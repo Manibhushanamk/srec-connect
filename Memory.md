@@ -51,13 +51,40 @@
   - Added skeleton loaders (`Skeleton.tsx`, `loading.tsx`) across public and admin routes.
   - Verified mobile drawer hamburger opens and renders sidebar cleanly.
 
+### F. Directory Layout Overhaul & Laptop Grid Modernization
+- **Horizontal Filter Toolbars**:
+  - Replaced cramped vertical `<aside>` sidebars on `/students`, `/faculty`, `/achievements`, and `/events` with sleek horizontal full-width toolbars featuring real-time search and dropdown filters.
+  - Replaced narrow 2-column cards with responsive 3-column / 4-column grids with spacious margins, preventing name truncation and layout crunch on laptop screens.
+- **Universal Theme Contrast (Light & Dark Mode)**:
+  - Replaced hardcoded `text-slate-100`, `text-slate-400`, and `text-slate-500` classes with semantic tokens (`text-foreground`, `text-muted-foreground`, `border-border`, `bg-card`).
+  - Styled `<select>` dropdowns with native theme backgrounds (`bg-background text-foreground border-border`), eliminating stark white boxes and unreadable white-on-white text in dark mode.
+- **Feed Live Syncing Resolution**:
+  - Replaced the stuck cyan "Syncing live feed..." text with animated skeleton placeholders (`FeedCardSkeleton`) and immediate post rendering.
+
+### G. Comprehensive Multi-Role Testing & RBAC Access Matrix
+- **Student Role (`viswanadhum9985559753@gmail.com`)**:
+  - Verified access to Student Dashboard (`/dashboard/student`), Achievement Submission (`/dashboard/student/submit`), Feed (`/`), Grievances (`/grievances`), and Events (`/events`).
+  - Admin quick actions and sensitive admin endpoints are properly restricted.
+- **Faculty Role (`faculty@srecnandyal.edu.in`)**:
+  - Fixed fatal 500 runtime crash on `/dashboard/faculty` caused by non-serializable props in `EmptyState`.
+  - Added Research & Grant submission page at `/dashboard/faculty/submit`.
+  - Granted Verification Desk access (`/admin/achievements`) so faculty can verify student submissions without getting access-denied loops.
+- **HOD Role (`hod@srecnandyal.edu.in`)**:
+  - Verified sovereign department access to Disciplinary Incident Management (`/admin/discipline`), Grievances (`/admin/grievances`), and Official Action Letter issuance.
+- **Super Admin Role (`manibhushanam4k@gmail.com`)**:
+  - Verified system-wide Trash & Soft-Delete Recovery (`/admin/trash`), Role Management (`/admin/users`), Universal Export, and Database Deduplication.
+
 ---
 
 ## 3. Empirical Verification Evidence
 - **Automated Tests:** 39/39 passing across all 8 suites (`npm test`).
 - **Production Build:** 51/51 routes compiled cleanly with 0 TypeScript/ESLint errors (`npm run build`).
-- **Full-Site Visual & Console Inspection (`capture_and_inspect_all_pages.js`):**
-  - Inspected 20 distinct routes on Desktop (1280px) and Mobile (375px).
+- **Playwright Visual Verification:**
+  - `verified_students_light.png` & `check_students_dark.png`
+  - `verified_faculty_light.png` & `check_faculty_dark.png`
+  - `verified_achievements_light.png` & `check_achievements_dark.png`
+  - `verified_events_light.png` & `check_events_dark.png`
+  - `check_feed_top.png` (verified feed tabs and skeleton resolution)
   - Total Issues / Horizontal Overflows: **0**
   - Console Errors / Uncaught Exceptions: **0**
   - High-res visual artifacts generated: 38 full-page screenshots + `inspection_report.json`.
