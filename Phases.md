@@ -138,16 +138,22 @@ graph TD
 ## Phase 10: Analytics, Public Portal & Operations
 - **Objective:** Department analytics dashboards, global search, and public website finalization.
 - **Tasks:**
-  - [ ] Task 10.1: Department metrics with Recharts (registrations, verified achievements, activity breakdown).
-  - [ ] Task 10.2: Role-aware global search across students, faculty, events, and posts.
-  - [ ] Task 10.3: Public SEO metadata, sitemap generation, and robots.txt rules.
-- **Verification:** Verification that private routes are marked noindex and search returns only authorized records.
-- **Status:** Next Up
+  - [x] Task 10.1: Department metrics with Recharts (registrations, verified achievements, activity breakdown).
+  - [x] Task 10.2: Role-aware global search across students, faculty, events, and posts.
+  - [x] Task 10.3: Public SEO metadata, sitemap generation, and robots.txt rules.
+- **Verification:** Verification that private routes are marked noindex and search returns only authorized records; verified in Playwright at `/admin/analytics` and 4/4 tests passed in `tests/analytics-search.test.ts`.
+- **Status:** Complete (Phase 10 Verified)
 
 ---
 
 ## Phase 11: Production Readiness & Hardening
 - **Objective:** Comprehensive testing, security audit, performance optimization, and deployment readiness.
+- **Tasks:**
+  - [ ] Task 11.1: Security audit and secret verification (zero exposed credentials).
+  - [ ] Task 11.2: End-to-end production build (`next build`) and package hygiene.
+  - [ ] Task 11.3: Final verification report and documentation closure.
+- **Verification:** Clean production build (`npm run build`) and zero security warnings.
+- **Status:** In Progress
 - **Tasks:**
   - [ ] Task 11.1: Complete Vitest unit suite and Playwright end-to-end regression runs.
   - [ ] Task 11.2: Security audit (OWASP checks, CSRF, IDOR, input sanitization, rate limiting).
