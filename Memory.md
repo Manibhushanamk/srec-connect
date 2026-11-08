@@ -3,34 +3,30 @@
 > **Project:** SREC Connect v3.0  
 > **Institution:** Santhiram Engineering College (SREC), Nandyal — CSE (AI & ML)  
 > **Last Updated:** 2026-11-08  
-> **Current Phase:** Phase 7 — Events & QR Attendance Complete; Ready for Phase 8 (Complaints & Discipline Management)  
+> **Current Phase:** Phase 8 — Complaints & Discipline Management Complete; Currently Executing Phase 9 (Drive, Notices & Notifications)  
 
 ---
 
 ## 1. Current Status & Phase Progress
 
-- **Active Goal:** Phase 7 (Events Lifecycle, Capacity Concurrency, Waitlist Management, and QR Attendance Desk) Completed & Empirically Verified. Ready for Phase 8 (Complaints & Discipline Management).
+- **Active Goal:** Phase 8 (Dual-track reporting, Confidential HOD Bypass, Immutable Response Timeline, and Authorized Resolution Actions) Completed & Empirically Verified. Ready for Phase 9 (Google Drive, Notices & Notifications).
 - **Current State:**
-  - **Phase 7 Complete:**
-    - Implemented Events REST API endpoints:
-      - [`src/app/api/events/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/events/route.ts): GET with multi-attribute filtering & POST for event creation with RBAC enforcement and Audit Logging.
-      - [`src/app/api/events/[id]/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/events/[id]/route.ts): GET with seat metrics and anti-spam WhatsApp disclosure (only exposed post-confirmed-registration), PATCH, and DELETE.
-      - [`src/app/api/events/[id]/register/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/events/[id]/register/route.ts): Concurrency-safe transactional seat reservation (`prisma.$transaction`), automatic waitlist queueing when capacity is full, and automatic waitlist promotion upon cancellation.
-      - [`src/app/api/events/[id]/checkin/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/events/[id]/checkin/route.ts): Organizer check-in via Roll Number or QR scan with audit logging.
-      - [`src/app/api/events/[id]/attendance/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/events/[id]/attendance/route.ts): Real-time roster and attendance rate dashboard.
-    - Implemented UI pages:
-      - Public Event Detail Page ([`src/app/(public)/events/[id]/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/(public)/events/[id]/page.tsx)) with dynamic registration action card ([`src/components/events/EventRegistrationBox.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/components/events/EventRegistrationBox.tsx)).
-      - Admin Events Management Dashboard ([`src/app/admin/events/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/admin/events/page.tsx)).
-      - Live Organizer Attendance Desk ([`src/app/admin/events/[id]/attendance/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/admin/events/[id]/attendance/page.tsx)) with fast roll-number check-in and manual toggle.
-    - Automated integration test suite: 6/6 tests passing in `tests/events-attendance.test.ts`. Total project tests: 38/38 passing across all suites.
-    - Verified live with Playwright screenshots:
-      - `verified_event_details.png`
-      - `verified_admin_events.png`
-      - `verified_admin_event_attendance.png`
+  - **Phase 8 Complete:**
+    - Dual-track Incident & Grievance reporting API endpoints:
+      - [`src/app/api/incidents/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/incidents/route.ts): GET with role-based visibility isolation (Students only see their own cases, Faculty cannot see `isConfidentialHOD` cases, HOD has full access), and POST for filing grievances and disciplinary reports.
+      - [`src/app/api/incidents/[id]/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/incidents/[id]/route.ts): GET single dossier with strict confidentiality boundary checks, and PATCH for status updates.
+      - [`src/app/api/incidents/[id]/responses/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/incidents/[id]/responses/route.ts): POST appending statements to immutable response timeline with student right-to-respond.
+      - [`src/app/api/incidents/[id]/actions/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/incidents/[id]/actions/route.ts): POST recording outcome action (`VERBAL_WARNING`, `WRITTEN_WARNING`, `COUNSELLING`, `CORRECTIVE_TASK`, `HOD_REVIEW`, `FORMAL_ACTION`), strictly enforcing that `FORMAL_ACTION` is reserved for HOD and Super Admin.
+    - User Interface:
+      - Admin Disciplinary Management Console ([`src/app/admin/discipline/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/admin/discipline/page.tsx)) with status filtering, priority badges, and modal.
+      - Comprehensive Case Dossier ([`src/app/admin/discipline/[id]/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/admin/discipline/[id]/page.tsx)) with chronological immutable response timeline and action recorder.
+    - Verified with 7/7 tests passing in `tests/complaints-discipline.test.ts` and captured Playwright screenshot `verified_admin_discipline.png`. Total project test suite: 31/31 passing tests.
+  - **Phase 7 Complete (`c303c01`):**
+    - Events lifecycle, transactional capacity concurrency, automatic waitlist promotion, QR attendance check-in desk at `/admin/events/[id]/attendance`.
   - **Phase 6 Complete (`2bcb547`):**
-    - Achievements multi-tier verification queue, edit & approve desk at `/admin/achievements`.
+    - Achievements multi-tier verification queue and moderation desk at `/admin/achievements`.
   - **Phases 1-5 Complete:**
-    - Foundation, Auth & RBAC, Bulk Ingestion, Portfolios, and Social Community Feed.
+    - App Foundation, RBAC, Bulk Ingestion, Student/Faculty Portfolios, and Social Community Feed.
 
 ---
 

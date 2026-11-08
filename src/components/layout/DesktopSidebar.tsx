@@ -13,6 +13,7 @@ import {
   Building2,
   Info,
   Shield,
+  ShieldAlert,
   FileSpreadsheet,
   ChevronRight,
   Sparkles,
@@ -43,6 +44,7 @@ export const DesktopSidebar: React.FC = () => {
     { label: 'Bulk Ingestion', href: '/admin/bulk-upload', icon: FileSpreadsheet },
     { label: 'Verify Achievements', href: '/admin/achievements', icon: Award },
     { label: 'Campus Events', href: '/admin/events', icon: Calendar },
+    { label: 'Discipline & Grievances', href: '/admin/discipline', icon: ShieldAlert },
   ];
 
   return (

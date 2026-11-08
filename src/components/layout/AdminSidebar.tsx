@@ -20,6 +20,7 @@ import {
   History,
   Settings,
   Shield,
+  ShieldAlert,
   Zap,
   ChevronRight,
   ChevronDown,
@@ -75,6 +76,13 @@ const MENU_GROUPS = {
       { href: '/admin/events', label: 'All Events', icon: Calendar },
       { href: '/admin/events/upcoming', label: 'Upcoming', icon: Zap },
       { href: '/admin/events/completed', label: 'Completed', icon: Award },
+    ],
+  },
+  discipline: {
+    label: 'Discipline & Cases',
+    icon: ShieldAlert,
+    items: [
+      { href: '/admin/discipline', label: 'All Cases', icon: ShieldAlert },
     ],
   },
   students: {

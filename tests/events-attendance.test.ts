@@ -37,43 +37,20 @@ describe('Phase 7: Events, Capacity Concurrency & QR Attendance Workflow Tests',
     if (!organizer) throw new Error('Organizer user required in DB');
     testOrganizerUserId = organizer.id;
 
-    // 4. Ensure two student users exist for registration concurrency test
-    studentUser1 = await prisma.user.findFirst({
-      where: { email: '22091a3201@srecnandyal.edu.in' },
-      include: { student: true },
+    // 4. Ensure two permanent student users exist for registration concurrency test
+    const s1 = await prisma.student.findUnique({
+      where: { rollNumber: '22091A3201' },
+      include: { user: true },
     });
-    if (!studentUser1) {
-      studentUser1 = await prisma.user.findFirst({
-        where: { role: 'STUDENT', student: { isNot: null } },
-        include: { student: true },
-      });
-    }
+    if (!s1?.user) throw new Error('Student 22091A3201 required in DB');
+    studentUser1 = { ...s1.user, student: s1 };
 
-    // Always create a dedicated, isolated second student for events concurrency test
-    const email2 = `events.test.student.${Date.now()}@srecnandyal.edu.in`;
-    const roll2 = `22091A3277`;
-    await prisma.eventRegistration.deleteMany({ where: { user: { email: email2 } } });
-    await prisma.user.deleteMany({ where: { email: email2 } });
-    await prisma.student.deleteMany({ where: { rollNumber: roll2 } });
-
-    studentUser2 = await prisma.user.create({
-      data: {
-        email: email2,
-        name: 'Waitlist Test Candidate',
-        role: 'STUDENT',
-        status: 'ACTIVE',
-        student: {
-          create: {
-            rollNumber: roll2,
-            name: 'Waitlist Test Candidate',
-            batch: '2022-2026',
-            section: 'A',
-            departmentName: 'Artificial Intelligence & Machine Learning',
-          },
-        },
-      },
-      include: { student: true },
+    const s2 = await prisma.student.findUnique({
+      where: { rollNumber: '22091A3202' },
+      include: { user: true },
     });
+    if (!s2?.user) throw new Error('Student 22091A3202 required in DB');
+    studentUser2 = { ...s2.user, student: s2 };
   });
 
   after(async () => {
@@ -82,12 +59,6 @@ describe('Phase 7: Events, Capacity Concurrency & QR Attendance Workflow Tests',
       await prisma.eventRegistration.deleteMany({ where: { eventId: createdEventId } });
       await prisma.auditLog.deleteMany({ where: { entityId: createdEventId } });
       await prisma.event.deleteMany({ where: { id: createdEventId } });
-    }
-    if (studentUser2?.id) {
-      await prisma.eventAttendance.deleteMany({ where: { userId: studentUser2.id } });
-      await prisma.eventRegistration.deleteMany({ where: { userId: studentUser2.id } });
-      await prisma.student.deleteMany({ where: { rollNumber: '22091A3277' } });
-      await prisma.user.deleteMany({ where: { id: studentUser2.id } });
     }
   });
 
@@ -191,7 +162,7 @@ describe('Phase 7: Events, Capacity Concurrency & QR Attendance Workflow Tests',
 
     assert.equal(reg?.status, 'WAITLISTED');
     // Cannot check in waitlisted attendee
-    const isEligibleForCheckIn = reg?.status === 'REGISTERED';
+    const isEligibleForCheckIn = (reg?.status as string) === 'REGISTERED';
     assert.equal(isEligibleForCheckIn, false);
   });
 

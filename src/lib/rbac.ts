@@ -150,10 +150,43 @@ export function canAccessAdmin(user: AuthUserContext | null | undefined): boolea
 
 export function getVisibleMenuGroups(context: PermissionContext): string[] {
   if (context.isRoot || context.role === 'SUPER_ADMIN' || context.role === 'ADMIN') {
-    return ['overview', 'users', 'departments', 'academic', 'system'];
+    return [
+      'overview',
+      'users',
+      'departments',
+      'achievements',
+      'events',
+      'discipline',
+      'students',
+      'faculty',
+      'bulk-upload',
+      'analytics',
+      'audit-logs',
+      'settings',
+    ];
   }
-  if (context.role === 'HOD' || context.role === 'WEB_MANAGER') {
-    return ['overview', 'users', 'departments', 'academic'];
+  if (context.role === 'HOD') {
+    return [
+      'overview',
+      'users',
+      'departments',
+      'achievements',
+      'events',
+      'discipline',
+      'students',
+      'faculty',
+      'analytics',
+    ];
+  }
+  if (context.role === 'WEB_MANAGER') {
+    return [
+      'overview',
+      'users',
+      'departments',
+      'events',
+      'bulk-upload',
+      'analytics',
+    ];
   }
   return ['overview'];
 }

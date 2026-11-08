@@ -116,11 +116,11 @@ graph TD
 ## Phase 8: Complaints & Discipline Management
 - **Objective:** Confidential student grievances and faculty disciplinary incident reporting.
 - **Tasks:**
-  - [ ] Task 8.1: Dual-track reporting forms (Grievance vs Incident Report) with priority levels.
-  - [ ] Task 8.2: Confidential HOD bypass workflow for student grievances.
-  - [ ] Task 8.3: Immutable response timeline with student right-to-respond and authorized action logging.
-- **Verification:** Permission test proving non-authorized users cannot access or view incident records.
-- **Status:** Next Up
+  - [x] Task 8.1: Dual-track reporting forms (Grievance vs Incident Report) with priority levels.
+  - [x] Task 8.2: Confidential HOD bypass workflow for student grievances.
+  - [x] Task 8.3: Immutable response timeline with student right-to-respond and authorized action logging.
+- **Verification:** Permission test proving non-authorized users cannot access or view incident records; verified in Playwright at `/admin/discipline` and 7/7 tests passed in `tests/complaints-discipline.test.ts`.
+- **Status:** Complete (Phase 8 Verified)
 
 ---
 
@@ -131,7 +131,7 @@ graph TD
   - [ ] Task 9.2: Announcements system with audience filtering (batch, section, role).
   - [ ] Task 9.3: In-app notification center and user preference controls.
 - **Verification:** Integration test verifying Drive permissions and isolation of sensitive incident attachments.
-- **Status:** Locked
+- **Status:** In Progress
 
 ---
 
