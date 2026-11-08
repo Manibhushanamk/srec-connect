@@ -19,8 +19,34 @@ import {
   Edit,
   Loader2,
   CheckCircle2,
+  CheckCircle,
+  Image as ImageIcon,
+  Sparkles,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+
+const EVENT_POSTER_PRESETS = [
+  {
+    name: 'AI & Neural Systems',
+    url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    name: 'Hackathon & Sprint',
+    url: 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    name: 'Cyber & Cloud Matrix',
+    url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    name: 'Research Keynote',
+    url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
+  },
+  {
+    name: 'Robotics & Hardware',
+    url: 'https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=1200&q=80',
+  },
+];
 
 export default function AdminEventsPage() {
   const [events, setEvents] = useState<any[]>([]);
@@ -46,6 +72,7 @@ export default function AdminEventsPage() {
     capacity: 100,
     registrationDeadline: '',
     whatsappGroupUrl: '',
+    posterUrl: '',
   });
 
   const fetchEvents = async () => {
@@ -101,6 +128,7 @@ export default function AdminEventsPage() {
           capacity: 100,
           registrationDeadline: '',
           whatsappGroupUrl: '',
+          posterUrl: '',
         });
         fetchEvents();
       } else {
@@ -207,33 +235,45 @@ export default function AdminEventsPage() {
           {filteredEvents.map((event) => (
             <Card key={event.id} className="p-5 border-slate-800 bg-slate-900/60 hover:border-slate-700 transition-all">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div className="space-y-2 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatusBadge status={event.status as any} size="sm" />
-                    <Badge variant="cyan" size="sm">{event.category?.name || 'Workshop'}</Badge>
-                    {event.department && (
-                      <Badge variant="brand" size="sm">{event.department.shortName || event.department.name}</Badge>
-                    )}
-                    <span className="text-[11px] text-slate-400">
-                      Capacity: {event.registeredCount || 0} / {event.capacity} seats confirmed
-                    </span>
-                  </div>
+                <div className="flex gap-4 items-start flex-1">
+                  {event.posterUrl ? (
+                    <div className="w-24 h-20 rounded-xl overflow-hidden flex-shrink-0 border border-slate-700/80 bg-slate-950 shadow-sm hidden sm:block">
+                      <img src={event.posterUrl} alt={event.title} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-24 h-20 rounded-xl bg-slate-800/80 flex items-center justify-center flex-shrink-0 border border-slate-700/50 text-slate-500 hidden sm:flex">
+                      <ImageIcon className="w-6 h-6" />
+                    </div>
+                  )}
 
-                  <h3 className="text-base font-bold text-white">{event.title}</h3>
+                  <div className="space-y-2 flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusBadge status={event.status as any} size="sm" />
+                      <Badge variant="cyan" size="sm">{event.category?.name || 'Workshop'}</Badge>
+                      {event.department && (
+                        <Badge variant="brand" size="sm">{event.department.shortName || event.department.name}</Badge>
+                      )}
+                      <span className="text-[11px] text-slate-400">
+                        Capacity: {event.registeredCount || 0} / {event.capacity} seats confirmed
+                      </span>
+                    </div>
 
-                  <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
-                    <span className="flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-cyan-400" />
-                      {formatDate(event.startDate)}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-cyan-400" />
-                      {event.venue}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-cyan-400" />
-                      {event.attendedCount || 0} checked in
-                    </span>
+                    <h3 className="text-base font-bold text-white truncate">{event.title}</h3>
+
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-cyan-400" />
+                        {formatDate(event.startDate)}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+                        {event.venue}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-cyan-400" />
+                        {event.attendedCount || 0} checked in
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -414,6 +454,61 @@ export default function AdminEventsPage() {
               onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
               className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
             />
+          </div>
+
+          {/* Event Banner & Poster */}
+          <div className="space-y-2 p-3.5 rounded-xl bg-slate-950/80 border border-slate-800">
+            <div className="flex items-center justify-between">
+              <label className="block text-slate-300 font-medium flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Event Poster / Banner Image</span>
+              </label>
+              <span className="text-[10px] text-cyan-400">High-Resolution (16:9 Recommended)</span>
+            </div>
+
+            <input
+              type="url"
+              placeholder="Paste public banner/poster URL (e.g. Unsplash or Google Drive)"
+              value={createForm.posterUrl}
+              onChange={(e) => setCreateForm({ ...createForm, posterUrl: e.target.value })}
+              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 text-xs"
+            />
+
+            <div>
+              <p className="text-[10px] text-slate-400 mb-1.5">Or choose a curated template poster:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {EVENT_POSTER_PRESETS.map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => setCreateForm({ ...createForm, posterUrl: preset.url })}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-medium border transition-all ${
+                      createForm.posterUrl === preset.url
+                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/60 shadow-xs'
+                        : 'bg-slate-900 text-slate-400 border-slate-700/80 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    {preset.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {createForm.posterUrl && (
+              <div className="relative h-32 w-full rounded-xl overflow-hidden border border-slate-700 mt-2">
+                <img
+                  src={createForm.posterUrl}
+                  alt="Poster preview"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent flex items-end p-2.5">
+                  <span className="text-[11px] font-medium text-white flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                    Poster Preview Ready
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">

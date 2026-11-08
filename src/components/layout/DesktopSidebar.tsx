@@ -18,6 +18,10 @@ import {
   FileSpreadsheet,
   ChevronRight,
   Sparkles,
+  LayoutDashboard,
+  Plus,
+  Trash2,
+  Settings,
 } from 'lucide-react';
 
 export const DesktopSidebar: React.FC = () => {
@@ -48,7 +52,6 @@ export const DesktopSidebar: React.FC = () => {
   ];
 
   const exploreLinks = [
-    { label: 'Academic Departments', href: '/departments', icon: Building2 },
     { label: 'About College', href: '/about', icon: Info },
   ];
 
@@ -131,7 +134,7 @@ export const DesktopSidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* 3. Academic Departments & College Info */}
+      {/* 3. College Information & Administration */}
       <div className="bg-card rounded-2xl border border-border p-3 mb-4 shadow-subtle">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 py-1.5">
           Campus Information
@@ -156,8 +159,81 @@ export const DesktopSidebar: React.FC = () => {
             );
           })}
 
+          {/* Student Workspace */}
+          {userRole === 'STUDENT' && (
+            <>
+              <div className="pt-2 pb-1 px-3 text-[10px] font-bold text-primary uppercase tracking-wider">
+                Student Workspace
+              </div>
+              <Link
+                href="/dashboard/student"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                  pathname === '/dashboard/student'
+                    ? 'bg-primary text-white font-semibold'
+                    : 'text-foreground/80 hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                <LayoutDashboard className={`w-4 h-4 ${pathname === '/dashboard/student' ? 'text-white' : 'text-muted-foreground'}`} />
+                <span>My Dashboard</span>
+              </Link>
+              <Link
+                href="/dashboard/student/submit"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                  pathname === '/dashboard/student/submit'
+                    ? 'bg-primary text-white font-semibold'
+                    : 'text-foreground/80 hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                <Plus className={`w-4 h-4 ${pathname === '/dashboard/student/submit' ? 'text-white' : 'text-muted-foreground'}`} />
+                <span>Submit Achievement</span>
+              </Link>
+            </>
+          )}
+
+          {/* Faculty Portal */}
+          {userRole === 'FACULTY' && (
+            <>
+              <div className="pt-2 pb-1 px-3 text-[10px] font-bold text-primary uppercase tracking-wider">
+                Faculty Portal
+              </div>
+              <Link
+                href="/dashboard/faculty"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                  pathname === '/dashboard/faculty'
+                    ? 'bg-primary text-white font-semibold'
+                    : 'text-foreground/80 hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                <LayoutDashboard className={`w-4 h-4 ${pathname === '/dashboard/faculty' ? 'text-white' : 'text-muted-foreground'}`} />
+                <span>Faculty Dashboard</span>
+              </Link>
+              <Link
+                href="/admin/achievements"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                  pathname === '/admin/achievements'
+                    ? 'bg-primary text-white font-semibold'
+                    : 'text-foreground/80 hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                <Award className={`w-4 h-4 ${pathname === '/admin/achievements' ? 'text-white' : 'text-muted-foreground'}`} />
+                <span>Verify Achievements</span>
+              </Link>
+              <Link
+                href="/dashboard/faculty/submit"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                  pathname === '/dashboard/faculty/submit'
+                    ? 'bg-primary text-white font-semibold'
+                    : 'text-foreground/80 hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                <Plus className={`w-4 h-4 ${pathname === '/dashboard/faculty/submit' ? 'text-white' : 'text-muted-foreground'}`} />
+                <span>Submit Record</span>
+              </Link>
+            </>
+          )}
+
           {/* Admin Management Links */}
-          {(userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'HOD' || userRole === 'WEB_MANAGER' || !userRole) && (
+          {(userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'HOD' || userRole === 'WEB_MANAGER') && (
             <>
               <div className="pt-2 pb-1 px-3 text-[10px] font-bold text-primary uppercase tracking-wider">
                 Administration
@@ -180,6 +256,19 @@ export const DesktopSidebar: React.FC = () => {
                   </Link>
                 );
               })}
+              {(userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') && (
+                <Link
+                  href="/admin/trash"
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                    pathname === '/admin/trash'
+                      ? 'bg-primary text-white font-semibold'
+                      : 'text-foreground/80 hover:text-foreground hover:bg-muted'
+                  }`}
+                >
+                  <Trash2 className={`w-4 h-4 ${pathname === '/admin/trash' ? 'text-white' : 'text-muted-foreground'}`} />
+                  <span>Trash Recovery</span>
+                </Link>
+              )}
             </>
           )}
         </nav>

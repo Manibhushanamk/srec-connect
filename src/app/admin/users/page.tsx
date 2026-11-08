@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldAlert,
+  Trash2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -146,18 +147,37 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleTrashUser = async (u: UserItem) => {
+    if (!confirm(`Are you sure you want to move user "${u.name || u.email}" to Trash? Their account will be deactivated and hidden from directories.`)) return;
+    try {
+      const res = await fetch('/api/admin/trash', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'TRASH', type: 'USER', id: u.id }),
+      });
+      if (res.ok) {
+        fetchUsers();
+      } else {
+        const err = await res.json();
+        alert(err.error || 'Failed to move user to trash');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error trashing user');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
-              User & Academic Directory
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
+              User &amp; Academic Directory
             </h1>
             <Badge variant="cyan" size="sm">{total} Accounts</Badge>
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-slate-400 mt-1">
             Manage institutional pre-provisioned identities, permanent roll numbers, and role permissions.
           </p>
         </div>
@@ -305,14 +325,24 @@ export default function AdminUsersPage() {
                     </td>
 
                     <td className="py-3.5 px-4 text-right">
-                      <Button
-                        variant={u.status === 'ACTIVE' ? 'danger' : 'primary'}
-                        size="sm"
-                        onClick={() => handleToggleStatus(u)}
-                        className="text-xs py-1 px-2.5 h-auto"
-                      >
-                        {u.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant={u.status === 'ACTIVE' ? 'danger' : 'primary'}
+                          size="sm"
+                          onClick={() => handleToggleStatus(u)}
+                          className="text-xs py-1 px-2.5 h-auto"
+                        >
+                          {u.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
+                        </Button>
+                        <button
+                          type="button"
+                          onClick={() => handleTrashUser(u)}
+                          className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                          title="Move to Trash"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

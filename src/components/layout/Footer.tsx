@@ -8,7 +8,6 @@ const FOOTER_LINKS = {
     { label: 'Events', href: '/events' },
     { label: 'Faculty', href: '/faculty' },
     { label: 'Students', href: '/students' },
-    { label: 'Departments', href: '/departments' },
   ],
   resources: [
     { label: 'About SREC', href: '/about' },

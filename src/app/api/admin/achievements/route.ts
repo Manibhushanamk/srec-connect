@@ -171,14 +171,17 @@ export async function DELETE(req: NextRequest) {
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.achievement.delete({ where: { id } });
+      await tx.achievement.update({
+        where: { id },
+        data: { deletedAt: new Date() },
+      });
 
       await tx.auditLog.create({
         data: {
           actorId: user.id,
           actorEmail: user.email,
           actorRole: user.role,
-          action: 'ACHIEVEMENT_DELETE',
+          action: 'ACHIEVEMENT_MOVED_TO_TRASH',
           entityType: 'Achievement',
           entityId: id,
           metadata: JSON.stringify({ deletedAt: new Date().toISOString() }),

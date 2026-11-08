@@ -60,7 +60,7 @@ export async function GET(
       },
     });
 
-    if (!incident) {
+    if (!incident || incident.deletedAt !== null) {
       return NextResponse.json({ error: 'Incident not found' }, { status: 404 });
     }
 
@@ -138,6 +138,49 @@ export async function PATCH(
     return NextResponse.json({ success: true, incident: updated });
   } catch (error: any) {
     console.error('[Incident Detail PATCH] Error:', error);
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email.toLowerCase().trim() },
+    });
+
+    if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Forbidden: Super Admin required' }, { status: 403 });
+    }
+
+    const updated = await prisma.incident.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+
+    await prisma.auditLog.create({
+      data: {
+        actorId: currentUser.id,
+        actorEmail: currentUser.email,
+        actorRole: currentUser.role,
+        action: 'INCIDENT_MOVED_TO_TRASH',
+        entityType: 'Incident',
+        entityId: id,
+        metadata: JSON.stringify({ title: updated.title }),
+      },
+    });
+
+    return NextResponse.json({ success: true, message: 'Incident moved to trash' });
+  } catch (error: any) {
+    console.error('[Incident Detail DELETE] Error:', error);
     return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

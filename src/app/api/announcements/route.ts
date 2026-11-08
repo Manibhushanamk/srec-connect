@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
 
     const announcements = await prisma.announcement.findMany({
       where: {
+        deletedAt: null,
         OR: orConditions,
         expiresAt: {
           gt: new Date(),

@@ -2,9 +2,7 @@
 
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Filter, RotateCcw } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+import { Search, Filter, RotateCcw, Award, Calendar, Building2 } from 'lucide-react';
 
 interface AchievementsFilterBarProps {
   levels: readonly string[];
@@ -28,6 +26,13 @@ export function AchievementsFilterBar({
   const currentDepartment = searchParams.get('department') || 'all';
   const currentAcademicYear = searchParams.get('academicYear') || 'all';
 
+  const hasActiveFilters =
+    Boolean(currentSearch) ||
+    currentLevel !== 'all' ||
+    currentCategory !== 'all' ||
+    currentDepartment !== 'all' ||
+    currentAcademicYear !== 'all';
+
   const updateFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     if (!value || value === 'all') {
@@ -44,117 +49,119 @@ export function AchievementsFilterBar({
   };
 
   return (
-    <Card variant="glass">
-      <CardContent className="p-5 space-y-6">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-foreground flex items-center gap-2">
-            <Filter className="w-5 h-5 text-primary" />
-            Filters
-          </h3>
-          {(currentSearch || currentLevel !== 'all' || currentCategory !== 'all' || currentDepartment !== 'all' || currentAcademicYear !== 'all') && (
-            <button
-              onClick={clearFilters}
-              className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 transition-colors"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Reset
-            </button>
-          )}
+    <div className="w-full bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-xs space-y-4 transition-colors">
+      {/* Search and Reset */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="search"
+            id="search"
+            placeholder="Search verified honors by student name, roll number, organization, or title..."
+            defaultValue={currentSearch}
+            className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                updateFilter('search', (e.target as HTMLInputElement).value);
+              }
+            }}
+            onBlur={(e) => {
+              if (e.target.value !== currentSearch) {
+                updateFilter('search', e.target.value);
+              }
+            }}
+          />
         </div>
 
-        {/* Search */}
-        <div>
-          <label htmlFor="search" className="label-text">Search</label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="search"
-              id="search"
-              placeholder="Search achievements..."
-              defaultValue={currentSearch}
-              className="input-field pl-10"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  updateFilter('search', (e.target as HTMLInputElement).value);
-                }
-              }}
-              onBlur={(e) => {
-                if (e.target.value !== currentSearch) {
-                  updateFilter('search', e.target.value);
-                }
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Level */}
-        <div>
-          <label htmlFor="level" className="label-text">Level</label>
-          <select
-            id="level"
-            value={currentLevel}
-            className="input-field"
-            onChange={(e) => updateFilter('level', e.target.value)}
+        {hasActiveFilters && (
+          <button
+            onClick={clearFilters}
+            className="self-end md:self-auto px-3.5 py-2 text-xs font-semibold rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center gap-1.5 transition-colors shrink-0"
           >
-            <option value="all">All Levels</option>
-            {levels.map((level) => (
-              <option key={level} value={level}>{level}</option>
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset Filters</span>
+          </button>
+        )}
+      </div>
+
+      {/* Select Dropdowns Toolbar */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-border">
+        {/* Department */}
+        <div>
+          <label htmlFor="department" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+            <Building2 className="w-3 h-3 text-primary" />
+            <span>Department</span>
+          </label>
+          <select
+            id="department"
+            value={currentDepartment}
+            className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+            onChange={(e) => updateFilter('department', e.target.value)}
+          >
+            <option value="all" className="bg-card text-foreground">All Departments</option>
+            {departments.map((dept) => (
+              <option key={dept.code} value={dept.code} className="bg-card text-foreground">{dept.name}</option>
             ))}
           </select>
         </div>
 
         {/* Category */}
         <div>
-          <label htmlFor="category" className="label-text">Category</label>
+          <label htmlFor="category" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+            <Award className="w-3 h-3 text-primary" />
+            <span>Category</span>
+          </label>
           <select
             id="category"
             value={currentCategory}
-            className="input-field"
+            className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
             onChange={(e) => updateFilter('category', e.target.value)}
           >
-            <option value="all">All Categories</option>
+            <option value="all" className="bg-card text-foreground">All Categories</option>
             {categories.map((cat) => (
-              <option key={cat.name} value={cat.name}>{cat.name}</option>
+              <option key={cat.name} value={cat.name} className="bg-card text-foreground">{cat.name}</option>
             ))}
           </select>
         </div>
 
-        {/* Department */}
+        {/* Level */}
         <div>
-          <label htmlFor="department" className="label-text">Department</label>
+          <label htmlFor="level" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+            <Filter className="w-3 h-3 text-primary" />
+            <span>Recognition Level</span>
+          </label>
           <select
-            id="department"
-            value={currentDepartment}
-            className="input-field"
-            onChange={(e) => updateFilter('department', e.target.value)}
+            id="level"
+            value={currentLevel}
+            className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+            onChange={(e) => updateFilter('level', e.target.value)}
           >
-            <option value="all">All Departments</option>
-            {departments.map((dept) => (
-              <option key={dept.code} value={dept.code}>{dept.name}</option>
+            <option value="all" className="bg-card text-foreground">All Levels</option>
+            {levels.map((lvl) => (
+              <option key={lvl} value={lvl} className="bg-card text-foreground">{lvl}</option>
             ))}
           </select>
         </div>
 
         {/* Academic Year */}
         <div>
-          <label htmlFor="academicYear" className="label-text">Academic Year</label>
+          <label htmlFor="academicYear" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+            <Calendar className="w-3 h-3 text-primary" />
+            <span>Academic Year</span>
+          </label>
           <select
             id="academicYear"
             value={currentAcademicYear}
-            className="input-field"
+            className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
             onChange={(e) => updateFilter('academicYear', e.target.value)}
           >
-            <option value="all">All Years</option>
+            <option value="all" className="bg-card text-foreground">All Academic Years</option>
             {academicYears.map((year) => (
-              <option key={year} value={year}>{year}</option>
+              <option key={year} value={year} className="bg-card text-foreground">{year}</option>
             ))}
           </select>
         </div>
-
-        <Button variant="secondary" fullWidth onClick={clearFilters}>
-          Clear All Filters
-        </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

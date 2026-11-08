@@ -132,6 +132,7 @@ export async function PATCH(
     if (body.speaker !== undefined) updateData.speaker = body.speaker?.trim() || null;
     if (body.capacity !== undefined) updateData.capacity = Math.max(1, Number(body.capacity));
     if (body.status !== undefined) updateData.status = body.status;
+    if (body.posterUrl !== undefined) updateData.posterUrl = body.posterUrl?.trim() || null;
     if (body.whatsappGroupUrl !== undefined) updateData.whatsappGroupUrl = body.whatsappGroupUrl?.trim() || null;
     if (body.startDate) updateData.startDate = new Date(body.startDate);
     if (body.endDate) updateData.endDate = new Date(body.endDate);

@@ -12,14 +12,14 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
     const baseStyles = 'inline-flex items-center font-mono tracking-wider transition-all duration-200';
     
     const variants = {
-      default: 'bg-slate-700/50 text-slate-300 border border-slate-600/50',
-      brand: 'bg-brand-500/20 text-brand-400 border border-brand-500/30',
-      cyan: 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30',
-      emerald: 'bg-neon-emerald/20 text-neon-emerald border border-neon-emerald/30',
-      amber: 'bg-neon-amber/20 text-neon-amber border border-neon-amber/30',
-      rose: 'bg-neon-rose/20 text-neon-rose border border-neon-rose/30',
-      violet: 'bg-violet-500/20 text-violet-400 border border-violet-500/30',
-      slate: 'bg-slate-700/50 text-slate-300 border border-slate-600/50',
+      default: 'bg-muted text-muted-foreground border border-border',
+      brand: 'bg-primary/10 text-primary border border-primary/20',
+      cyan: 'bg-cyan-500/10 text-cyan-500 dark:text-cyan-400 border border-cyan-500/30',
+      emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30',
+      amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30',
+      rose: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30',
+      violet: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/30',
+      slate: 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border border-slate-500/20',
     };
 
     const sizes = {

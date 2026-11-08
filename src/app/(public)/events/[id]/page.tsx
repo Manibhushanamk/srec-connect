@@ -17,6 +17,7 @@ import {
   FileText,
   User,
   GraduationCap,
+  ExternalLink,
 } from 'lucide-react';
 
 interface EventDetailPageProps {
@@ -70,7 +71,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       <div>
         <Link
           href="/events"
-          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to Events Directory
@@ -78,15 +79,24 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
       </div>
 
       {/* Main Event Header & Hero */}
-      <div className="relative rounded-3xl overflow-hidden border border-slate-800 bg-slate-900/40">
+      <div className="relative rounded-3xl overflow-hidden border border-border bg-card">
         {event.posterUrl ? (
-          <div className="h-64 sm:h-80 w-full relative">
+          <div className="h-64 sm:h-96 w-full relative group">
             <img
               src={event.posterUrl}
               alt={event.title}
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />
+            <a
+              href={event.posterUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="absolute top-4 right-4 px-3 py-1.5 rounded-xl bg-background/80 backdrop-blur-md border border-border text-xs font-medium text-foreground hover:bg-background transition-all shadow-md flex items-center gap-1.5 opacity-90 group-hover:opacity-100"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>View Full Poster</span>
+            </a>
           </div>
         ) : (
           <div className="h-48 sm:h-60 w-full bg-gradient-to-r from-blue-900/40 via-indigo-900/30 to-purple-900/40 flex items-center justify-center relative overflow-hidden">
@@ -111,34 +121,34 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <StatusBadge status={event.status as any} size="sm" />
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight leading-tight">
             {event.title}
           </h1>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-slate-800/80 text-xs text-slate-300">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-border text-xs text-muted-foreground">
             <div className="flex items-center gap-2.5">
-              <Calendar className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+              <Calendar className="w-4 h-4 text-primary flex-shrink-0" />
               <div>
-                <p className="text-[11px] text-slate-400">Date</p>
-                <p className="font-semibold text-white">
+                <p className="text-[11px] text-muted-foreground">Date</p>
+                <p className="font-semibold text-foreground">
                   {formatDate(event.startDate)} {event.endDate && ` - ${formatDate(event.endDate)}`}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2.5">
-              <Clock className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+              <Clock className="w-4 h-4 text-primary flex-shrink-0" />
               <div>
-                <p className="text-[11px] text-slate-400">Time</p>
-                <p className="font-semibold text-white">{formatDateTime(event.startDate)}</p>
+                <p className="text-[11px] text-muted-foreground">Time</p>
+                <p className="font-semibold text-foreground">{formatDateTime(event.startDate)}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-2.5">
-              <MapPin className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+              <MapPin className="w-4 h-4 text-primary flex-shrink-0" />
               <div>
-                <p className="text-[11px] text-slate-400">Venue</p>
-                <p className="font-semibold text-white">{event.venue}</p>
+                <p className="text-[11px] text-muted-foreground">Venue</p>
+                <p className="font-semibold text-foreground">{event.venue}</p>
               </div>
             </div>
           </div>
@@ -150,30 +160,30 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
         {/* Left Column: Event Specs & Description */}
         <div className="lg:col-span-2 space-y-6">
           {/* About Event */}
-          <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-6 space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <FileText className="w-5 h-5 text-cyan-400" />
+          <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
               About This Event
             </h2>
-            <div className="text-sm text-slate-300 leading-relaxed whitespace-pre-line">
+            <div className="text-sm text-foreground/90 leading-relaxed whitespace-pre-line">
               {event.description || 'No detailed description provided for this campus event.'}
             </div>
           </div>
 
           {/* Speakers / Resource Persons */}
           {event.speaker && (
-            <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-6 space-y-4">
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <Users className="w-5 h-5 text-cyan-400" />
+            <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+              <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
                 Featured Speaker & Resource Person
               </h2>
-              <div className="flex items-start gap-3 p-4 bg-slate-800/40 rounded-xl border border-slate-700/50">
-                <div className="w-10 h-10 rounded-full bg-blue-600/20 text-cyan-400 flex items-center justify-center font-bold text-sm">
+              <div className="flex items-start gap-3 p-4 bg-muted rounded-xl border border-border">
+                <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-sm">
                   {event.speaker[0]}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white text-sm">{event.speaker}</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <h3 className="font-semibold text-foreground text-sm">{event.speaker}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     {event.speakerResourcePerson || 'Invited Domain Expert / Keynote Presenter'}
                   </p>
                 </div>
@@ -182,18 +192,18 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           )}
 
           {/* Department & Organizer Details */}
-          <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-6 space-y-4">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-cyan-400" />
+          <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+            <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-primary" />
               Organizing Body
             </h2>
-            <div className="flex items-center gap-3 text-xs text-slate-300">
-              <div className="p-2.5 rounded-xl bg-slate-800 border border-slate-700">
-                <GraduationCap className="w-5 h-5 text-cyan-400" />
+            <div className="flex items-center gap-3 text-xs text-foreground/90">
+              <div className="p-2.5 rounded-xl bg-muted border border-border">
+                <GraduationCap className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="font-semibold text-white">{event.organizer}</p>
-                <p className="text-slate-400 text-[11px] mt-0.5">
+                <p className="font-semibold text-foreground">{event.organizer}</p>
+                <p className="text-muted-foreground text-[11px] mt-0.5">
                   {event.department?.fullName || 'Santhiram Engineering College'}
                 </p>
               </div>
@@ -212,8 +222,8 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           />
 
           {/* Quick Info Box */}
-          <div className="bg-slate-900/40 border border-slate-800/80 rounded-2xl p-5 space-y-3 text-xs text-slate-400">
-            <h4 className="font-semibold text-slate-200">Registration Guidelines</h4>
+          <div className="bg-card border border-border rounded-2xl p-5 space-y-3 text-xs text-muted-foreground">
+            <h4 className="font-semibold text-foreground">Registration Guidelines</h4>
             <ul className="space-y-1.5 list-disc list-inside text-[11px] leading-relaxed">
               <li>Open to enrolled SREC engineering students.</li>
               <li>Attendance verification conducted at entry via digital QR check-in.</li>

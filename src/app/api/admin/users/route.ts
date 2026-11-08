@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20', 10);
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: any = { deletedAt: null };
     if (role && role !== 'ALL') {
       where.role = role as Role;
     }

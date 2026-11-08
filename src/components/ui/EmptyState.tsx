@@ -1,30 +1,31 @@
+import React, { ReactNode } from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
-import { ReactNode } from 'react';
 import { Award, Users, Calendar, FileText, Search, Plus, Sparkles } from 'lucide-react';
+
+export interface EmptyAction {
+  label: string;
+  onClick?: () => void;
+  href?: string;
+  variant?: 'primary' | 'cyan' | 'secondary';
+}
 
 interface EmptyStateProps {
   icon?: ReactNode;
   title: string;
   description?: string;
-  action?: {
-    label: string;
-    onClick: () => void;
-    variant?: 'primary' | 'cyan';
-  };
-  secondaryAction?: {
-    label: string;
-    onClick: () => void;
-  };
+  action?: EmptyAction;
+  secondaryAction?: EmptyAction;
   className?: string;
 }
 
 const iconMap: Record<string, ReactNode> = {
-  achievements: <Award className="w-12 h-12 text-neon-cyan/50" />,
-  students: <Users className="w-12 h-12 text-neon-emerald/50" />,
-  events: <Calendar className="w-12 h-12 text-neon-amber/50" />,
-  faculty: <Users className="w-12 h-12 text-brand-400/50" />,
-  search: <Search className="w-12 h-12 text-slate-500/50" />,
-  default: <Sparkles className="w-12 h-12 text-brand-400/50" />,
+  achievements: <Award className="w-12 h-12 text-cyan-500" />,
+  students: <Users className="w-12 h-12 text-emerald-500" />,
+  events: <Calendar className="w-12 h-12 text-amber-500" />,
+  faculty: <Users className="w-12 h-12 text-primary" />,
+  search: <Search className="w-12 h-12 text-muted-foreground" />,
+  default: <Sparkles className="w-12 h-12 text-primary" />,
 };
 
 export function EmptyState({
@@ -35,42 +36,45 @@ export function EmptyState({
   secondaryAction,
   className,
 }: EmptyStateProps) {
+  const renderActionButton = (act: EmptyAction, isSecondary = false) => {
+    const btnClass = cn(
+      'w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all duration-200 inline-flex items-center justify-center shadow-sm',
+      isSecondary
+        ? 'text-foreground bg-muted border border-border hover:bg-muted/80'
+        : act.variant === 'cyan'
+        ? 'bg-cyan-500 text-slate-950 hover:bg-cyan-400'
+        : 'bg-primary text-white hover:bg-primary/90'
+    );
+
+    if (act.href) {
+      return (
+        <Link href={act.href} className={btnClass}>
+          {act.label}
+        </Link>
+      );
+    }
+
+    return (
+      <button onClick={act.onClick} className={btnClass}>
+        {act.label}
+      </button>
+    );
+  };
+
   return (
-    <div className={cn('flex flex-col items-center justify-center py-16 px-6 text-center', className)}>
-      <div className={cn(
-        'relative w-20 h-20 rounded-2xl flex items-center justify-center mb-6 border border-dashed border-slate-700/50',
-        'bg-gradient-to-br from-space-800/50 to-space-900/50'
-      )}>
-        <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan/10 to-neon-emerald/10 rounded-2xl" />
+    <div className={cn('flex flex-col items-center justify-center py-14 px-6 text-center bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-xs', className)}>
+      <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center mb-5 border border-dashed border-border bg-muted/60">
+        <div className="absolute inset-0 bg-primary/5 rounded-2xl" />
         {icon || iconMap.default}
       </div>
-      <h3 className="text-lg font-semibold text-slate-100 mb-2">{title}</h3>
+      <h3 className="text-lg font-bold text-foreground mb-1.5">{title}</h3>
       {description && (
-        <p className="text-slate-400 text-sm max-w-sm mb-6">{description}</p>
+        <p className="text-muted-foreground text-xs sm:text-sm max-w-md mb-6 leading-relaxed">{description}</p>
       )}
       {(action || secondaryAction) && (
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-xs">
-          {action && (
-            <button
-              onClick={action.onClick}
-              className={cn(
-                'w-full sm:w-auto px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-200',
-                action.variant === 'cyan'
-                  ? 'bg-neon-cyan text-space-950 hover:bg-neon-cyan/90'
-                  : 'bg-brand-500 text-white hover:bg-brand-600'
-              )}
-            >
-              {action.label}
-            </button>
-          )}
-          {secondaryAction && (
-            <button
-              onClick={secondaryAction.onClick}
-              className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-medium text-sm text-slate-300 bg-space-800/60 border border-slate-700/50 hover:bg-space-700/80 hover:text-white transition-all duration-200"
-            >
-              {secondaryAction.label}
-            </button>
-          )}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 w-full max-w-sm">
+          {action && renderActionButton(action, false)}
+          {secondaryAction && renderActionButton(secondaryAction, true)}
         </div>
       )}
     </div>
@@ -88,8 +92,8 @@ export function EmptyStatePreset({
   type: 'achievements' | 'students' | 'events' | 'faculty' | 'search' | 'default';
   title?: string;
   description?: string;
-  action?: EmptyStateProps['action'];
-  secondaryAction?: EmptyStateProps['secondaryAction'];
+  action?: EmptyAction;
+  secondaryAction?: EmptyAction;
   className?: string;
 }) {
   const presets = {

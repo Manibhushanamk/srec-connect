@@ -37,7 +37,7 @@ async function getStudents(searchParams: {
   const limit = 12;
   const skip = (page - 1) * limit;
 
-  const where: any = { isActive: true };
+  const where: any = { isActive: true, deletedAt: null };
 
   if (searchParams.department && searchParams.department !== 'all') {
     where.departmentId = searchParams.department;
@@ -72,13 +72,13 @@ async function getStudents(searchParams: {
       prisma.student.count({ where }),
       prisma.department.findMany({ where: { isActive: true }, orderBy: { displayOrder: 'asc' } }),
       prisma.student.findMany({
-        where: { isActive: true },
+        where: { isActive: true, deletedAt: null },
         select: { batch: true },
         distinct: ['batch'],
         orderBy: { batch: 'desc' },
       }),
       prisma.student.findMany({
-        where: { isActive: true },
+        where: { isActive: true, deletedAt: null },
         select: { section: true },
         distinct: ['section'],
         orderBy: { section: 'asc' },
@@ -143,106 +143,108 @@ export default async function StudentsPage({
             <GraduationCap className="w-3.5 h-3.5 mr-1.5" />
             Students Directory
           </Badge>
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-100">Student Profiles</h1>
-          <p className="mt-2 text-slate-400">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">Student Profiles</h1>
+          <p className="mt-2 text-muted-foreground font-medium">
             {data.total} {data.total === 1 ? 'student' : 'students'} enrolled across all departments
           </p>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        <aside className="lg:w-64 flex-shrink-0 space-y-6">
-          <StudentsFilterBar
-            departments={data.departments}
-            batches={data.batches}
-            sections={data.sections}
-          />
-        </aside>
+      {/* Top Horizontal Filter Bar */}
+      <StudentsFilterBar
+        departments={data.departments}
+        batches={data.batches}
+        sections={data.sections}
+      />
 
-        <main className="flex-1 min-w-0">
-          {data.students.length === 0 ? (
-            <EmptyStatePreset type="students" />
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                {data.students.map((student) => (
-                  <Link key={student.id} href={`/students/${student.id}`} className="group">
-                    <Card variant="bento" hover className="h-full">
-                      <CardContent className="p-5">
-                        <div className="flex items-start gap-4 mb-4">
-                          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                            {student.avatarUrl ? (
-                              <img src={student.avatarUrl} alt={student.name} className="w-16 h-16 rounded-xl object-cover" />
-                            ) : (
-                              <span className="text-white text-2xl font-bold">{student.name.charAt(0)}</span>
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-slate-100 truncate group-hover:text-emerald-400 transition-colors">
-                              {student.name}
-                            </h3>
-                            <p className="text-sm text-slate-400">{student.rollNumber}</p>
-                          </div>
-                        </div>
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          <Badge variant="cyan" size="sm">{student.department?.shortName || 'N/A'}</Badge>
-                          <Badge variant="brand" size="sm">{student.batch}</Badge>
-                          <Badge variant="slate" size="sm">Sec {student.section}</Badge>
-                        </div>
-                        <div className="space-y-2 text-sm text-slate-500">
-                          {student.email && (
-                            <div className="flex items-center gap-2">
-                              <Mail className="w-3.5 h-3.5 flex-shrink-0" />
-                              <span className="truncate">{student.email}</span>
-                            </div>
-                          )}
-                          {student.phone && (
-                            <div className="flex items-center gap-2">
-                              <Phone className="w-3.5 h-3.5 flex-shrink-0" />
-                              <span>{student.phone}</span>
-                            </div>
+      <main className="w-full">
+        {data.students.length === 0 ? (
+          <EmptyStatePreset type="students" />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-6 mb-6">
+              {data.students.map((student) => (
+                <Link key={student.id} href={`/students/${student.rollNumber || student.id}`} className="group">
+                  <Card variant="bento" hover className="h-full">
+                    <CardContent className="p-5">
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform shadow-md">
+                          {student.avatarUrl ? (
+                            <img src={student.avatarUrl} alt={student.name} className="w-14 h-14 rounded-2xl object-cover" />
+                          ) : (
+                            <span className="text-white text-xl font-bold">{student.name.charAt(0)}</span>
                           )}
                         </div>
-                        <div className="mt-4 pt-3 border-t border-slate-800/50 flex items-center justify-between">
-                          <Badge variant="emerald" size="sm" className="gap-1">
-                            <Award className="w-3 h-3" />
-                            {student.primaryAchievements.length} honors
-                          </Badge>
-                          <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-brand-400 transition-colors" />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-foreground text-sm sm:text-base group-hover:text-emerald-500 transition-colors line-clamp-1">
+                            {student.name}
+                          </h3>
+                          <span className="inline-block mt-0.5 font-mono text-xs font-semibold px-2 py-0.5 rounded bg-muted text-foreground border border-border">
+                            {student.rollNumber}
+                          </span>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        <Badge variant="cyan" size="sm">{student.department?.shortName || student.department?.name || 'CSE'}</Badge>
+                        <Badge variant="brand" size="sm">{student.batch || '2022-2026'}</Badge>
+                        <Badge variant="slate" size="sm">Sec {student.section || 'A'}</Badge>
+                      </div>
+                      <div className="space-y-1.5 text-xs text-muted-foreground">
+                        {student.email && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
+                            <span className="truncate">{student.email}</span>
+                          </div>
+                        )}
+                        {student.phone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
+                            <span>{student.phone}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
+                        <Badge variant="emerald" size="sm" className="gap-1">
+                          <Award className="w-3 h-3" />
+                          {student.primaryAchievements.length} honors
+                        </Badge>
+                        <span className="text-xs font-medium text-emerald-500 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                          <span>Portfolio</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-4">
+                {currentPage > 1 && (
+                  <Link href={buildUrl({ page: String(currentPage - 1) })}>
+                    <Button variant="secondary" size="sm">
+                      <ChevronDown className="w-4 h-4 rotate-180" />
+                      Previous
+                    </Button>
                   </Link>
-                ))}
+                )}
+                <span className="px-4 text-xs text-muted-foreground">
+                  Page {currentPage} of {totalPages}
+                </span>
+                {currentPage < totalPages && (
+                  <Link href={buildUrl({ page: String(currentPage + 1) })}>
+                    <Button variant="secondary" size="sm">
+                      Next
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </Link>
+                )}
               </div>
-
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2">
-                  {currentPage > 1 && (
-                    <Link href={buildUrl({ page: String(currentPage - 1) })}>
-                      <Button variant="secondary" size="sm">
-                        <ChevronDown className="w-4 h-4 rotate-180" />
-                        Previous
-                      </Button>
-                    </Link>
-                  )}
-                  <span className="px-4 text-sm text-slate-400">
-                    Page {currentPage} of {totalPages}
-                  </span>
-                  {currentPage < totalPages && (
-                    <Link href={buildUrl({ page: String(currentPage + 1) })}>
-                      <Button variant="secondary" size="sm">
-                        Next
-                        <ChevronDown className="w-4 h-4" />
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-              )}
-            </>
-          )}
-        </main>
-      </div>
+            )}
+          </>
+        )}
+      </main>
     </div>
   );
 }

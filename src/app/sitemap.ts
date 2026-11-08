@@ -32,7 +32,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // 3. Dynamic student portfolio routes
     const students = await prisma.student.findMany({
-      where: { isActive: true },
+      where: { isActive: true, deletedAt: null },
       select: { rollNumber: true, updatedAt: true },
       take: 100,
     });

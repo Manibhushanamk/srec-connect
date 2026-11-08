@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import {
   Shield,
   Crown,
@@ -27,6 +28,7 @@ import {
   Layers,
   ChevronRight,
   Sliders,
+  LogOut,
 } from 'lucide-react';
 
 interface ProfileWorkspaceProps {
@@ -287,6 +289,16 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
               >
                 <Sliders className="w-3.5 h-3.5" />
                 <span>Customize</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: '/signin' })}
+                className="text-xs py-2 px-3.5 flex items-center justify-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-semibold transition-all flex-1 sm:flex-initial"
+                title="Log out of SREC Connect"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Log Out</span>
               </button>
             </div>
           </div>
@@ -750,9 +762,49 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                 </span>
               </div>
             </div>
+
+            <div className="mt-6 pt-5 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h5 className="text-xs font-bold text-rose-400 uppercase tracking-wider">Active Authentication Session</h5>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Terminate your active authenticated session on this browser.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: '/signin' })}
+                className="px-4 py-2 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center gap-2 shadow-sm transition-colors whitespace-nowrap"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Log Out of SREC Connect</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
+
+      {/* Global Quick Session Logout Bar */}
+      <div className="mt-8 p-4 rounded-2xl border border-rose-500/20 bg-rose-500/5 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 shrink-0">
+            <LogOut className="w-4 h-4" />
+          </div>
+          <div>
+            <h4 className="text-xs font-bold text-foreground">Sign Out of Campus Session</h4>
+            <p className="text-[11px] text-muted-foreground">
+              Signed in as <span className="font-semibold text-foreground">{initialUser.email}</span>. Click to securely terminate your session.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => signOut({ callbackUrl: '/signin' })}
+          className="w-full sm:w-auto px-4 py-2 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center gap-1.5 shadow-sm transition-all whitespace-nowrap"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span>Log Out</span>
+        </button>
+      </div>
     </div>
   );
 };

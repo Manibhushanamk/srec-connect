@@ -122,6 +122,7 @@ export const authOptions: NextAuthOptions = {
           id: true,
           role: true,
           status: true,
+          deletedAt: true,
         },
       });
 
@@ -145,9 +146,9 @@ export const authOptions: NextAuthOptions = {
         return '/access-denied?reason=not_provisioned';
       }
 
-      // 3. Account Suspension Guard
-      if (dbUser.status === 'SUSPENDED') {
-        console.warn(`[Auth] Suspended user sign-in attempt: ${normalizedEmail}`);
+      // 3. Account Suspension / Soft-Delete Guard
+      if (dbUser.deletedAt || dbUser.status === 'SUSPENDED') {
+        console.warn(`[Auth] Inactive/Deleted user sign-in attempt: ${normalizedEmail}`);
         return '/access-denied?reason=account_suspended';
       }
 

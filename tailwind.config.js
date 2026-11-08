@@ -56,6 +56,22 @@ module.exports = {
           800: '#1e3a8a',
           900: '#1e3a5f',
         },
+        'neon-cyan': {
+          DEFAULT: '#06b6d4',
+          500: '#06b6d4',
+        },
+        'neon-emerald': {
+          DEFAULT: '#10b981',
+          500: '#10b981',
+        },
+        'neon-amber': {
+          DEFAULT: '#f59e0b',
+          500: '#f59e0b',
+        },
+        'neon-rose': {
+          DEFAULT: '#f43f5e',
+          500: '#f43f5e',
+        },
         space: {
           950: '#030712',
           900: '#0b1120',

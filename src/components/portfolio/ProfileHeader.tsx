@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { CheckCircle2, Shield, Award, Calendar, ExternalLink, MapPin, Mail, Github, Linkedin, Plus, Share2 } from 'lucide-react';
 
 export interface ProfileHeaderProps {
@@ -94,19 +95,40 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           <div className="flex items-center gap-2.5 flex-wrap">
             {isOwner ? (
               <>
-                <button className="btn-primary text-xs py-2 px-3.5">
+                <Link
+                  href="/dashboard/student/submit"
+                  className="btn-primary text-xs py-2 px-3.5 inline-flex items-center gap-1.5"
+                >
                   <Plus className="w-3.5 h-3.5" /> Submit Achievement
-                </button>
-                <button className="btn-secondary text-xs py-2 px-3.5">
+                </Link>
+                <Link
+                  href="/profile"
+                  className="btn-secondary text-xs py-2 px-3.5 inline-flex items-center gap-1.5"
+                >
                   Edit Portfolio
-                </button>
+                </Link>
               </>
             ) : (
-              <button className="btn-primary text-xs py-2 px-4">
+              <button
+                onClick={() => {
+                  if (email) {
+                    navigator.clipboard.writeText(email);
+                    alert(`Copied institutional email to clipboard: ${email}`);
+                  }
+                }}
+                className="btn-primary text-xs py-2 px-4"
+              >
                 Connect
               </button>
             )}
-            <button className="btn-secondary text-xs py-2 px-3" aria-label="Share Profile">
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(window.location.href);
+                alert('Profile link copied to clipboard!');
+              }}
+              className="btn-secondary text-xs py-2 px-3"
+              aria-label="Share Profile"
+            >
               <Share2 className="w-4 h-4" />
             </button>
           </div>

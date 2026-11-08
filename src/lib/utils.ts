@@ -26,6 +26,21 @@ export function formatDateTime(date: Date | string): string {
   });
 }
 
+export function formatTimeAgo(date: Date | string): string {
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return typeof date === 'string' ? date : '';
+  const now = new Date();
+  const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+  if (diffSec < 60) return 'Just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return formatDate(d);
+}
+
 export function slugify(text: string): string {
   return text
     .toLowerCase()

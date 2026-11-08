@@ -41,11 +41,11 @@ async function getFacultyData(facultyId: string) {
       include: { department: true, user: true },
     }),
     prisma.achievement.findMany({
-      where: { facultyId },
+      where: { facultyId, deletedAt: null },
       include: { category: true, department: true, media: { where: { isCover: true }, take: 1 } },
       orderBy: { achievementDate: 'desc' },
     }),
-    prisma.achievement.count({ where: { facultyId, status: 'PENDING' } }),
+    prisma.achievement.count({ where: { facultyId, status: 'PENDING', deletedAt: null } }),
   ]);
 
   return { faculty, achievements, pendingCount };
@@ -169,8 +169,7 @@ export default async function FacultyDashboardPage() {
               type="achievements" 
               title="No Research Records Yet"
               description="Start building your academic portfolio by adding publications, patents, and guided projects."
-              action={{ label: 'Add Your First Record', onClick: () => {}, variant: 'primary' }}
-              secondaryAction={{ label: 'Add Your First Record', onClick: () => {} }}
+              action={{ label: 'Add Your First Record', href: '/dashboard/faculty/submit', variant: 'primary' }}
             />
           ) : (
             <div className="space-y-3">

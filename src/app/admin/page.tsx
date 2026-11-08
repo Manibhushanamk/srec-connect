@@ -44,6 +44,7 @@ import {
   MapPin,
   Mail,
   Phone,
+  Trash2,
 } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -68,7 +69,7 @@ const MODULES = [
   { key: 'analytics', label: 'Analytics Hub', icon: BarChart3, href: '/admin/analytics', description: 'Momentum, trends & department comparisons', roles: ['ROOT'] },
   { key: 'students', label: 'Student Portfolios', icon: GraduationCap, href: '/students', description: 'Verified academic portfolios', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
   { key: 'faculty', label: 'Faculty Directory', icon: Briefcase, href: '/faculty', description: 'Faculty profiles & research areas', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
-  { key: 'departments', label: 'Academic Departments', icon: Building2, href: '/departments', description: 'SREC engineering departments', roles: ['ROOT', 'DEPARTMENT'] },
+  { key: 'trash', label: 'Trash & System Recovery', icon: Trash2, href: '/admin/trash', description: 'Soft-deleted entities, recovery & permanent hard purge', roles: ['ROOT'] },
   { key: 'settings', label: 'Profile & Settings', icon: Crown, href: '/profile', description: 'Admin profile & institutional settings', roles: ['ROOT'] },
 ];
 
@@ -128,6 +129,9 @@ export default async function AdminPage() {
   }
 
   const userRole = user.role;
+  if (userRole === 'FACULTY') {
+    redirect('/admin/achievements');
+  }
   const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || Boolean(user.isRoot);
   const isRoot = isSuperAdmin;
   const userDepartmentId = user.departmentId;

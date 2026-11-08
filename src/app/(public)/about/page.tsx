@@ -40,20 +40,6 @@ const ACCREDITATIONS = [
   { name: 'ISO 9001:2015', icon: Shield, description: 'Quality Management System Certified', color: 'rose' },
 ];
 
-const DEPARTMENTS_DATA = [
-  { code: 'AIML', name: 'Artificial Intelligence & Machine Learning', shortName: 'AIML', icon: Brain, color: 'from-violet-500 to-purple-500', intake: 60, established: 2022 },
-  { code: 'CSE', name: 'Computer Science & Engineering', shortName: 'CSE', icon: Code, color: 'from-brand-500 to-cyan-500', intake: 180, established: 2007 },
-  { code: 'CSD', name: 'CSE (Data Science)', shortName: 'CSD', icon: Brain, color: 'from-emerald-500 to-teal-500', intake: 60, established: 2021 },
-  { code: 'CSG', name: 'CSE (Cyber Security)', shortName: 'CSG', icon: Shield, color: 'from-rose-500 to-red-500', intake: 60, established: 2021 },
-  { code: 'CSIT', name: 'CSE & Information Technology', shortName: 'CSIT', icon: Globe, color: 'from-sky-500 to-blue-500', intake: 60, established: 2011 },
-  { code: 'ECE', name: 'Electronics & Communication Engineering', shortName: 'ECE', icon: Zap, color: 'from-amber-500 to-orange-500', intake: 120, established: 2007 },
-  { code: 'EEE', name: 'Electrical & Electronics Engineering', shortName: 'EEE', icon: Zap, color: 'from-yellow-500 to-amber-500', intake: 60, established: 2007 },
-  { code: 'MECH', name: 'Mechanical Engineering', shortName: 'MECH', icon: Target, color: 'from-slate-500 to-gray-500', intake: 60, established: 2007 },
-  { code: 'CIVIL', name: 'Civil Engineering', shortName: 'CIVIL', icon: Building2, color: 'from-stone-500 to-amber-500', intake: 60, established: 2007 },
-  { code: 'MBA', name: 'Master of Business Administration', shortName: 'MBA', icon: TrendingUp, color: 'from-emerald-500 to-green-500', intake: 60, established: 2009 },
-  { code: 'MCA', name: 'Master of Computer Applications', shortName: 'MCA', icon: Code, color: 'from-indigo-500 to-violet-500', intake: 60, established: 2009 },
-];
-
 const GOVERNANCE_TIERS = [
   {
     tier: 'Tier 1',
@@ -111,27 +97,6 @@ export default function AboutPage() {
                 <h3 className="text-xl font-semibold text-slate-100 mb-2">{acc.name}</h3>
                 <p className="text-slate-400">{acc.description}</p>
                 <CheckCircle className="w-6 h-6 text-emerald-400 mx-auto mt-4" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      <section id="departments" aria-labelledby="departments-heading">
-        <h2 id="departments-heading" className="text-3xl font-bold text-slate-100 mb-8 text-center">11 Academic Departments</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {DEPARTMENTS_DATA.map((dept) => (
-            <Card key={dept.code} variant="bento" hover className="group">
-              <CardContent className="p-5">
-                <div className={cn('w-12 h-12 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform', `bg-gradient-to-br ${dept.color}`)}>
-                  <dept.icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="font-semibold text-slate-100 mb-1">{dept.name}</h3>
-                <p className="text-sm text-slate-500 mb-3">{dept.shortName} • Est. {dept.established}</p>
-                <div className="flex flex-wrap gap-1">
-                  <Badge variant="slate" size="sm">{dept.intake} Seats</Badge>
-                  <Badge variant="cyan" size="sm">UG/PG</Badge>
-                </div>
               </CardContent>
             </Card>
           ))}

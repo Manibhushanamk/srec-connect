@@ -27,13 +27,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     const baseStyles = 'inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-space-900 disabled:opacity-50 disabled:cursor-not-allowed';
     
     const variants = {
-      primary: 'bg-brand-500 text-white hover:bg-brand-600 active:bg-brand-700 focus:ring-brand-500/50 shadow-brand-500/20',
-      secondary: 'bg-space-800/60 text-slate-100 border border-slate-700/50 hover:bg-space-700/80 hover:border-brand-500/50 focus:ring-brand-500/50',
-      cyan: 'bg-neon-cyan text-space-950 hover:bg-neon-cyan/90 active:bg-neon-cyan focus:ring-neon-cyan/50 shadow-neon-cyan/20',
-      outline: 'bg-transparent text-slate-300 border border-slate-700/50 hover:bg-space-800/50 hover:text-white hover:border-brand-500/50 focus:ring-brand-500/50',
-      danger: 'bg-neon-rose text-white hover:bg-neon-rose/90 active:bg-neon-rose focus:ring-neon-rose/50 shadow-neon-rose/20',
-      success: 'bg-neon-emerald text-white hover:bg-neon-emerald/90 active:bg-neon-emerald focus:ring-neon-emerald/50 shadow-neon-emerald/20',
-      ghost: 'bg-transparent text-slate-300 hover:bg-space-800/50 hover:text-white focus:ring-brand-500/50',
+      primary: 'bg-primary text-white hover:bg-primary/90 active:bg-primary/80 focus:ring-primary/50 shadow-sm font-semibold',
+      secondary: 'bg-secondary text-secondary-foreground border border-border hover:bg-muted focus:ring-primary/50 font-semibold',
+      cyan: 'bg-cyan-500 text-slate-950 hover:bg-cyan-400 active:bg-cyan-600 focus:ring-cyan-500/50 shadow-sm font-semibold',
+      outline: 'bg-transparent text-foreground border border-border hover:bg-muted focus:ring-primary/50 font-medium',
+      danger: 'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 focus:ring-rose-500/50 shadow-sm font-semibold',
+      success: 'bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 focus:ring-emerald-500/50 shadow-sm font-semibold',
+      ghost: 'bg-transparent text-foreground/80 hover:bg-muted hover:text-foreground focus:ring-primary/50',
     };
 
     const sizes = {

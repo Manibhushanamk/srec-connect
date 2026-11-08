@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { StoryHighlights } from '@/components/social/StoryHighlights';
 import { FeedCard, FeedPostProps } from '@/components/social/FeedCard';
+import { FeedCardSkeleton } from '@/components/ui/Skeleton';
 import { PostComposer } from '@/components/social/PostComposer';
 import { ProfileHeader } from '@/components/portfolio/ProfileHeader';
 import {
@@ -128,14 +129,21 @@ export default function HomePage() {
         if (res.ok) {
           const data = await res.json();
           if (data.posts && data.posts.length > 0) {
-            setPosts(data.posts);
+            // Merge live posts with fallback showcase posts so feed is always rich and engaging
+            const combined = [...data.posts];
+            for (const fb of FALLBACK_POSTS) {
+              if (!combined.some((p) => p.id === fb.id)) {
+                combined.push(fb);
+              }
+            }
+            setPosts(combined);
           } else {
-            // Keep fallback posts if database currently has 0 posts
             setPosts(FALLBACK_POSTS);
           }
         }
       } catch (err) {
         console.warn('Could not fetch live posts, displaying fallback:', err);
+        setPosts(FALLBACK_POSTS);
       } finally {
         setIsLoading(false);
       }
@@ -168,7 +176,9 @@ export default function HomePage() {
 
   const filteredPosts = posts.filter((post) => {
     if (feedFilter === 'ALL') return true;
-    return post.author.role === feedFilter;
+    if (feedFilter === 'STUDENT') return post.author.role === 'STUDENT';
+    if (feedFilter === 'FACULTY') return post.author.role === 'FACULTY' || post.author.role === 'HOD';
+    return true;
   });
 
   return (
@@ -179,82 +189,115 @@ export default function HomePage() {
       {/* 2. Interactive Post Composer */}
       <PostComposer onPostCreated={handlePostCreated} />
 
-      {/* 3. Instagram / LinkedIn Feed Tabs */}
-      <div className="flex items-center justify-between border-b border-border pb-2 px-1">
-        <div className="flex gap-2">
+      {/* 3. Modern Segmented Tab Bar */}
+      <div className="bg-card/70 dark:bg-space-850/70 backdrop-blur-md rounded-2xl p-1.5 border border-border/70 shadow-xs">
+        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveTab('FEED')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs whitespace-nowrap transition-all duration-200 ${
               activeTab === 'FEED'
-                ? 'bg-primary text-white shadow-xs'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                ? 'bg-primary text-white shadow-sm font-semibold'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/80 font-medium'
             }`}
           >
-            Department Feed
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Department Feed</span>
           </button>
           <button
             onClick={() => setActiveTab('PORTFOLIOS')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs whitespace-nowrap transition-all duration-200 ${
               activeTab === 'PORTFOLIOS'
-                ? 'bg-primary text-white shadow-xs'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                ? 'bg-primary text-white shadow-sm font-semibold'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/80 font-medium'
             }`}
           >
-            Verified Portfolios
+            <Award className="w-3.5 h-3.5" />
+            <span>Verified Portfolios</span>
           </button>
           <button
             onClick={() => setActiveTab('DEPARTMENT')}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs whitespace-nowrap transition-all duration-200 ${
               activeTab === 'DEPARTMENT'
-                ? 'bg-primary text-white shadow-xs'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                ? 'bg-primary text-white shadow-sm font-semibold'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/80 font-medium'
             }`}
           >
-            About CSE (AI & ML)
+            <Brain className="w-3.5 h-3.5" />
+            <span>About CSE (AI & ML)</span>
           </button>
         </div>
-
-        {activeTab === 'FEED' && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <button
-              onClick={() => setFeedFilter('ALL')}
-              className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
-                feedFilter === 'ALL' ? 'bg-secondary text-foreground font-semibold shadow-xs' : 'hover:text-foreground'
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setFeedFilter('STUDENT')}
-              className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
-                feedFilter === 'STUDENT' ? 'bg-secondary text-foreground font-semibold shadow-xs' : 'hover:text-foreground'
-              }`}
-            >
-              Students
-            </button>
-            <button
-              onClick={() => setFeedFilter('FACULTY')}
-              className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
-                feedFilter === 'FACULTY' ? 'bg-secondary text-foreground font-semibold shadow-xs' : 'hover:text-foreground'
-              }`}
-            >
-              Faculty
-            </button>
-          </div>
-        )}
       </div>
+
+      {/* 3b. Audience Filter Bar (Shown when viewing Feed) */}
+      {activeTab === 'FEED' && (
+        <div className="flex items-center justify-between px-1 pt-1 pb-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+              <Filter className="w-3 h-3 text-primary" />
+              <span>Filter:</span>
+            </span>
+            <div className="inline-flex items-center p-0.5 rounded-lg bg-muted/60 dark:bg-space-800/80 border border-border/50">
+              <button
+                onClick={() => setFeedFilter('ALL')}
+                className={`whitespace-nowrap px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                  feedFilter === 'ALL'
+                    ? 'bg-background text-foreground font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                All Posts
+              </button>
+              <button
+                onClick={() => setFeedFilter('STUDENT')}
+                className={`whitespace-nowrap px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                  feedFilter === 'STUDENT'
+                    ? 'bg-background text-foreground font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Students
+              </button>
+              <button
+                onClick={() => setFeedFilter('FACULTY')}
+                className={`whitespace-nowrap px-2.5 py-1 rounded-md text-xs font-medium transition-all ${
+                  feedFilter === 'FACULTY'
+                    ? 'bg-background text-foreground font-semibold shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Faculty
+              </button>
+            </div>
+          </div>
+          <span className="text-[11px] text-muted-foreground hidden sm:inline">
+            {filteredPosts.length} post{filteredPosts.length === 1 ? '' : 's'}
+          </span>
+        </div>
+      )}
 
       {/* 4. Tab 1: Department Community Feed */}
       {activeTab === 'FEED' && (
         <div className="space-y-4">
-          {isLoading && (
-            <div className="text-center py-4 text-xs font-mono text-cyan-500 animate-pulse">
-              Syncing live feed...
+          {isLoading ? (
+            <div className="space-y-4 animate-in fade-in duration-200">
+              <FeedCardSkeleton />
+              <FeedCardSkeleton />
             </div>
+          ) : filteredPosts.length === 0 ? (
+            <div className="social-card p-10 text-center space-y-3 bg-card border border-border rounded-2xl">
+              <div className="w-12 h-12 rounded-2xl bg-muted/80 flex items-center justify-center mx-auto text-muted-foreground">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-semibold text-foreground">No posts found</h3>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                No posts match the selected filter. Try selecting &quot;All Posts&quot; or share an update with the department!
+              </p>
+            </div>
+          ) : (
+            filteredPosts.map((post) => (
+              <FeedCard key={post.id} {...post} />
+            ))
           )}
-          {filteredPosts.map((post) => (
-            <FeedCard key={post.id} {...post} />
-          ))}
         </div>
       )}
 

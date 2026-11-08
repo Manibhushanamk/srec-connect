@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     const categoryParam = searchParams.get('category');
     const priorityParam = searchParams.get('priority');
 
-    const where: any = {};
+    const where: any = { deletedAt: null };
 
     if (statusParam && statusParam !== 'ALL') {
       where.status = statusParam as IncidentStatus;

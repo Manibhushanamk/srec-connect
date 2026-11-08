@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
       prisma.student.findMany({
         where: {
           isActive: true,
+          deletedAt: null,
           OR: [
             { rollNumber: { contains: query, mode: 'insensitive' } },
             { name: { contains: query, mode: 'insensitive' } },
@@ -42,6 +43,7 @@ export async function GET(req: NextRequest) {
       prisma.faculty.findMany({
         where: {
           isActive: true,
+          deletedAt: null,
           OR: [
             { name: { contains: query, mode: 'insensitive' } },
             { designation: { contains: query, mode: 'insensitive' } },
@@ -82,6 +84,7 @@ export async function GET(req: NextRequest) {
       // 4. Search Posts
       prisma.post.findMany({
         where: {
+          deletedAt: null,
           content: { contains: query, mode: 'insensitive' },
         },
         include: {

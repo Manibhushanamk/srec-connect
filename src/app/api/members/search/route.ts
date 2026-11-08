@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
     const users = await prisma.user.findMany({
       where: {
         status: 'ACTIVE',
+        deletedAt: null,
         OR: [
           { name: { contains: q, mode: 'insensitive' } },
           { email: { contains: lowerQ } },

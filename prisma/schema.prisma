@@ -251,6 +251,7 @@ model Post {
   isPinned     Boolean        @default(false)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
   
   media        PostMedia[]
   comments     PostComment[]
@@ -265,6 +266,7 @@ model Post {
   @@index([authorId])
   @@index([createdAt])
   @@index([visibility])
+  @@index([deletedAt])
 }
 
 model PostMedia {
@@ -612,6 +614,7 @@ model Incident {
   status            IncidentStatus     @default(REPORTED)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
+  deletedAt         DateTime?
 
   responses         IncidentResponse[]
   actions           IncidentAction[]
@@ -620,6 +623,7 @@ model Incident {
   @@index([studentId])
   @@index([status])
   @@index([isConfidentialHOD])
+  @@index([deletedAt])
 }
 
 model IncidentResponse {
@@ -758,12 +762,14 @@ model Announcement {
   expiresAt    DateTime?
   createdAt    DateTime               @default(now())
   updatedAt    DateTime               @updatedAt
+  deletedAt    DateTime?
 
   notifications Notification[]
 
   @@index([targetRole])
   @@index([batch])
   @@index([createdAt])
+  @@index([deletedAt])
 }
 
 model Notification {

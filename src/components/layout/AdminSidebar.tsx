@@ -30,6 +30,7 @@ import {
   Briefcase,
   Database,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { getVisibleMenuGroups, PermissionContext } from '@/lib/rbac';
@@ -82,6 +83,13 @@ const MENU_GROUPS = {
       { href: '/admin/notices', label: 'Announcements', icon: Bell },
     ],
   },
+  trash: {
+    label: 'System Recovery',
+    icon: Trash2,
+    items: [
+      { href: '/admin/trash', label: 'Trash Management', icon: Trash2 },
+    ],
+  },
   portals: {
     label: 'Campus Portals',
     icon: Building2,
@@ -89,7 +97,6 @@ const MENU_GROUPS = {
       { href: '/', label: 'Campus Feed', icon: LayoutDashboard },
       { href: '/students', label: 'Student Directory', icon: GraduationCap },
       { href: '/faculty', label: 'Faculty Directory', icon: Briefcase },
-      { href: '/departments', label: 'Departments', icon: Building2 },
     ],
   },
   profile: {
@@ -238,27 +245,86 @@ export function AdminSidebar({ className }: { className?: string } = {}) {
             Quick Actions
           </p>
           <div className="space-y-1.5">
-            <Link
-              href="/admin/achievements?status=PENDING"
-              className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
-            >
-              <AlertTriangle className="w-4 h-4 text-amber-400" />
-              <span>Review Pending</span>
-            </Link>
-            <Link
-              href="/admin/bulk-upload"
-              className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
-            >
-              <Upload className="w-4 h-4 text-cyan-400" />
-              <span>Bulk Upload</span>
-            </Link>
-            <Link
-              href="/admin/users"
-              className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
-            >
-              <Users className="w-4 h-4 text-emerald-400" />
-              <span>User Directory</span>
-            </Link>
+            {userRole === 'STUDENT' ? (
+              <>
+                <Link
+                  href="/dashboard/student/submit"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <Award className="w-4 h-4 text-cyan-400" />
+                  <span>Submit Achievement</span>
+                </Link>
+                <Link
+                  href="/dashboard/student"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <LayoutDashboard className="w-4 h-4 text-brand-400" />
+                  <span>Student Dashboard</span>
+                </Link>
+                <Link
+                  href="/students"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <GraduationCap className="w-4 h-4 text-emerald-400" />
+                  <span>Student Directory</span>
+                </Link>
+              </>
+            ) : userRole === 'FACULTY' ? (
+              <>
+                <Link
+                  href="/admin/achievements"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <Award className="w-4 h-4 text-cyan-400" />
+                  <span>Verification Desk</span>
+                </Link>
+                <Link
+                  href="/dashboard/faculty/submit"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <Upload className="w-4 h-4 text-emerald-400" />
+                  <span>Submit Record</span>
+                </Link>
+                <Link
+                  href="/dashboard/faculty"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <LayoutDashboard className="w-4 h-4 text-brand-400" />
+                  <span>Faculty Dashboard</span>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/admin/achievements?status=PENDING"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  <span>Review Pending</span>
+                </Link>
+                <Link
+                  href="/admin/bulk-upload"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <Upload className="w-4 h-4 text-cyan-400" />
+                  <span>Bulk Upload</span>
+                </Link>
+                <Link
+                  href="/admin/users"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <Users className="w-4 h-4 text-emerald-400" />
+                  <span>User Directory</span>
+                </Link>
+                <Link
+                  href="/admin/trash"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-400" />
+                  <span>Trash Recovery</span>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -269,8 +335,12 @@ export function AdminSidebar({ className }: { className?: string } = {}) {
             <Crown className="w-4 h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-slate-100 truncate">SREC Connect v3.0</p>
-            <p className="text-[10px] text-slate-400">Institutional Console</p>
+            <p className="text-xs font-semibold text-slate-100 truncate">
+              {userRole === 'STUDENT' ? 'Student Workspace' : userRole === 'FACULTY' ? 'Faculty Portal' : 'SREC Connect v3.0'}
+            </p>
+            <p className="text-[10px] text-slate-400">
+              {userRole === 'STUDENT' ? 'Academic Honors Center' : userRole === 'FACULTY' ? 'Research & Review Desk' : 'Institutional Console'}
+            </p>
           </div>
         </div>
       </div>

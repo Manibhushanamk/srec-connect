@@ -145,7 +145,13 @@ export interface PermissionContext {
 
 export function canAccessAdmin(user: AuthUserContext | null | undefined): boolean {
   if (!user || user.status !== 'ACTIVE') return false;
-  return user.role === 'SUPER_ADMIN' || user.role === 'HOD' || user.role === 'WEB_MANAGER' || user.role === 'ADMIN';
+  return (
+    user.role === 'SUPER_ADMIN' ||
+    user.role === 'HOD' ||
+    user.role === 'WEB_MANAGER' ||
+    user.role === 'ADMIN' ||
+    user.role === 'FACULTY'
+  );
 }
 
 export function getRoleLandingUrl(role?: string, email?: string): string {
@@ -158,8 +164,9 @@ export function getRoleLandingUrl(role?: string, email?: string): string {
     case 'WEB_MANAGER':
       return '/admin';
     case 'FACULTY':
-      return '/admin/achievements';
+      return '/dashboard/faculty';
     case 'STUDENT':
+      return '/dashboard/student';
     default:
       return '/';
   }
@@ -174,6 +181,7 @@ export function getVisibleMenuGroups(context: PermissionContext): string[] {
       'events',
       'discipline',
       'notices',
+      'trash',
       'portals',
       'profile',
     ];
@@ -201,5 +209,13 @@ export function getVisibleMenuGroups(context: PermissionContext): string[] {
       'profile',
     ];
   }
-  return ['overview', 'portals', 'profile'];
+  if (context.role === 'FACULTY') {
+    return [
+      'achievements',
+      'events',
+      'portals',
+      'profile',
+    ];
+  }
+  return ['portals', 'profile'];
 }

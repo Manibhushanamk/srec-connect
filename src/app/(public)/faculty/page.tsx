@@ -40,7 +40,7 @@ async function getFaculty(searchParams: {
   const limit = 12;
   const skip = (page - 1) * limit;
 
-  const where: any = { isActive: true };
+  const where: any = { isActive: true, deletedAt: null };
 
   if (searchParams.department && searchParams.department !== 'all') {
     where.departmentId = searchParams.department;
@@ -133,8 +133,8 @@ export default async function FacultyPage({
             <Briefcase className="w-3.5 h-3.5 mr-1.5" />
             Faculty & Research
           </Badge>
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-100">Faculty Directory</h1>
-          <p className="mt-2 text-slate-400">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">Faculty Directory</h1>
+          <p className="mt-2 text-muted-foreground font-medium">
             {data.total} {data.total === 1 ? 'faculty member' : 'faculty members'} across all departments
           </p>
         </div>
@@ -154,22 +154,20 @@ export default async function FacultyPage({
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        <aside className="lg:w-64 flex-shrink-0 space-y-6">
-          <FacultyFilterBar
-            departments={data.departments}
-            roleCategories={ROLE_CATEGORIES}
-          />
-        </aside>
+      {/* Top Horizontal Filter Bar */}
+      <FacultyFilterBar
+        departments={data.departments}
+        roleCategories={ROLE_CATEGORIES}
+      />
 
-        <main className="flex-1 min-w-0">
+      <main className="w-full">
           {data.faculty.length === 0 ? (
             <EmptyStatePreset type="faculty" />
           ) : viewMode === 'list' ? (
             <div className="table-container">
               <table className="w-full" role="table">
                 <thead>
-                  <tr className="border-b border-slate-800/50">
+                  <tr className="border-b border-border">
                     <th className="table-header">Faculty</th>
                     <th className="table-header">Designation</th>
                     <th className="table-header">Department</th>
@@ -190,8 +188,8 @@ export default async function FacultyPage({
                             )}
                           </div>
                           <div>
-                            <p className="font-medium text-slate-100">{member.name}</p>
-                            <p className="text-xs text-slate-500">{member.designation}</p>
+                            <p className="font-medium text-foreground">{member.name}</p>
+                            <p className="text-xs text-muted-foreground">{member.designation}</p>
                           </div>
                         </div>
                       </td>
@@ -201,11 +199,11 @@ export default async function FacultyPage({
                       <td className="table-cell">
                         <Badge variant="cyan" size="sm">{member.department?.shortName || 'N/A'}</Badge>
                       </td>
-                      <td className="table-cell text-slate-300 max-w-xs truncate">
+                      <td className="table-cell text-foreground/80 max-w-xs truncate">
                         {member.specialization || '-'}
                       </td>
                       <td className="table-cell">
-                        <span className="text-slate-400">{member.achievements.length} publications</span>
+                        <span className="text-muted-foreground">{member.achievements.length} publications</span>
                       </td>
                     </tr>
                   ))}
@@ -213,7 +211,7 @@ export default async function FacultyPage({
               </table>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-6 mb-6">
               {data.faculty.map((member) => (
                 <Link key={member.id} href={`/faculty/${member.id}`} className="group">
                   <Card variant="bento" hover className="h-full">
@@ -227,10 +225,10 @@ export default async function FacultyPage({
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-slate-100 truncate group-hover:text-brand-400 transition-colors">
+                          <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
                             {member.name}
                           </h3>
-                          <p className="text-sm text-slate-400">{member.designation}</p>
+                          <p className="text-sm text-muted-foreground">{member.designation}</p>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2 mb-4">
@@ -238,11 +236,11 @@ export default async function FacultyPage({
                         <Badge variant="cyan" size="sm">{member.department?.shortName || 'N/A'}</Badge>
                         {member.degrees && <Badge variant="slate" size="sm">{member.degrees}</Badge>}
                       </div>
-                      <p className="text-sm text-slate-400 mb-4 line-clamp-2">
+                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                         {member.specialization || 'No specialization listed'}
                       </p>
-                      <div className="flex items-center justify-between pt-3 border-t border-slate-800/50">
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <div className="flex items-center justify-between pt-3 border-t border-border">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <BookOpen className="w-3.5 h-3.5" />
                           <span>{member.achievements.length} publications</span>
                         </div>
@@ -251,7 +249,7 @@ export default async function FacultyPage({
                             href={member.googleScholar}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1"
+                            className="text-xs text-primary hover:underline flex items-center gap-1"
                           >
                             <ExternalLink className="w-3.5 h-3.5" />
                             Scholar
@@ -289,7 +287,6 @@ export default async function FacultyPage({
             </div>
           )}
         </main>
-      </div>
     </div>
   );
 }

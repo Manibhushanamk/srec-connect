@@ -13,12 +13,14 @@ import {
   Check,
   Flag,
   Users,
+  Trash2,
 } from 'lucide-react';
+import { formatTimeAgo } from '@/lib/utils';
 
 export interface FeedAuthor {
   id: string;
   name: string;
-  role: 'STUDENT' | 'FACULTY' | 'HOD' | 'ADMIN';
+  role: 'STUDENT' | 'FACULTY' | 'HOD' | 'ADMIN' | 'SUPER_ADMIN' | 'WEB_MANAGER' | string;
   rollNumber?: string;
   designation?: string;
   department: string;
@@ -95,6 +97,27 @@ export const FeedCard: React.FC<FeedPostProps> = ({
   const [newComment, setNewComment] = useState('');
   const [showOptions, setShowOptions] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
+  const [isTrashed, setIsTrashed] = useState(false);
+
+  const currentUserRole = (session?.user as any)?.role;
+  const isSuperAdmin = currentUserRole === 'SUPER_ADMIN';
+  const isAuthor = currentUserId === author.id;
+  const canDeletePost = isAuthor || isSuperAdmin;
+
+  const handleTrashPost = async () => {
+    if (!confirm('Move this post to Trash? It will be immediately removed from the live feed.')) return;
+    setShowOptions(false);
+    try {
+      const res = await fetch(`/api/posts/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setIsTrashed(true);
+      } else {
+        alert('Failed to remove post');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const toggleLike = async () => {
     // Optimistic UI update
@@ -176,6 +199,10 @@ export const FeedCard: React.FC<FeedPostProps> = ({
     ? postCollabs.find((c) => c.userId === currentUserId && c.status === 'PENDING')
     : null;
 
+  if (isTrashed) {
+    return null;
+  }
+
   const handleCollabAction = async (action: 'ACCEPT' | 'DECLINE') => {
     try {
       const res = await fetch(`/api/posts/${id}/collaborate`, {
@@ -244,10 +271,16 @@ export const FeedCard: React.FC<FeedPostProps> = ({
             <p className="text-xs text-muted-foreground leading-tight">
               {author.rollNumber ? (
                 <span className="font-mono font-medium text-foreground/80">{author.rollNumber}</span>
-              ) : (
+              ) : author.designation ? (
                 author.designation
+              ) : author.role === 'SUPER_ADMIN' ? (
+                <span className="font-semibold text-purple-400">Super Administrator</span>
+              ) : author.role === 'HOD' ? (
+                <span className="font-semibold text-blue-400">Head of Department</span>
+              ) : (
+                <span className="font-medium text-muted-foreground">{author.role}</span>
               )}{' '}
-              • {author.department} • <span className="text-muted-foreground/80">{createdAt}</span>
+              • {author.department} • <span className="text-muted-foreground/80">{formatTimeAgo(createdAt)}</span>
             </p>
           </div>
         </div>
@@ -264,11 +297,20 @@ export const FeedCard: React.FC<FeedPostProps> = ({
             <div className="absolute right-0 top-8 z-20 w-44 rounded-xl bg-card border border-border shadow-lg py-1 text-xs">
               <button
                 onClick={handleReportPost}
-                className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-muted text-rose-500 font-medium"
+                className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
               >
                 <Flag className="w-3.5 h-3.5" />
                 Report Post
               </button>
+              {canDeletePost && (
+                <button
+                  onClick={handleTrashPost}
+                  className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-rose-500/10 text-rose-500 font-medium border-t border-border"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Move to Trash
+                </button>
+              )}
             </div>
           )}
         </div>

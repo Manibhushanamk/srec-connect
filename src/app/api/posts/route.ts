@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     const filter = searchParams.get('filter'); // 'ALL' | 'STUDENT' | 'FACULTY'
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 50);
 
-    const where: any = {};
+    const where: any = { deletedAt: null };
     if (filter === 'STUDENT') {
       where.author = { role: 'STUDENT' };
     } else if (filter === 'FACULTY') {

@@ -153,7 +153,7 @@ export default function StudentGrievancesPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Header Banner */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 text-white shadow-xl flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1">
@@ -349,9 +349,9 @@ export default function StudentGrievancesPage() {
 
       {/* Tab 2: My Cases */}
       {activeTab === 'MY_CASES' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Case List Sidebar */}
-          <div className="space-y-3">
+          <div className="lg:col-span-5 xl:col-span-4 space-y-3 lg:sticky lg:top-24">
             <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Your Recorded Dossiers
             </h2>
@@ -395,7 +395,7 @@ export default function StudentGrievancesPage() {
           </div>
 
           {/* Dossier Detail Area */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-7 xl:col-span-8 space-y-4 min-w-0">
             {selectedIncident ? (
               <div className="bg-card border border-border rounded-2xl p-6 space-y-5">
                 {/* Header */}

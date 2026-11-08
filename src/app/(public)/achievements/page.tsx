@@ -46,6 +46,7 @@ async function getAchievements(searchParams: {
 
   const where: any = {
     status: 'PUBLISHED',
+    deletedAt: null,
   };
 
   if (searchParams.level && searchParams.level !== 'all') {
@@ -88,7 +89,7 @@ async function getAchievements(searchParams: {
       prisma.category.findMany({ where: { type: { in: ['ACHIEVEMENT', 'BOTH'] }, isActive: true }, orderBy: { displayOrder: 'asc' } }),
       prisma.department.findMany({ where: { isActive: true }, orderBy: { displayOrder: 'asc' } }),
       prisma.achievement.findMany({
-        where: { status: 'PUBLISHED' },
+        where: { status: 'PUBLISHED', deletedAt: null },
         select: { academicYear: true },
         distinct: ['academicYear'],
         orderBy: { academicYear: 'desc' },
@@ -174,8 +175,8 @@ export default async function AchievementsPage({
             <Medal className="w-3.5 h-3.5 mr-1.5" />
             Verified & Published
           </Badge>
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-100">Verified Achievements</h1>
-          <p className="mt-2 text-slate-400">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">Verified Achievements</h1>
+          <p className="mt-2 text-muted-foreground font-medium">
             {data.total} {data.total === 1 ? 'achievement' : 'achievements'} published across all departments
           </p>
         </div>
@@ -187,22 +188,20 @@ export default async function AchievementsPage({
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        <aside className="lg:w-64 flex-shrink-0 space-y-6">
-          <AchievementsFilterBar
-            levels={LEVELS}
-            categories={data.categories}
-            departments={data.departments}
-            academicYears={data.academicYears}
-          />
-        </aside>
+      {/* Top Horizontal Filter Bar */}
+      <AchievementsFilterBar
+        levels={LEVELS}
+        categories={data.categories}
+        departments={data.departments}
+        academicYears={data.academicYears}
+      />
 
-        <main className="flex-1 min-w-0">
-          {data.achievements.length === 0 ? (
-            <EmptyStatePreset type="achievements" />
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      <main className="w-full">
+        {data.achievements.length === 0 ? (
+          <EmptyStatePreset type="achievements" />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-6 mb-6">
                 {data.achievements.map((achievement) => (
                   <Link key={achievement.id} href={`/achievements/${achievement.id}`} className="group">
                     <Card variant="bento" hover className="h-full">
@@ -213,10 +212,10 @@ export default async function AchievementsPage({
                           </div>
                           <ParticipationBadge type={achievement.participationType} />
                         </div>
-                        <h3 className="font-semibold text-slate-100 mb-2 line-clamp-2 group-hover:text-brand-400 transition-colors">
+                        <h3 className="font-semibold text-foreground mb-2 line-clamp-2 group-hover:text-primary transition-colors">
                           {achievement.title}
                         </h3>
-                        <p className="text-sm text-slate-400 mb-3 line-clamp-2">
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                           {achievement.description}
                         </p>
                         <div className="flex flex-wrap gap-2 mb-3">
@@ -224,7 +223,7 @@ export default async function AchievementsPage({
                           <Badge variant="brand" size="sm">{achievement.department?.shortName || 'N/A'}</Badge>
                           <Badge variant="slate" size="sm">{achievement.academicYear}</Badge>
                         </div>
-                        <div className="flex items-center justify-between text-xs text-slate-500">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <div className="flex items-center gap-1">
                             <Calendar className="w-3.5 h-3.5" />
                             {formatDate(achievement.achievementDate)}
@@ -268,7 +267,6 @@ export default async function AchievementsPage({
             </>
           )}
         </main>
-      </div>
     </div>
   );
 }

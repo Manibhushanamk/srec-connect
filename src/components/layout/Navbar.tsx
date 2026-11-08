@@ -14,7 +14,6 @@ const NAV_LINKS = [
   { href: '/events', label: 'Events', icon: Calendar },
   { href: '/faculty', label: 'Faculty', icon: BookOpen },
   { href: '/students', label: 'Students', icon: Users },
-  { href: '/departments', label: 'Departments', icon: Shield },
 ];
 
 export function Navbar() {

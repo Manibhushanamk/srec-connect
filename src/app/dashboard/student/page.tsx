@@ -47,11 +47,11 @@ async function getStudentData(studentId: string) {
       include: { department: true, user: true },
     }),
     prisma.achievement.findMany({
-      where: { primaryStudentId: studentId },
+      where: { primaryStudentId: studentId, deletedAt: null },
       include: { category: true, department: true, media: { where: { isCover: true }, take: 1 } },
       orderBy: { achievementDate: 'desc' },
     }),
-    prisma.achievement.count({ where: { primaryStudentId: studentId, status: 'PENDING' } }),
+    prisma.achievement.count({ where: { primaryStudentId: studentId, status: 'PENDING', deletedAt: null } }),
   ]);
 
   return { student, achievements, pendingCount };
@@ -174,7 +174,7 @@ export default async function StudentDashboardPage() {
           {achievements.length === 0 ? (
             <EmptyStatePreset 
               type="achievements" 
-              action={{ label: 'Submit Your First Achievement', onClick: () => {}, variant: 'primary' }}
+              action={{ label: 'Submit Your First Achievement', href: '/dashboard/student/submit', variant: 'primary' }}
             />
           ) : (
             <div className="space-y-3">
