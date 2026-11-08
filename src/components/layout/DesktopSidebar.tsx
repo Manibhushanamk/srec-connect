@@ -14,6 +14,7 @@ import {
   Info,
   Shield,
   ShieldAlert,
+  Bell,
   FileSpreadsheet,
   ChevronRight,
   Sparkles,
@@ -45,6 +46,7 @@ export const DesktopSidebar: React.FC = () => {
     { label: 'Verify Achievements', href: '/admin/achievements', icon: Award },
     { label: 'Campus Events', href: '/admin/events', icon: Calendar },
     { label: 'Discipline & Grievances', href: '/admin/discipline', icon: ShieldAlert },
+    { label: 'Notices & Circulars', href: '/admin/notices', icon: Bell },
   ];
 
   return (

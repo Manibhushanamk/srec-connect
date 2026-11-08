@@ -127,11 +127,11 @@ graph TD
 ## Phase 9: Google Drive, Notices & Notifications
 - **Objective:** Google Drive API integration for official PDFs, announcements, and multi-channel notifications.
 - **Tasks:**
-  - [ ] Task 9.1: Google Drive backend service for uploading verified certificates with public-link disclosure.
-  - [ ] Task 9.2: Announcements system with audience filtering (batch, section, role).
-  - [ ] Task 9.3: In-app notification center and user preference controls.
-- **Verification:** Integration test verifying Drive permissions and isolation of sensitive incident attachments.
-- **Status:** In Progress
+  - [x] Task 9.1: Google Drive backend service for uploading verified certificates with public-link disclosure.
+  - [x] Task 9.2: Announcements system with audience filtering (batch, section, role).
+  - [x] Task 9.3: In-app notification center and user preference controls.
+- **Verification:** Integration test verifying Drive permissions and isolation of sensitive incident attachments; verified in Playwright at `/admin/notices` and 4/4 tests passed in `tests/drive-notices.test.ts`.
+- **Status:** Complete (Phase 9 Verified)
 
 ---
 
@@ -142,7 +142,7 @@ graph TD
   - [ ] Task 10.2: Role-aware global search across students, faculty, events, and posts.
   - [ ] Task 10.3: Public SEO metadata, sitemap generation, and robots.txt rules.
 - **Verification:** Verification that private routes are marked noindex and search returns only authorized records.
-- **Status:** Locked
+- **Status:** Next Up
 
 ---
 

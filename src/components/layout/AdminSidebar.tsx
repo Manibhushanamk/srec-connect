@@ -21,6 +21,7 @@ import {
   Settings,
   Shield,
   ShieldAlert,
+  Bell,
   Zap,
   ChevronRight,
   ChevronDown,
@@ -83,6 +84,13 @@ const MENU_GROUPS = {
     icon: ShieldAlert,
     items: [
       { href: '/admin/discipline', label: 'All Cases', icon: ShieldAlert },
+    ],
+  },
+  notices: {
+    label: 'Notices & Circulars',
+    icon: Bell,
+    items: [
+      { href: '/admin/notices', label: 'All Notices', icon: Bell },
     ],
   },
   students: {

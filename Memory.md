@@ -3,30 +3,29 @@
 > **Project:** SREC Connect v3.0  
 > **Institution:** Santhiram Engineering College (SREC), Nandyal — CSE (AI & ML)  
 > **Last Updated:** 2026-11-08  
-> **Current Phase:** Phase 8 — Complaints & Discipline Management Complete; Currently Executing Phase 9 (Drive, Notices & Notifications)  
+> **Current Phase:** Phase 9 — Google Drive, Notices & Notifications Complete; Currently Executing Phase 10 (Analytics, Public Portal & Operations)  
 
 ---
 
 ## 1. Current Status & Phase Progress
 
-- **Active Goal:** Phase 8 (Dual-track reporting, Confidential HOD Bypass, Immutable Response Timeline, and Authorized Resolution Actions) Completed & Empirically Verified. Ready for Phase 9 (Google Drive, Notices & Notifications).
+- **Active Goal:** Phase 9 (Google Drive Backend Service, Security Boundary Isolation, Announcements Audience Fan-Out, and In-App Notification Center) Completed & Empirically Verified. Ready for Phase 10 (Analytics, Public Portal & Operations).
 - **Current State:**
-  - **Phase 8 Complete:**
-    - Dual-track Incident & Grievance reporting API endpoints:
-      - [`src/app/api/incidents/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/incidents/route.ts): GET with role-based visibility isolation (Students only see their own cases, Faculty cannot see `isConfidentialHOD` cases, HOD has full access), and POST for filing grievances and disciplinary reports.
-      - [`src/app/api/incidents/[id]/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/incidents/[id]/route.ts): GET single dossier with strict confidentiality boundary checks, and PATCH for status updates.
-      - [`src/app/api/incidents/[id]/responses/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/incidents/[id]/responses/route.ts): POST appending statements to immutable response timeline with student right-to-respond.
-      - [`src/app/api/incidents/[id]/actions/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/incidents/[id]/actions/route.ts): POST recording outcome action (`VERBAL_WARNING`, `WRITTEN_WARNING`, `COUNSELLING`, `CORRECTIVE_TASK`, `HOD_REVIEW`, `FORMAL_ACTION`), strictly enforcing that `FORMAL_ACTION` is reserved for HOD and Super Admin.
-    - User Interface:
-      - Admin Disciplinary Management Console ([`src/app/admin/discipline/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/admin/discipline/page.tsx)) with status filtering, priority badges, and modal.
-      - Comprehensive Case Dossier ([`src/app/admin/discipline/[id]/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/admin/discipline/[id]/page.tsx)) with chronological immutable response timeline and action recorder.
-    - Verified with 7/7 tests passing in `tests/complaints-discipline.test.ts` and captured Playwright screenshot `verified_admin_discipline.png`. Total project test suite: 31/31 passing tests.
+  - **Phase 9 Complete:**
+    - Google Drive Backend Service ([`src/lib/drive.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/lib/drive.ts)): Uploads verified academic certificates with public viewer permissions, strictly blocking confidential grievance and disciplinary attachments via `DriveSecurityError`.
+    - Database Models: Added `Announcement` and `Notification` to `prisma/schema.prisma` and synchronized with Neon PostgreSQL.
+    - Announcements API ([`src/app/api/announcements/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/announcements/route.ts)): Audience filtering (batch, section, role) and automatic notification fan-out with audit logging.
+    - Notifications API ([`src/app/api/notifications/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/notifications/route.ts)): Unread count and mark-as-read endpoints.
+    - UI Components:
+      - Live Notification Bell Dropdown ([`src/components/layout/NotificationBell.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/components/layout/NotificationBell.tsx)) integrated into [`src/components/layout/AppHeader.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/components/layout/AppHeader.tsx).
+      - Admin Notices Management Console ([`src/app/admin/notices/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/admin/notices/page.tsx)).
+    - 4/4 tests passed in `tests/drive-notices.test.ts` and captured Playwright screenshot `verified_admin_notices.png`. Total project tests: 35/35 passing.
+  - **Phase 8 Complete (`e3c60e6`):**
+    - Complaints & Discipline Management with confidential HOD bypass and immutable response timeline.
   - **Phase 7 Complete (`c303c01`):**
-    - Events lifecycle, transactional capacity concurrency, automatic waitlist promotion, QR attendance check-in desk at `/admin/events/[id]/attendance`.
-  - **Phase 6 Complete (`2bcb547`):**
-    - Achievements multi-tier verification queue and moderation desk at `/admin/achievements`.
-  - **Phases 1-5 Complete:**
-    - App Foundation, RBAC, Bulk Ingestion, Student/Faculty Portfolios, and Social Community Feed.
+    - Events lifecycle, transactional capacity concurrency, automatic waitlist promotion, QR attendance desk.
+  - **Phases 1-6 Complete:**
+    - App Foundation, RBAC, Bulk Ingestion, Portfolios, Social Feed, and Achievements Verification.
 
 ---
 

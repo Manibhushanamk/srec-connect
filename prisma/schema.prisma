@@ -98,6 +98,10 @@ model User {
   reportedIncidents   Incident[]         @relation("ReportedIncidents")
   incidentResponses   IncidentResponse[] @relation("IncidentResponses")
   incidentActions     IncidentAction[]   @relation("IncidentActions")
+
+  // Notices & Notifications (Phase 9)
+  announcementsCreated Announcement[]    @relation("CreatedAnnouncements")
+  notifications       Notification[]     @relation("UserNotifications")
   
   auditLogs           AuditLog[]
 
@@ -133,6 +137,7 @@ model Department {
   students     Student[]
   achievements Achievement[]
   events       Event[]
+  announcements Announcement[]
   bulkBatches  PendingBulkBatch[]
 
   @@index([code])
@@ -697,6 +702,59 @@ model PendingBulkItem {
   @@index([collidingPublishedId])
   @@index([email])
   @@index([rollNumber])
+}
+
+// ── ANNOUNCEMENTS & NOTIFICATIONS (Phase 9) ──
+
+enum AnnouncementTargetRole {
+  ALL
+  STUDENT
+  FACULTY
+}
+
+enum AnnouncementPriority {
+  NORMAL
+  URGENT
+}
+
+model Announcement {
+  id           String                 @id @default(cuid())
+  title        String
+  content      String
+  priority     AnnouncementPriority   @default(NORMAL)
+  targetRole   AnnouncementTargetRole @default(ALL)
+  batch        String?                // e.g. "2022-2026" or null for all
+  section      String?                // e.g. "A" or null for all
+  departmentId String?
+  department   Department?            @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  authorId     String
+  author       User                   @relation("CreatedAnnouncements", fields: [authorId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  notifications Notification[]
+
+  @@index([targetRole])
+  @@index([batch])
+  @@index([createdAt])
+}
+
+model Notification {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  announcementId String?
+  announcement   Announcement? @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+  title          String
+  message        String
+  link           String?
+  isRead         Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
 }
 
 // ── AUDIT LOGS & SETTINGS ──

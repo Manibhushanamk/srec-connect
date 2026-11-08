@@ -3,8 +3,9 @@
 import React from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { Search, Bell, Shield, GraduationCap, LogIn, Sparkles } from 'lucide-react';
+import { Search, Shield, GraduationCap, LogIn, Sparkles } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { NotificationBell } from '@/components/layout/NotificationBell';
 
 export const AppHeader: React.FC = () => {
   const { data: session } = useSession();
@@ -52,13 +53,7 @@ export const AppHeader: React.FC = () => {
         {/* Actions (Notifications, Theme, User) */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Notifications Bell */}
-          <button
-            className="relative p-2 rounded-xl text-muted-foreground hover:text-foreground bg-secondary/60 hover:bg-secondary border border-border transition-colors"
-            aria-label="Notifications"
-          >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-card" />
-          </button>
+          <NotificationBell />
 
           {/* Theme Toggle */}
           <ThemeToggle />
