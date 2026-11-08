@@ -86,12 +86,29 @@
   - Added role-gated `+ Post` quick action for `HOD`, `FACULTY`, and `SUPER_ADMIN`.
   - Added interactive modal dialog displaying complete notice text, issuing authority, and target section/batch.
 
+### G. Direct Google Drive File Upload & Public Sharing Automation
+- **Drive OAuth Scope Integration**: Extended NextAuth GoogleProvider authorization params with `https://www.googleapis.com/auth/drive.file`. When signing in with Google Workspace, users grant file-level Drive access without compromising private drive folders.
+- **Drive Client & Sharing Protocol (`drive.ts`)**:
+  - Support for user OAuth access tokens (`accessToken`) alongside institutional Service Account (`GOOGLE_PRIVATE_KEY` / `GOOGLE_SERVICE_ACCOUNT_EMAIL`).
+  - Automatic public viewer permission creation via Google Drive API v3:
+    `drive.permissions.create({ fileId, requestBody: { role: 'reader', type: 'anyone' } })`.
+- **Upload API Endpoint (`POST /api/drive/upload`)**:
+  - Validates authentication and file parameters (PDF, PNG, JPG, JPEG, WEBP, DOCX up to 15 MB).
+  - Enforces strict security boundary via `assertDriveAllowed`: blocks sensitive disciplinary/misconduct files while allowing certificates, publications, and event banners.
+  - Returns `webViewLink` and `webContentLink` with `isPublicLink: true` and logs to `AuditLog`.
+- **Reusable `DriveFileUploader.tsx`**:
+  - Drag-and-drop file upload zone with animated progress indicator, file size calculation, Google Drive link preview button, removal action, and toggle to manual URL entry.
+  - Fully integrated into both Student submission (`/dashboard/student/submit`) and Faculty submission (`/dashboard/faculty/submit`).
+
 ---
 
 ## 3. Empirical Verification Evidence
-- **Automated Tests:** 39/39 passing across all 8 suites (`npm test`).
+- **Automated Tests:** 40/40 passing across all 8 suites (`npm test`).
 - **TypeScript:** 0 errors (`npx tsc --noEmit`).
 - **Visual Evidence:**
+  - `verify_drive_upload_zone_empty.png`: Verified empty drag-and-drop Google Drive upload zone.
+  - `verify_drive_upload_success_state.png`: Verified upload completion card with `Shared with Anyone (Viewer)` badge, file metadata, and Google Drive viewer link.
+  - `verify_drive_faculty_submit.png`: Verified faculty document upload integration.
   - `verify_admin_dark_students.png`: Verified full-width horizontal bar and spacious 3-column student cards in dark mode.
   - `verify_admin_dark_faculty.png`: Verified horizontal filter and spacious cards in dark mode.
   - `verify_admin_dark_achievements.png`: Verified 4-column filter bar and centered empty state.
