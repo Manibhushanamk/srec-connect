@@ -120,6 +120,7 @@ export async function POST(req: NextRequest) {
       studentRollNumber,
       isConfidentialHOD = false,
       reporterEmail,
+      attachmentUrl,
     } = body;
 
     if (!currentUser && reporterEmail) {
@@ -161,7 +162,9 @@ export async function POST(req: NextRequest) {
         reporterId: currentUser.id,
         studentId: targetStudentId,
         title: title.trim(),
-        description: description.trim(),
+        description: attachmentUrl
+          ? `${description.trim()}\n\n[Attachment: ${attachmentUrl.trim()}]`
+          : description.trim(),
         category: category as IncidentCategory,
         priority: priority as IncidentPriority,
         isConfidentialHOD: shouldBeConfidential,

@@ -86,6 +86,11 @@ export async function POST(req: NextRequest) {
       accessToken: (session as any)?.accessToken,
     });
 
+    const isSimulated = driveResult.fileId.startsWith('drive-srec-');
+    const effectiveWebViewLink = isSimulated
+      ? `/uploads/${stampedFileName}`
+      : driveResult.webViewLink;
+
     // 6. Record in Audit Log
     try {
       await prisma.auditLog.create({
@@ -118,10 +123,10 @@ export async function POST(req: NextRequest) {
       fileName: file.name,
       fileSize: file.size,
       mimeType,
-      webViewLink: driveResult.webViewLink,
-      webContentLink: driveResult.webContentLink,
+      webViewLink: effectiveWebViewLink,
+      webContentLink: effectiveWebViewLink,
       isPublicLink: driveResult.isPublicLink,
-      message: 'File successfully uploaded to Google Drive with public viewer permissions (Anyone with the link can view).',
+      message: 'File successfully uploaded and shared with public viewer permissions.',
     });
   } catch (error: any) {
     console.error('[Drive Upload Error] Failed to process file upload:', error);

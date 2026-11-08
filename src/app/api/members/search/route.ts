@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
         departmentName: true,
         student: {
           select: {
+            id: true,
             rollNumber: true,
             section: true,
             batch: true,
@@ -57,6 +58,8 @@ export async function GET(req: NextRequest) {
       seenIds.add(u.id);
       members.push({
         id: u.id,
+        userId: u.id,
+        studentId: u.student?.id || null,
         name: u.name || 'Scholar',
         email: u.email,
         role: u.role,
@@ -93,6 +96,8 @@ export async function GET(req: NextRequest) {
         seenIds.add(targetUserId);
         members.push({
           id: targetUserId,
+          userId: s.user?.id || null,
+          studentId: s.id,
           name: s.name,
           email: s.email,
           role: 'STUDENT',

@@ -85,26 +85,7 @@ export function AchievementsFilterBar({
       </div>
 
       {/* Select Dropdowns Toolbar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-border">
-        {/* Department */}
-        <div>
-          <label htmlFor="department" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
-            <Building2 className="w-3 h-3 text-primary" />
-            <span>Department</span>
-          </label>
-          <select
-            id="department"
-            value={currentDepartment}
-            className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-            onChange={(e) => updateFilter('department', e.target.value)}
-          >
-            <option value="all" className="bg-card text-foreground">All Departments</option>
-            {departments.map((dept) => (
-              <option key={dept.code} value={dept.code} className="bg-card text-foreground">{dept.name}</option>
-            ))}
-          </select>
-        </div>
-
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-border">
         {/* Category */}
         <div>
           <label htmlFor="category" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">

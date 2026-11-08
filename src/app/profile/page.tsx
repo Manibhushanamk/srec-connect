@@ -31,6 +31,13 @@ export default async function ProfilePage() {
             include: { category: true, media: true },
             orderBy: { achievementDate: 'desc' },
           },
+          teamAchievements: {
+            include: {
+              achievement: {
+                include: { category: true, media: true },
+              },
+            },
+          },
         },
       },
       faculty: {
@@ -58,6 +65,32 @@ export default async function ProfilePage() {
   if (!user) {
     redirect('/signin?callbackUrl=/profile');
   }
+
+  // Also fetch any achievements created by this user or where they are listed
+  const userCreatedAchievements = await prisma.achievement.findMany({
+    where: {
+      createdById: user.id,
+      status: { in: ['APPROVED', 'PUBLISHED'] },
+    },
+    include: { category: true, media: true },
+    orderBy: { achievementDate: 'desc' },
+  });
+
+  const studentAllAchievements = user.student
+    ? [
+        ...(user.student.primaryAchievements || []),
+        ...(user.student.teamAchievements || [])
+          .map((ta) => ta.achievement)
+          .filter((a) => a && (a.status === 'APPROVED' || a.status === 'PUBLISHED')),
+      ].filter((a, index, arr) => arr.findIndex((x) => x.id === a.id) === index)
+    : [];
+
+  const facultyAllAchievements = user.faculty
+    ? [
+        ...(user.faculty.achievements || []),
+        ...userCreatedAchievements,
+      ].filter((a, index, arr) => arr.findIndex((x) => x.id === a.id) === index)
+    : userCreatedAchievements;
 
   const serializedUser = {
     id: user.id,
@@ -90,7 +123,7 @@ export default async function ProfilePage() {
           githubUrl: user.student.githubUrl,
           portfolioUrl: user.student.portfolioUrl,
           avatarUrl: user.student.avatarUrl,
-          achievements: (user.student.primaryAchievements || []).map((a) => ({
+          achievements: studentAllAchievements.map((a) => ({
             id: a.id,
             title: a.title,
             description: a.description,
@@ -101,9 +134,9 @@ export default async function ProfilePage() {
             participationType: a.participationType,
             academicYear: a.academicYear,
             achievementDate: a.achievementDate.toISOString(),
-            personName: user.name,
-            personType: 'STUDENT' as const,
-            rollNumber: user.student?.rollNumber,
+            personName: a.personName || user.name,
+            personType: (a.personType as any) || 'STUDENT',
+            rollNumber: a.primaryStudentRoll || user.student?.rollNumber,
             departmentName: user.department?.name || user.departmentName || 'Computer Science & Engineering (AI & ML)',
             googleDriveUrl: a.googleDriveUrl || a.certificateUrl,
             certificateUrl: a.certificateUrl || a.googleDriveUrl,
@@ -123,7 +156,7 @@ export default async function ProfilePage() {
           googleScholar: user.faculty.googleScholar,
           linkedinUrl: user.linkedinUrl,
           avatarUrl: user.faculty.avatarUrl,
-          achievements: (user.faculty.achievements || []).map((a) => ({
+          achievements: facultyAllAchievements.map((a) => ({
             id: a.id,
             title: a.title,
             description: a.description,
@@ -134,8 +167,8 @@ export default async function ProfilePage() {
             participationType: a.participationType,
             academicYear: a.academicYear,
             achievementDate: a.achievementDate.toISOString(),
-            personName: user.name,
-            personType: 'FACULTY' as const,
+            personName: a.personName || user.name,
+            personType: (a.personType as any) || 'FACULTY',
             rollNumber: null,
             departmentName: user.department?.name || user.departmentName || 'Computer Science & Engineering (AI & ML)',
             googleDriveUrl: a.googleDriveUrl || a.certificateUrl,

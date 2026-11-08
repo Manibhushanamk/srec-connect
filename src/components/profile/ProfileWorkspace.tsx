@@ -136,8 +136,8 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
 
   const isSuperAdmin = initialUser.role === 'SUPER_ADMIN' || initialUser.role === 'ADMIN';
   const isHOD = initialUser.role === 'HOD';
-  const isFaculty = initialUser.role === 'FACULTY';
-  const isStudent = initialUser.role === 'STUDENT' && !!initialUser.student;
+  const isFaculty = initialUser.role === 'FACULTY' || isHOD || Boolean(initialUser.faculty);
+  const isStudent = (initialUser.role === 'STUDENT' || !isFaculty) && Boolean(initialUser.student);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -435,8 +435,8 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
       {/* TAB 1: OVERVIEW & ROLE LAUNCHPAD */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          {/* Admin Launchpad for Super Admin */}
-          {isSuperAdmin && (
+          {/* Admin Launchpad for Super Admin and Department HOD */}
+          {(isSuperAdmin || isHOD) && (
             <div className="social-card p-5 border-border bg-card">
               <div className="flex items-center justify-between mb-4">
                 <div>

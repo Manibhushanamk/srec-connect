@@ -1,5 +1,7 @@
 import { google } from 'googleapis';
 import { Readable } from 'stream';
+import fs from 'fs';
+import path from 'path';
 
 export class DriveSecurityError extends Error {
   constructor(message: string) {
@@ -33,6 +35,7 @@ export interface DriveUploadResult {
   fileId: string;
   webViewLink: string;
   webContentLink: string;
+  localMirrorUrl?: string | null;
   isPublicLink: boolean;
 }
 
@@ -56,6 +59,20 @@ export async function uploadCertificateToDrive({
 }): Promise<DriveUploadResult> {
   // 1. Enforce strict security boundary
   assertDriveAllowed(documentType);
+
+  // Persist file locally in public/uploads for guaranteed accessibility
+  let localUrl = '';
+  try {
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    const localFilePath = path.join(uploadsDir, fileName);
+    fs.writeFileSync(localFilePath, fileBuffer);
+    localUrl = `/uploads/${fileName}`;
+  } catch (fsErr) {
+    console.warn('[Drive Local Mirror] Failed to write local upload mirror:', fsErr);
+  }
 
   // 2. Case A: User's Authenticated Google OAuth Access Token
   if (accessToken) {
@@ -171,6 +188,7 @@ export async function uploadCertificateToDrive({
     fileId: mockFileId,
     webViewLink: `https://drive.google.com/file/d/${mockFileId}/view?usp=sharing`,
     webContentLink: `https://drive.google.com/uc?id=${mockFileId}&export=download`,
+    localMirrorUrl: localUrl,
     isPublicLink: true,
   };
 }

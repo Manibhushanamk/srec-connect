@@ -252,4 +252,38 @@
     - `verify_student_achievements.png` (Student profile with 2-column AchievementCard grid)
     - `verify_portal_modal.png` (Interactive tap-to-view honor dossier modal centered on screen)
 
+---
+
+## Session Update — AIML Department Specialization, Grievance File Upload, Student Directory Team Linkage & HOD Self Profile
+
+- **AIML Department Specialization in Verified Achievements (`/achievements`)**:
+  - Removed "Department: All Departments" filter dropdown from `AchievementsFilterBar.tsx` and refactored grid to a clean 3-column toolbar (`Category`, `Recognition Level`, `Academic Year`).
+  - Updated achievements directory subtitle to `5 verified honors published • Department of Computer Science & Engineering (AI & ML)`.
+- **Reliable Local File Upload Mirroring (`/api/drive/upload` & `/api/upload`)**:
+  - Mirrored uploaded documents, certificates, and evidence to `public/uploads/` so all uploaded files open and preview immediately without 404s.
+  - Allowed `/uploads/` URLs in `api/achievements/submit` and updated `drive.ts` and `api/drive/upload` to return valid URLs.
+- **Incident & Grievance Report Evidence File Upload (`/grievances`)**:
+  - Added "Supporting Evidence / Document Attachment (Optional)" upload area in the grievance report form accepting PDF, PNG, JPG, and DOCX files up to 20MB.
+  - In `api/incidents/route.ts`, saved evidence attachments and rendered an "Attached Supporting Evidence" card in the case dossier view with preview and document download/open link.
+- **Interactive Student Directory Lookup for Team Members (`/dashboard/student/submit` & `/dashboard/faculty/submit`)**:
+  - Replaced manual text inputs with an interactive, debounced search that queries the student directory by roll number or name.
+  - Linked `studentId` on `AchievementTeamMember` in `api/achievements/submit`, enabling multi-member attribution.
+  - Updated `/profile` to merge `primaryAchievements` and `teamAchievements`, ensuring achievements automatically appear on all team members' personal accounts and portfolios.
+- **Broadcast Achievement to Campus Community Feed**:
+  - Added "Broadcast to Campus Community Feed" toggle, story/caption textarea, and photo uploader to student & faculty achievement submission forms.
+  - In `api/achievements/submit`, automatically creates a linked `Post` (with `achievementId`, caption, photo, and tagged collaborators) appearing immediately on the live feed.
+- **HOD & Faculty Self-Profile Full View Restoration (`/profile`)**:
+  - Expanded `isFaculty` logic in `ProfileWorkspace.tsx` to include `HOD` and any user with a `faculty` record.
+  - Displayed the 4 stats metrics cards (Posts, Verified Honors, Experience, Research Areas), Official Academic Credentials grid, Administrator Command Launchpad (for HOD), and verified achievement cards with tap-to-view honor dossier modals.
+- **Empirical Validation**:
+  - TypeScript: 0 errors (`npx tsc --noEmit`).
+  - Unit/Integration Tests: 40/40 passing (`npm test`).
+  - Visual Proofs:
+    - `verify_achievements_aiml_only.png` (Verified achievements with 3-column filter and AIML department heading)
+    - `verify_student_submit_feed_team.png` (Student achievement submission with student lookup and Community Feed broadcast)
+    - `verify_faculty_submit_feed_students.png` (Faculty achievement submission with student lookup and Community Feed broadcast)
+    - `verify_profile_hod_complete.png` (HOD profile with stats, credentials, admin launchpad, and achievement cards)
+    - `verify_grievances_authenticated_upload.png` (Grievance submission with file/evidence attachment input)
+
+
 

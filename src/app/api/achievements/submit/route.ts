@@ -34,6 +34,9 @@ export async function POST(req: NextRequest) {
     achievementDate,
     googleDriveUrl,
     teamMembers,
+    postToFeed,
+    feedCaption,
+    feedImageUrl,
   } = body;
 
   if (!title || !categoryId || !organizationEventName) {
@@ -43,10 +46,13 @@ export async function POST(req: NextRequest) {
   // Security: Protocol and host validation on googleDriveUrl
   if (googleDriveUrl) {
     const trimmedUrl = String(googleDriveUrl).trim();
-    const isValidGoogleUrl = /^https:\/\/(drive|docs)\.google\.com\//.test(trimmedUrl);
-    if (!isValidGoogleUrl) {
+    const isValidUrl =
+      /^https:\/\/(drive|docs)\.google\.com\//.test(trimmedUrl) ||
+      trimmedUrl.startsWith('/uploads/') ||
+      trimmedUrl.startsWith('http://localhost:3000/uploads/');
+    if (!isValidUrl) {
       return NextResponse.json(
-        { error: 'Invalid certificate URL. Only verified Google Drive/Docs links (https://drive.google.com/...) are accepted.' },
+        { error: 'Invalid certificate URL. Only verified Google Drive links (https://drive.google.com/...) or verified institutional document uploads are accepted.' },
         { status: 400 }
       );
     }
@@ -79,20 +85,92 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Insert team members if any
+  // Insert team members if any and link student accounts
   if (teamMembers && Array.isArray(teamMembers) && teamMembers.length > 0) {
     for (const member of teamMembers) {
       if (member.rollNumber?.trim()) {
         const parsed = parseRollNumber(member.rollNumber);
+        let studentRecord = member.studentId
+          ? await prisma.student.findUnique({ where: { id: member.studentId }, include: { user: true } })
+          : null;
+        if (!studentRecord && parsed.normalized) {
+          studentRecord = await prisma.student.findUnique({
+            where: { rollNumber: parsed.normalized },
+            include: { user: true },
+          });
+        }
+
         await prisma.achievementTeamMember.create({
           data: {
             achievementId: achievement.id,
-            rollNumber: parsed.normalized,
-            studentName: member.studentName || parsed.normalized,
+            studentId: studentRecord?.id || member.studentId || null,
+            rollNumber: parsed.normalized || member.rollNumber.trim(),
+            studentName: member.studentName || studentRecord?.name || parsed.normalized,
             isLeader: false,
           },
         });
       }
+    }
+  }
+
+  // Automatic Community Feed Broadcast if requested
+  if (postToFeed) {
+    try {
+      const postText =
+        (feedCaption && feedCaption.trim()) ||
+        `🎉 Proud to announce our verified achievement: "${title}" recognized by ${organizationEventName}!`;
+
+      const post = await prisma.post.create({
+        data: {
+          authorId: dbUser.id,
+          content: postText,
+          achievementId: achievement.id,
+          visibility: 'PUBLIC',
+          media: feedImageUrl
+            ? {
+                create: [
+                  {
+                    url: feedImageUrl,
+                    order: 0,
+                  },
+                ],
+              }
+            : undefined,
+        },
+      });
+
+      // Add collaborators to feed post
+      if (teamMembers && Array.isArray(teamMembers)) {
+        for (const member of teamMembers) {
+          if (member.rollNumber?.trim()) {
+            const parsed = parseRollNumber(member.rollNumber);
+            let targetUserId = member.userId;
+            if (!targetUserId) {
+              const targetStudent = await prisma.student.findUnique({
+                where: { rollNumber: parsed.normalized },
+                include: { user: true },
+              });
+              targetUserId = targetStudent?.user?.id;
+            }
+            if (targetUserId && targetUserId !== dbUser.id) {
+              try {
+                await prisma.postCollaborator.create({
+                  data: {
+                    postId: post.id,
+                    userId: targetUserId,
+                    rollNumber: parsed.normalized,
+                    status: 'ACCEPTED',
+                  },
+                });
+              } catch (collabErr) {
+                console.warn('[Feed Collaborator Non-blocking Error]:', collabErr);
+              }
+            }
+          }
+        }
+      }
+    } catch (feedPostErr) {
+      console.warn('[Achievement Feed Post Error (non-blocking)]:', feedPostErr);
     }
   }
 

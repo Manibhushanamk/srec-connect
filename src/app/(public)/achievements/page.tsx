@@ -178,7 +178,7 @@ export default async function AchievementsPage({
           </Badge>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">Verified Achievements</h1>
           <p className="mt-2 text-muted-foreground font-medium">
-            {data.total} {data.total === 1 ? 'achievement' : 'achievements'} published across all departments
+            {data.total} verified {data.total === 1 ? 'honor' : 'honors'} published • Department of Computer Science & Engineering (AI & ML)
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

@@ -226,7 +226,7 @@ export default function SignInPage() {
                 </button>
 
                 {showDevFallback && (
-                  <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+                  <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
                     <button
                       type="button"
                       onClick={() => handleDevSignIn('manibhushanam4k@gmail.com')}
@@ -234,6 +234,15 @@ export default function SignInPage() {
                     >
                       <p className="font-bold text-[11px] text-foreground">Super Admin</p>
                       <p className="text-[10px] text-muted-foreground truncate">Mani Bhushanam</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDevSignIn('manibhushanam5k@gmail.com')}
+                      className="p-2 rounded-lg border border-border hover:border-primary text-left bg-secondary/40"
+                    >
+                      <p className="font-bold text-[11px] text-foreground">HOD (AIML)</p>
+                      <p className="text-[10px] text-muted-foreground truncate">Dr. K. Srinivas Rao</p>
                     </button>
 
                     <button

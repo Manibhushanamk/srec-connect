@@ -20,6 +20,11 @@ import {
   Shield,
   CheckCircle2,
   AlertCircle,
+  Paperclip,
+  Upload,
+  File,
+  X,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -48,6 +53,36 @@ export default function StudentGrievancesPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [formSuccess, setFormSuccess] = useState(false);
+
+  // Evidence Attachment State
+  const [attachmentUrl, setAttachmentUrl] = useState<string>('');
+  const [attachmentName, setAttachmentName] = useState<string>('');
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
+
+  const handleAttachmentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAttachment(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setAttachmentUrl(data.url);
+        setAttachmentName(file.name);
+      } else {
+        alert(data.error || 'Failed to upload document');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Upload failed');
+    } finally {
+      setUploadingAttachment(false);
+    }
+  };
 
   // Response message state
   const [responseMsg, setResponseMsg] = useState('');
@@ -100,7 +135,10 @@ export default function StudentGrievancesPage() {
       const res = await fetch('/api/incidents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          attachmentUrl: attachmentUrl || undefined,
+        }),
       });
 
       if (res.ok) {
@@ -113,6 +151,8 @@ export default function StudentGrievancesPage() {
           priority: 'MEDIUM',
           isConfidentialHOD: false,
         });
+        setAttachmentUrl('');
+        setAttachmentName('');
         await fetchMyCases();
         setTimeout(() => {
           setFormSuccess(false);
@@ -347,6 +387,75 @@ export default function StudentGrievancesPage() {
                 />
               </div>
 
+              {/* Supporting Document / Evidence Attachment */}
+              <div className="space-y-2">
+                <label className="block font-semibold text-foreground text-xs">
+                  Supporting Evidence / Document Attachment (Optional)
+                </label>
+                <div className="border border-dashed border-border rounded-xl p-4 bg-secondary/20 hover:bg-secondary/40 transition-colors">
+                  {attachmentUrl ? (
+                    <div className="flex items-center justify-between gap-3 p-2.5 bg-card border border-border rounded-lg">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-500 shrink-0">
+                          <CheckCircle2 className="w-4 h-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-foreground truncate">
+                            {attachmentName || 'Evidence Attached'}
+                          </p>
+                          <a
+                            href={attachmentUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[11px] text-primary hover:underline flex items-center gap-1"
+                          >
+                            <span>Preview Uploaded File</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAttachmentUrl('');
+                          setAttachmentName('');
+                        }}
+                        className="p-1 rounded text-muted-foreground hover:text-rose-500 transition-colors"
+                        title="Remove file"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center cursor-pointer py-2 text-center">
+                      <input
+                        type="file"
+                        accept="image/*,.pdf,.doc,.docx"
+                        onChange={handleAttachmentUpload}
+                        disabled={uploadingAttachment}
+                        className="hidden"
+                      />
+                      {uploadingAttachment ? (
+                        <div className="flex items-center gap-2 text-xs text-primary font-medium">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Uploading evidence document...</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-center gap-1.5 text-xs text-primary font-medium">
+                            <Upload className="w-4 h-4" />
+                            <span>Click to upload supporting photo, PDF, or evidence file</span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Accepted formats: PDF, PNG, JPG, JPEG, DOCX (Up to 20 MB)
+                          </p>
+                        </div>
+                      )}
+                    </label>
+                  )}
+                </div>
+              </div>
+
               {/* Confidential HOD Bypass Toggle */}
               <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 rounded-xl space-y-2">
                 <label className="flex items-start gap-2.5 cursor-pointer">
@@ -473,10 +582,68 @@ export default function StudentGrievancesPage() {
                   </span>
                 </div>
 
-                {/* Case Description */}
-                <div className="text-xs text-foreground/90 bg-secondary/40 p-4 rounded-xl border border-border/60 leading-relaxed whitespace-pre-line">
-                  {selectedIncident.description}
-                </div>
+                {/* Case Description & Attached Evidence */}
+                {(() => {
+                  const attachmentMatch = selectedIncident.description?.match(/\[Attachment:\s*([^\]]+)\]/);
+                  const attachedUrl = attachmentMatch ? attachmentMatch[1].trim() : null;
+                  const cleanDesc = selectedIncident.description?.replace(/\[Attachment:\s*([^\]]+)\]/, '').trim();
+                  const isImage = attachedUrl && /\.(png|jpe?g|webp|gif)$/i.test(attachedUrl);
+
+                  return (
+                    <div className="space-y-3">
+                      <div className="text-xs text-foreground/90 bg-secondary/40 p-4 rounded-xl border border-border/60 leading-relaxed whitespace-pre-line">
+                        {cleanDesc || selectedIncident.description}
+                      </div>
+
+                      {attachedUrl && (
+                        <div className="p-4 rounded-xl bg-card border border-border space-y-2">
+                          <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                            <Paperclip className="w-3.5 h-3.5 text-primary" />
+                            <span>Attached Supporting Evidence</span>
+                          </h4>
+                          {isImage ? (
+                            <div className="space-y-2">
+                              <div className="max-w-md max-h-60 rounded-xl overflow-hidden border border-border bg-slate-950">
+                                <img
+                                  src={attachedUrl}
+                                  alt="Evidence Attachment"
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                              <a
+                                href={attachedUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-semibold"
+                              >
+                                <span>Open Full-Resolution Evidence Image</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 border border-border">
+                              <div className="flex items-center gap-2">
+                                <File className="w-4 h-4 text-primary" />
+                                <span className="text-xs font-mono font-medium text-foreground truncate max-w-xs">
+                                  {attachedUrl.split('/').pop()}
+                                </span>
+                              </div>
+                              <a
+                                href={attachedUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity"
+                              >
+                                <span>View Document</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Official Actions & Letters Section */}
                 {selectedIncident.actions?.length > 0 && (
