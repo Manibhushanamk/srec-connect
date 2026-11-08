@@ -75,6 +75,26 @@
 - **Feed Live Syncing Resolution**:
   - Replaced the stuck cyan "Syncing live feed..." text with animated skeleton placeholders (`FeedCardSkeleton`) and immediate post rendering.
 
+### H. Advanced Fluid Shimmer Skeleton Loading System
+- **Keyframe Shimmer Sweep (`animate-shimmer`)**:
+  - Added modern fluid metallic gradient sweep keyframe in `src/app/globals.css` with dark/light mode responsive opacity.
+- **Upgraded Component Skeletons (`src/components/ui/Skeleton.tsx`)**:
+  - `ScholarDirectoryCardSkeleton`: Exact silhouette matching `ScholarDirectoryCard` (banner, overlapping circular avatar, name, verification badge, metadata row, 4-stat metric boxes, and skill chips).
+  - `DirectoryPageSkeleton`: Header badge, title, student/faculty count, horizontal filter toolbar, and responsive grid of 6 cards.
+  - `StoryHighlightsSkeleton`: Story circles row with gradient rings and text label placeholders.
+  - `PostComposerSkeleton`: Composer card with avatar, input area, media action, and submit button skeletons.
+  - `FeedCardSkeleton`: Author avatar, name, roll number, time, staggered multi-line text, media box, and full action row.
+  - `EventCardSkeleton`: Event card with date badge, title, banner, seats counter, and register button skeletons.
+  - `TableRowsSkeleton`: Table row skeletons with avatar, multiple data columns, and status pills.
+- **Dedicated Route Loading Skeletons**:
+  - `/students` -> `src/app/(public)/students/loading.tsx` (DirectoryPageSkeleton).
+  - `/faculty` -> `src/app/(public)/faculty/loading.tsx` (DirectoryPageSkeleton).
+  - `/achievements` -> `src/app/(public)/achievements/loading.tsx` (DirectoryPageSkeleton).
+  - `/events` -> `src/app/(public)/events/loading.tsx` (EventsPageSkeleton).
+  - `/` -> `src/app/(public)/loading.tsx` (Highlights + Composer + Feed Skeletons).
+  - `/admin` -> `src/app/admin/loading.tsx` (Admin KPI grid + Table Skeletons).
+  - Root -> `src/components/ui/LoadingScreen.tsx` with official SREC crest.
+
 ### G. Comprehensive Multi-Role Testing & RBAC Access Matrix
 - **Student Role (`viswanadhum9985559753@gmail.com`)**:
   - Verified access to Student Dashboard (`/dashboard/student`), Achievement Submission (`/dashboard/student/submit`), Feed (`/`), Grievances (`/grievances`), and Events (`/events`).

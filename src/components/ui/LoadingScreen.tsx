@@ -82,8 +82,8 @@ export default function LoadingScreen() {
               </defs>
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-space-800 to-space-900 border border-slate-700/50 flex items-center justify-center shadow-[0_0_30px_-5px_rgba(37,99,235,0.4)]">
-                <Shield className="w-8 h-8 text-brand-400" />
+              <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-space-800 to-space-900 border border-slate-700/50 flex items-center justify-center shadow-[0_0_30px_-5px_rgba(37,99,235,0.4)] p-2">
+                <img src="/images/srec-logo.png" alt="SREC Logo" className="w-10 h-10 object-contain drop-shadow" />
                 <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-brand-500/30 via-cyan-500/20 to-emerald-500/30 blur-2xl opacity-50 animate-pulse" />
               </div>
             </div>
