@@ -224,3 +224,32 @@
     - `verify_faculty_clean.png` (light mode 2-column faculty directory)
     - `verify_portfolios_clean.png` (light mode verified portfolios tab)
 
+---
+
+## Session Update — Achievements Tap-to-View Modal, Highlights Management & Live Notices API
+
+- **Achievement Dossier Modal on Tap (`AchievementCard.tsx`)**:
+  - Integrated interactive tap-to-view honor modal directly into `AchievementCard` rendered via `createPortal(..., document.body)`.
+  - Displays rich honors dossier: Category, Recognition Level, SREC Verified Seal, Position/Rank, Conferred Date, Academic Year, Achiever Credentials, Honor Abstract, Competency Tags, and Google Drive Verification Record button.
+- **Achievements Grid Across Profiles (`ProfileWorkspace.tsx`, `/students/[id]`, `/faculty/[id]`)**:
+  - Replaced flat achievement rows on own profile (`/profile`), student public profile (`/students/[id]`), and faculty public profile (`/faculty/[id]`) with prestigious 2-column `AchievementCard` layout.
+- **Story Highlights Full Modifiability & Remove Controls (`StoryHighlights.tsx`)**:
+  - Replaced read-only defaults with editable, persistent normal data in `localStorage` (`srec_highlights_v3`).
+  - Added red **"Remove Highlight"** button and amber **"Modify Highlight"** button inside the Story Lightbox viewer for HOD / Faculty / Super Admin.
+  - Added header **"Manage"** toggle that renders instant delete `(X)` buttons directly on story circular avatars.
+- **Live Database Notices & Dynamic Right Context Rail (`RightContextRail.tsx` & `/admin/notices`)**:
+  - Removed hardcoded dummy notices and dummy upcoming events from `RightContextRail.tsx`.
+  - Created `src/app/api/announcements/[id]/route.ts` with `PATCH` and `DELETE` endpoints.
+  - Added "Edit Notice" modal and "Delete Notice" button in `src/app/admin/notices/page.tsx`.
+  - Seeded database with authentic announcements and HOD research records; purged test dummy records.
+- **Empirical Validation**:
+  - TypeScript: 0 errors (`npx tsc --noEmit`).
+  - Unit/Integration Tests: 40/40 passing (`npm test`).
+  - Visual Proofs:
+    - `verify_feed_highlights_rail.png` (Feed with modifiable highlights and dynamic rail)
+    - `verify_admin_notices.png` (Admin notices desk with Edit & Delete controls)
+    - `verify_faculty_achievements.png` (HOD profile with 2-column AchievementCard grid)
+    - `verify_student_achievements.png` (Student profile with 2-column AchievementCard grid)
+    - `verify_portal_modal.png` (Interactive tap-to-view honor dossier modal centered on screen)
+
+
