@@ -153,7 +153,7 @@ export default function AdminIncidentDossierPage({
       </div>
 
       {/* Case Header Dossier */}
-      <div className="border border-slate-800 bg-slate-900/80 rounded-2xl p-6 space-y-4">
+      <div className="border border-border bg-card rounded-2xl p-6 space-y-4 shadow-subtle">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="rose" size="sm">{incident.priority} PRIORITY</Badge>
@@ -162,48 +162,49 @@ export default function AdminIncidentDossierPage({
               {incident.status.replace(/_/g, ' ')}
             </Badge>
             {incident.isConfidentialHOD && (
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-400 px-2.5 py-0.5 rounded-full bg-amber-950/50 border border-amber-800/60">
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-rose-500 px-2.5 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/30">
                 <Lock className="w-3 h-3" />
-                Confidential HOD Bypass
+                HOD Confidential
               </span>
             )}
           </div>
-          <span className="text-xs text-slate-400 flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5 text-slate-500" />
+          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 text-muted-foreground" />
             Filed on {formatDate(incident.createdAt)}
           </span>
         </div>
 
-        <h1 className="text-2xl font-extrabold text-white">{incident.title}</h1>
+        <h1 className="text-2xl font-extrabold text-foreground">{incident.title}</h1>
 
         {/* Reporter & Subject Bar */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-800 text-xs">
-          <div className="p-3 bg-slate-800/40 rounded-xl border border-slate-700/50 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-slate-700 text-slate-300 flex items-center justify-center font-bold">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-border text-xs">
+          <div className="p-3 bg-muted/60 rounded-xl border border-border flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
               <User className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-[11px] text-slate-400">Reporting Party</p>
-              <p className="font-semibold text-white">{incident.reporter?.name}</p>
-              <p className="text-[10px] text-slate-400">{incident.reporter?.email} ({incident.reporter?.role})</p>
+              <p className="text-[11px] text-muted-foreground">Reporting Authority / Party</p>
+              <p className="font-semibold text-foreground">{incident.reporter?.name}</p>
+              <p className="text-[10px] text-muted-foreground">{incident.reporter?.email} ({incident.reporter?.role})</p>
             </div>
           </div>
 
-          <div className="p-3 bg-slate-800/40 rounded-xl border border-slate-700/50 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/60 flex items-center justify-center font-bold">
+          <div className="p-3 bg-muted/60 rounded-xl border border-border flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
               <GraduationCap className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-[11px] text-slate-400">Subject Student</p>
+              <p className="text-[11px] text-muted-foreground">Subject Student</p>
               {incident.student ? (
                 <>
-                  <p className="font-semibold text-white">{incident.student.name}</p>
-                  <p className="text-[10px] font-mono text-cyan-300">
-                    Roll: {incident.student.rollNumber} | {incident.student.departmentName}
+                  <p className="font-semibold text-foreground">{incident.student.name}</p>
+                  <p className="text-[10px] font-mono text-primary font-medium">
+                    Roll: {incident.student.rollNumber} • Sec {incident.student.section || 'A'} • Batch {incident.student.batch || '2022-2026'}
                   </p>
+                  <p className="text-[10px] text-muted-foreground">{incident.student.departmentName || 'CSE (AI & ML)'}</p>
                 </>
               ) : (
-                <p className="font-medium text-slate-400">General / Institutional Issue</p>
+                <p className="font-medium text-muted-foreground">General / Institutional Issue</p>
               )}
             </div>
           </div>
@@ -211,8 +212,8 @@ export default function AdminIncidentDossierPage({
 
         {/* Incident Narrative */}
         <div className="pt-2">
-          <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Incident Narrative</h4>
-          <div className="p-4 bg-slate-950/60 rounded-xl border border-slate-800 text-xs text-slate-300 leading-relaxed whitespace-pre-line font-normal">
+          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Incident Narrative</h4>
+          <div className="p-4 bg-background rounded-xl border border-border text-xs text-foreground/90 leading-relaxed whitespace-pre-line font-normal">
             {incident.description}
           </div>
         </div>
@@ -222,19 +223,19 @@ export default function AdminIncidentDossierPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Immutable Timeline */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
+          <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-subtle">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-cyan-400" />
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-primary" />
                 Immutable Response Timeline & Right-to-Respond
               </h3>
-              <span className="text-[11px] text-slate-500">
+              <span className="text-[11px] text-muted-foreground">
                 {incident.responses?.length || 0} formal statements
               </span>
             </div>
 
             {incident.responses?.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-500 border border-dashed border-slate-800 rounded-xl">
+              <div className="p-6 text-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
                 No official statements recorded yet.
               </div>
             ) : (
@@ -242,18 +243,18 @@ export default function AdminIncidentDossierPage({
                 {incident.responses.map((resp: any) => (
                   <div
                     key={resp.id}
-                    className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2 text-xs"
+                    className="p-4 rounded-xl bg-muted/60 border border-border space-y-2 text-xs"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-white">{resp.author?.name}</span>
+                        <span className="font-semibold text-foreground">{resp.author?.name}</span>
                         <Badge variant="slate" size="sm">{resp.author?.role}</Badge>
                       </div>
-                      <span className="text-[10px] text-slate-500">
+                      <span className="text-[10px] text-muted-foreground">
                         {formatDateTime(resp.createdAt)}
                       </span>
                     </div>
-                    <p className="text-slate-300 leading-relaxed whitespace-pre-line">
+                    <p className="text-foreground/90 leading-relaxed whitespace-pre-line">
                       {resp.message}
                     </p>
                   </div>
@@ -262,8 +263,8 @@ export default function AdminIncidentDossierPage({
             )}
 
             {/* Response Submission Input */}
-            <form onSubmit={handleSendResponse} className="pt-3 border-t border-slate-800 space-y-2">
-              <label className="block text-xs font-semibold text-slate-300">
+            <form onSubmit={handleSendResponse} className="pt-3 border-t border-border space-y-2">
+              <label className="block text-xs font-semibold text-foreground">
                 Add Official Statement / Right-to-Respond Message
               </label>
               <textarea
@@ -272,7 +273,7 @@ export default function AdminIncidentDossierPage({
                 placeholder="Enter formal response or clarification..."
                 value={responseMessage}
                 onChange={(e) => setResponseMessage(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                className="w-full px-3 py-2 bg-background border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
               <div className="flex justify-end">
                 <Button
@@ -292,20 +293,20 @@ export default function AdminIncidentDossierPage({
 
         {/* Right Column: Formal Actions & Disciplinary Resolution */}
         <div className="space-y-4">
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 space-y-4">
-            <h3 className="text-sm font-bold text-white flex items-center gap-2">
-              <FileCheck className="w-4 h-4 text-emerald-400" />
+          <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-subtle">
+            <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+              <FileCheck className="w-4 h-4 text-emerald-500" />
               Recorded Actions & Outcomes
             </h3>
 
             {incident.actions?.length === 0 ? (
-              <p className="text-xs text-slate-500">No disciplinary outcomes recorded yet.</p>
+              <p className="text-xs text-muted-foreground">No disciplinary outcomes recorded yet.</p>
             ) : (
               <div className="space-y-2.5">
                 {incident.actions.map((act: any) => (
                   <div
                     key={act.id}
-                    className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs space-y-1"
+                    className="p-3 rounded-xl bg-muted/60 border border-border text-xs space-y-1"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-emerald-400">

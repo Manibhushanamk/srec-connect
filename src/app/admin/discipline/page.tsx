@@ -29,6 +29,9 @@ export default function AdminDisciplinePage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [typeFilter, setTypeFilter] = useState('ALL'); // 'ALL' | 'STUDENT_GRIEVANCE' | 'FACULTY_DISCIPLINE'
+  const [sectionFilter, setSectionFilter] = useState('ALL');
+  const [batchFilter, setBatchFilter] = useState('ALL');
   const [search, setSearch] = useState('');
 
   // Modal State
@@ -47,11 +50,14 @@ export default function AdminDisciplinePage() {
   const fetchIncidents = async () => {
     setLoading(true);
     try {
-      const res = await fetch(
-        `/api/incidents?status=${statusFilter === 'ALL' ? '' : statusFilter}&category=${
-          categoryFilter === 'ALL' ? '' : categoryFilter
-        }`
-      );
+      const params = new URLSearchParams();
+      if (statusFilter !== 'ALL') params.set('status', statusFilter);
+      if (categoryFilter !== 'ALL') params.set('category', categoryFilter);
+      if (typeFilter !== 'ALL') params.set('type', typeFilter);
+      if (sectionFilter !== 'ALL') params.set('section', sectionFilter);
+      if (batchFilter !== 'ALL') params.set('batch', batchFilter);
+
+      const res = await fetch(`/api/incidents?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setIncidents(data.incidents || []);
@@ -65,7 +71,7 @@ export default function AdminDisciplinePage() {
 
   useEffect(() => {
     fetchIncidents();
-  }, [statusFilter, categoryFilter]);
+  }, [statusFilter, categoryFilter, typeFilter, sectionFilter, batchFilter]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,15 +131,15 @@ export default function AdminDisciplinePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border pb-6">
         <div>
           <Badge variant="rose" size="sm" className="mb-1">
             Student Affairs & Ethics
           </Badge>
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
             Complaints & Discipline Management
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Confidential student grievances, academic disciplinary tracking, and immutable response timelines.
           </p>
         </div>
@@ -141,35 +147,100 @@ export default function AdminDisciplinePage() {
         <Button
           variant="primary"
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-1.5 self-start sm:self-auto bg-rose-600 hover:bg-rose-500 shadow-rose-950/40"
+          className="flex items-center gap-1.5 self-start sm:self-auto bg-rose-600 hover:bg-rose-500 shadow-xs text-white"
         >
           <Plus className="w-4 h-4" />
           File Incident / Grievance
         </Button>
       </div>
 
-      {/* Filters and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative w-full sm:max-w-md">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search by case title, roll number, or student name..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-slate-900/60 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500"
-          />
+      {/* Category Tabs: Specific Section Breakdown */}
+      <div className="flex items-center gap-2 border-b border-border pb-3 overflow-x-auto text-xs font-semibold">
+        <button
+          onClick={() => setTypeFilter('ALL')}
+          className={`px-3.5 py-1.5 rounded-xl transition-all ${
+            typeFilter === 'ALL'
+              ? 'bg-primary text-white shadow-xs font-bold'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+        >
+          All Dossiers ({incidents.length})
+        </button>
+        <button
+          onClick={() => setTypeFilter('STUDENT_GRIEVANCE')}
+          className={`px-3.5 py-1.5 rounded-xl transition-all ${
+            typeFilter === 'STUDENT_GRIEVANCE'
+              ? 'bg-primary text-white shadow-xs font-bold'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+        >
+          Student Grievances (Filed by Students)
+        </button>
+        <button
+          onClick={() => setTypeFilter('FACULTY_DISCIPLINE')}
+          className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+            typeFilter === 'FACULTY_DISCIPLINE'
+              ? 'bg-rose-600 text-white shadow-xs font-bold'
+              : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+          }`}
+        >
+          <Lock className="w-3.5 h-3.5" />
+          Faculty Conduct Notices (HOD Only)
+        </button>
+      </div>
+
+      {/* Filters Toolbar: Search, Section & Batch Selectors */}
+      <div className="bg-card border border-border rounded-2xl p-4 shadow-subtle space-y-3">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search by case title, roll number, or student name..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 bg-background border border-border rounded-xl text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Section Selector */}
+            <select
+              value={sectionFilter}
+              onChange={(e) => setSectionFilter(e.target.value)}
+              className="px-3 py-2 bg-background border border-border rounded-xl text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+            >
+              <option value="ALL">All Sections</option>
+              <option value="A">Section A</option>
+              <option value="B">Section B</option>
+              <option value="C">Section C</option>
+            </select>
+
+            {/* Batch Selector */}
+            <select
+              value={batchFilter}
+              onChange={(e) => setBatchFilter(e.target.value)}
+              className="px-3 py-2 bg-background border border-border rounded-xl text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+            >
+              <option value="ALL">All Batches</option>
+              <option value="2022-2026">Batch 2022-2026</option>
+              <option value="2023-2027">Batch 2023-2027</option>
+              <option value="2024-2028">Batch 2024-2028</option>
+              <option value="2025-2029">Batch 2025-2029</option>
+            </select>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-xl self-stretch sm:self-auto overflow-x-auto text-xs">
+        {/* Status Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-2 border-t border-border text-xs">
           {['ALL', 'REPORTED', 'UNDER_REVIEW', 'ESCALATED_TO_HOD', 'RESOLVED'].map((tab) => (
             <button
               key={tab}
               onClick={() => setStatusFilter(tab)}
-              className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-all ${
+              className={`px-3 py-1 rounded-lg font-medium whitespace-nowrap transition-all ${
                 statusFilter === tab
-                  ? 'bg-rose-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-secondary text-foreground font-bold border border-border shadow-2xs'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {tab.replace(/_/g, ' ')}
@@ -181,19 +252,19 @@ export default function AdminDisciplinePage() {
       {/* Case List */}
       {loading ? (
         <div className="py-20 flex justify-center">
-          <Loader2 className="w-6 h-6 text-rose-400 animate-spin" />
+          <Loader2 className="w-6 h-6 text-rose-500 animate-spin" />
         </div>
       ) : filteredIncidents.length === 0 ? (
-        <div className="p-12 text-center border border-dashed border-slate-800 rounded-2xl bg-slate-900/20 text-xs text-slate-400">
-          <ShieldAlert className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-          <h3 className="text-sm font-semibold text-white">No incidents or grievances recorded</h3>
-          <p className="text-xs text-slate-400 mt-1">Cases reported by faculty or students will appear here.</p>
+        <div className="p-12 text-center border border-dashed border-border rounded-2xl bg-muted/20 text-xs text-muted-foreground">
+          <ShieldAlert className="w-10 h-10 text-muted-foreground/60 mx-auto mb-3" />
+          <h3 className="text-sm font-semibold text-foreground">No incidents or grievances recorded</h3>
+          <p className="text-xs text-muted-foreground mt-1">Cases matching the selected filters will appear here.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {filteredIncidents.map((inc) => (
             <Link key={inc.id} href={`/admin/discipline/${inc.id}`} className="block group">
-              <Card className="p-5 border-slate-800 bg-slate-900/60 hover:border-slate-700 transition-all">
+              <Card className="p-5 border-border bg-card hover:border-primary/50 transition-all">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                   <div className="space-y-2 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -206,42 +277,49 @@ export default function AdminDisciplinePage() {
                       <Badge variant={inc.status === 'RESOLVED' ? 'emerald' : 'cyan'} size="sm">
                         {inc.status.replace(/_/g, ' ')}
                       </Badge>
-                      {inc.isConfidentialHOD && (
-                        <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-400 px-2 py-0.5 rounded-full bg-amber-950/50 border border-amber-800/60">
+                      {inc.reporter?.role !== 'STUDENT' ? (
+                        <span className="flex items-center gap-1 text-[11px] font-semibold text-rose-500 px-2 py-0.5 rounded-full bg-rose-500/10 border border-rose-500/30">
                           <Lock className="w-3 h-3" />
-                          HOD Confidential
+                          Faculty Notice • HOD Confidential
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-[11px] font-semibold text-cyan-500 px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30">
+                          Student Grievance
                         </span>
                       )}
                     </div>
 
-                    <h3 className="text-base font-bold text-white group-hover:text-rose-400 transition-colors">
+                    <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors">
                       {inc.title}
                     </h3>
 
-                    <div className="flex flex-wrap items-center gap-4 text-xs text-slate-400">
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                       {inc.student && (
-                        <span className="flex items-center gap-1.5 font-mono text-cyan-300">
-                          <GraduationCap className="w-3.5 h-3.5 text-cyan-400" />
+                        <span className="flex items-center gap-1.5 font-mono text-foreground font-semibold px-2 py-0.5 rounded bg-muted border border-border">
+                          <GraduationCap className="w-3.5 h-3.5 text-primary" />
                           {inc.student.name} ({inc.student.rollNumber})
+                          <span className="text-[10px] text-muted-foreground font-normal">
+                            • Sec {inc.student.section || 'A'} • {inc.student.batch || '2022-2026'}
+                          </span>
                         </span>
                       )}
                       <span className="flex items-center gap-1.5">
-                        <User className="w-3.5 h-3.5 text-slate-500" />
+                        <User className="w-3.5 h-3.5 text-muted-foreground" />
                         Reported by {inc.reporter?.name} ({inc.reporter?.role})
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-slate-500" />
+                        <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                         {formatDate(inc.createdAt)}
                       </span>
-                      <span className="flex items-center gap-1.5 text-slate-300">
-                        <MessageSquare className="w-3.5 h-3.5 text-rose-400" />
+                      <span className="flex items-center gap-1.5 text-foreground font-medium">
+                        <MessageSquare className="w-3.5 h-3.5 text-primary" />
                         {inc._count?.responses || 0} responses
                       </span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 self-end lg:self-center">
-                    <Button variant="secondary" size="sm" className="text-xs group-hover:bg-slate-800">
+                    <Button variant="secondary" size="sm" className="text-xs group-hover:bg-muted">
                       Open Case Dossier
                       <ChevronRight className="w-3.5 h-3.5 ml-1" />
                     </Button>

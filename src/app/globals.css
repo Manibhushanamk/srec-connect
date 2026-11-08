@@ -123,22 +123,22 @@
   /* Form Inputs, Selects & Labels */
   .input-field {
     @apply w-full max-w-full block px-3.5 py-2 text-xs sm:text-sm rounded-xl box-border
-           bg-space-900 border border-slate-700/80 text-slate-100 placeholder-slate-500
+           bg-background border border-border text-foreground placeholder:text-muted-foreground
            transition-all duration-150
-           focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20
+           focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   select.input-field {
-    @apply bg-space-900 text-slate-100 cursor-pointer pr-8;
+    @apply bg-background text-foreground cursor-pointer pr-8;
   }
 
   select.input-field option {
-    @apply bg-space-900 text-slate-100 py-1.5;
+    @apply bg-card text-foreground py-1.5;
   }
 
   .label-text {
-    @apply block text-xs font-medium text-slate-300 mb-1.5;
+    @apply block text-xs font-medium text-muted-foreground mb-1.5;
   }
 }
 

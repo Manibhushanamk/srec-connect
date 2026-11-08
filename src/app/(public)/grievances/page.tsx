@@ -401,12 +401,21 @@ export default function StudentGrievancesPage() {
                 {/* Header */}
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="rose" size="sm">{selectedIncident.priority} PRIORITY</Badge>
                       <Badge variant="slate" size="sm">{selectedIncident.category.replace(/_/g, ' ')}</Badge>
-                      {selectedIncident.isConfidentialHOD && (
-                        <span className="text-[10px] font-semibold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Lock className="w-3 h-3" /> HOD Bypass
+                      {selectedIncident.reporter?.role !== 'STUDENT' ? (
+                        <span className="text-[10px] font-semibold text-rose-500 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Lock className="w-3 h-3" /> Faculty Conduct Notice • HOD Confidential
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold text-cyan-500 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-full">
+                          Student Grievance
+                        </span>
+                      )}
+                      {selectedIncident.student && (
+                        <span className="text-[10px] font-mono font-medium text-foreground bg-muted border border-border px-2 py-0.5 rounded-full">
+                          Sec {selectedIncident.student.section || 'A'} • Batch {selectedIncident.student.batch || '2022-2026'}
                         </span>
                       )}
                     </div>

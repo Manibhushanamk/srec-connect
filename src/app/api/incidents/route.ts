@@ -24,6 +24,9 @@ export async function GET(req: NextRequest) {
     const statusParam = searchParams.get('status');
     const categoryParam = searchParams.get('category');
     const priorityParam = searchParams.get('priority');
+    const typeParam = searchParams.get('type');
+    const sectionParam = searchParams.get('section');
+    const batchParam = searchParams.get('batch');
 
     const where: any = { deletedAt: null };
 
@@ -36,8 +39,20 @@ export async function GET(req: NextRequest) {
     if (priorityParam && priorityParam !== 'ALL') {
       where.priority = priorityParam as IncidentPriority;
     }
+    if (sectionParam && sectionParam !== 'ALL') {
+      where.student = { ...(where.student || {}), section: sectionParam };
+    }
+    if (batchParam && batchParam !== 'ALL') {
+      where.student = { ...(where.student || {}), batch: batchParam };
+    }
+    if (typeParam === 'STUDENT_GRIEVANCE') {
+      where.reporter = { role: 'STUDENT' };
+    } else if (typeParam === 'FACULTY_DISCIPLINE') {
+      where.reporter = { role: { not: 'STUDENT' } };
+    }
 
-    // Role-based visibility isolation
+    // Role-based visibility isolation:
+    // Disciplinary complaints given to a student by faculty/HOD are strictly restricted to HOD, Super Admin, and the reporting faculty.
     if (currentUser.role === 'STUDENT') {
       // Student can ONLY view cases where they are the reporter OR the accused subject
       const studentId = currentUser.student?.id;
@@ -46,13 +61,10 @@ export async function GET(req: NextRequest) {
         ...(studentId ? [{ studentId }] : []),
       ];
     } else if (currentUser.role === 'FACULTY') {
-      // Regular Faculty CANNOT view cases marked isConfidentialHOD: true unless they reported it
-      where.OR = [
-        { reporterId: currentUser.id },
-        { isConfidentialHOD: false },
-      ];
+      // Regular Faculty can ONLY view complaints they personally reported
+      where.reporterId = currentUser.id;
     }
-    // HOD and SUPER_ADMIN have full visibility to all cases including isConfidentialHOD: true
+    // HOD and SUPER_ADMIN have full sovereign departmental visibility to all cases across all sections and batches
 
     const incidents = await prisma.incident.findMany({
       where,

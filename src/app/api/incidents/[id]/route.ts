@@ -64,25 +64,32 @@ export async function GET(
       return NextResponse.json({ error: 'Incident not found' }, { status: 404 });
     }
 
-    // Confidentiality and Access Isolation Check
+    // Confidentiality and Access Isolation Check:
+    // Disciplinary complaints given to a student by faculty/HOD are strictly restricted to HOD, Super Admin, and the issuing faculty.
     const isReporter = incident.reporterId === currentUser.id;
     const isSubjectStudent = incident.studentId && currentUser.student?.id === incident.studentId;
     const isHOD = currentUser.role === 'HOD';
     const isSuperAdmin = currentUser.role === 'SUPER_ADMIN';
 
-    if (incident.isConfidentialHOD) {
-      // Strictly restricted to HOD, SUPER_ADMIN, and the reporter
-      if (!isHOD && !isSuperAdmin && !isReporter) {
+    if (currentUser.role === 'STUDENT') {
+      if (!isReporter && !isSubjectStudent) {
         return NextResponse.json(
-          { error: 'Forbidden: Confidential case restricted to HOD' },
+          { error: 'Forbidden: You do not have permission to view this case dossier' },
           { status: 403 }
         );
       }
-    } else {
-      // General non-confidential cases
-      if (currentUser.role === 'STUDENT' && !isReporter && !isSubjectStudent) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    } else if (currentUser.role === 'FACULTY') {
+      if (!isReporter && !isHOD && !isSuperAdmin) {
+        return NextResponse.json(
+          { error: 'Forbidden: Student disciplinary records and complaints are strictly restricted to HOD and the issuing faculty' },
+          { status: 403 }
+        );
       }
+    } else if (incident.isConfidentialHOD && !isHOD && !isSuperAdmin && !isReporter) {
+      return NextResponse.json(
+        { error: 'Forbidden: Confidential case restricted to HOD' },
+        { status: 403 }
+      );
     }
 
     return NextResponse.json({ incident });
