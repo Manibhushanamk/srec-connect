@@ -42,6 +42,7 @@ export const DesktopSidebar: React.FC = () => {
     { label: 'User Directory', href: '/admin/users', icon: Users },
     { label: 'Bulk Ingestion', href: '/admin/bulk-upload', icon: FileSpreadsheet },
     { label: 'Verify Achievements', href: '/admin/achievements', icon: Award },
+    { label: 'Campus Events', href: '/admin/events', icon: Calendar },
   ];
 
   return (

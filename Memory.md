@@ -3,30 +3,34 @@
 > **Project:** SREC Connect v3.0  
 > **Institution:** Santhiram Engineering College (SREC), Nandyal — CSE (AI & ML)  
 > **Last Updated:** 2026-11-08  
-> **Current Phase:** Phase 5 — Social Community & Feed Complete; Ready for Phase 6 (Achievements & Verification)  
+> **Current Phase:** Phase 7 — Events & QR Attendance Complete; Ready for Phase 8 (Complaints & Discipline Management)  
 
 ---
 
 ## 1. Current Status & Phase Progress
 
-- **Active Goal:** Phase 5 (Social Community & Feed: Post Composer, Sharp WebP Compression, Cloudflare R2 Pipeline, Interactive Likes/Bookmarks/Comments) Completed; All pages audited and layout bugs fixed. Ready to start Phase 6 (Achievements & Multi-Tier Verification Workflow).
+- **Active Goal:** Phase 7 (Events Lifecycle, Capacity Concurrency, Waitlist Management, and QR Attendance Desk) Completed & Empirically Verified. Ready for Phase 8 (Complaints & Discipline Management).
 - **Current State:**
-  - Resolved AppShell layout constraint: Directories and profiles were previously cramped into `max-w-2xl` with an invasive right rail. Updated `AppShell.tsx` to conditionally give directory & profile pages full responsive width (`max-w-5xl`/`max-w-6xl`) and reserve the 3-column layout exclusively for the Home Feed.
-  - Eliminated dead/broken navigation links: Replaced non-existent `/incidents` and `/documents` with live `/departments` and `/about`; mapped admin tools to live `/admin/users` and `/admin/bulk-upload`.
-  - Added role-based Profile Router ([`src/app/profile/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/profile/page.tsx)) and redirects for `/feed` and `/achievements/submit`.
-  - Optimized Academic Departments query ([`src/app/(public)/departments/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/(public)/departments/page.tsx)): Replaced 44 parallel DB queries with 4 grouped queries, eliminating database connection pool timeouts.
-  - Implemented Phase 5 Post Composer ([`src/components/social/PostComposer.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/components/social/PostComposer.tsx)) with image preview, character count, visibility selection, and strict client/server enforcement of max 2 images.
-  - Implemented Sharp WebP Image Pipeline ([`src/lib/image-processor.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/lib/image-processor.ts) & [`src/lib/media-constants.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/lib/media-constants.ts)) ensuring max 1200px dimensions, WebP compression, and `<= 500 KB` file size.
-  - Implemented Community Feed APIs:
-    - [`src/app/api/posts/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/posts/route.ts) (GET list with filters & POST creation with R2 uploads)
-    - [`src/app/api/posts/[id]/like/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/posts/[id]/like/route.ts) (toggle like)
-    - [`src/app/api/posts/[id]/bookmark/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/posts/[id]/bookmark/route.ts) (toggle bookmark)
-    - [`src/app/api/posts/[id]/comments/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/posts/[id]/comments/route.ts) (fetch & post comments)
-    - [`src/app/api/posts/[id]/report/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/posts/[id]/report/route.ts) (report post for moderation)
-  - Interactive Feed Card ([`src/components/social/FeedCard.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/components/social/FeedCard.tsx)) wired to backend APIs with optimistic updates.
-  - Integration test suites passing: 29/29 tests passing across `tests/auth-rbac.test.ts`, `tests/user-admin-bulk.test.ts`, `tests/portfolios.test.ts`, and `tests/social-feed.test.ts`.
-  - TypeScript typecheck passing cleanly with 0 errors (`tsc --noEmit`).
-  - Empirically verified end-to-end post creation and like interaction via Playwright (`verified_live_feed_post.png`).
+  - **Phase 7 Complete:**
+    - Implemented Events REST API endpoints:
+      - [`src/app/api/events/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/events/route.ts): GET with multi-attribute filtering & POST for event creation with RBAC enforcement and Audit Logging.
+      - [`src/app/api/events/[id]/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/events/[id]/route.ts): GET with seat metrics and anti-spam WhatsApp disclosure (only exposed post-confirmed-registration), PATCH, and DELETE.
+      - [`src/app/api/events/[id]/register/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/events/[id]/register/route.ts): Concurrency-safe transactional seat reservation (`prisma.$transaction`), automatic waitlist queueing when capacity is full, and automatic waitlist promotion upon cancellation.
+      - [`src/app/api/events/[id]/checkin/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/events/[id]/checkin/route.ts): Organizer check-in via Roll Number or QR scan with audit logging.
+      - [`src/app/api/events/[id]/attendance/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/events/[id]/attendance/route.ts): Real-time roster and attendance rate dashboard.
+    - Implemented UI pages:
+      - Public Event Detail Page ([`src/app/(public)/events/[id]/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/(public)/events/[id]/page.tsx)) with dynamic registration action card ([`src/components/events/EventRegistrationBox.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/components/events/EventRegistrationBox.tsx)).
+      - Admin Events Management Dashboard ([`src/app/admin/events/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/admin/events/page.tsx)).
+      - Live Organizer Attendance Desk ([`src/app/admin/events/[id]/attendance/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/admin/events/[id]/attendance/page.tsx)) with fast roll-number check-in and manual toggle.
+    - Automated integration test suite: 6/6 tests passing in `tests/events-attendance.test.ts`. Total project tests: 38/38 passing across all suites.
+    - Verified live with Playwright screenshots:
+      - `verified_event_details.png`
+      - `verified_admin_events.png`
+      - `verified_admin_event_attendance.png`
+  - **Phase 6 Complete (`2bcb547`):**
+    - Achievements multi-tier verification queue, edit & approve desk at `/admin/achievements`.
+  - **Phases 1-5 Complete:**
+    - Foundation, Auth & RBAC, Bulk Ingestion, Portfolios, and Social Community Feed.
 
 ---
 

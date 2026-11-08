@@ -94,22 +94,22 @@ graph TD
 ## Phase 6: Achievements & Verification
 - **Objective:** Multi-tier achievement submission and verification review workflow.
 - **Tasks:**
-  - [ ] Task 6.1: Student achievement submission with proof document upload.
-  - [ ] Task 6.2: Faculty review queue with approval, rejection, and resubmission request actions.
-  - [ ] Task 6.3: HOD escalation queue and audit log tracking.
-- **Verification:** State transition test verifying unverified achievements never display the Verified badge.
-- **Status:** Locked
+  - [x] Task 6.1: Student achievement submission with proof document upload.
+  - [x] Task 6.2: Faculty review queue with approval, rejection, and resubmission request actions.
+  - [x] Task 6.3: HOD escalation queue and audit log tracking.
+- **Verification:** State transition test verifying unverified achievements never display the Verified badge; verified in Playwright at `/admin/achievements` and 3/3 tests passed in `tests/achievements-workflow.test.ts`.
+- **Status:** Complete (commit `2bcb547`)
 
 ---
 
 ## Phase 7: Events & QR Attendance
 - **Objective:** Department events lifecycle, registration, waitlist, and QR attendance check-in.
 - **Tasks:**
-  - [ ] Task 7.1: Event creation with audience targeting, seat limits, and optional WhatsApp link for registrants.
-  - [ ] Task 7.2: Transactional student registration with capacity and waitlist management.
-  - [ ] Task 7.3: Event check-in via organizer manual toggle and event-specific QR scanner.
-- **Verification:** Concurrency test verifying capacity cannot be oversold; QR scanner verified for event check-in only.
-- **Status:** Locked
+  - [x] Task 7.1: Event creation with audience targeting, seat limits, and optional WhatsApp link for registrants.
+  - [x] Task 7.2: Transactional student registration with capacity and waitlist management.
+  - [x] Task 7.3: Event check-in via organizer manual toggle and event-specific QR scanner.
+- **Verification:** Concurrency test verifying capacity cannot be oversold and automatic waitlist promotion upon cancellation; QR scanner verified for event check-in only (6/6 tests passing in `tests/events-attendance.test.ts`, verified via Playwright at `/events/[id]`, `/admin/events`, and `/admin/events/[id]/attendance`).
+- **Status:** Complete (Phase 7 Verified)
 
 ---
 
@@ -120,7 +120,7 @@ graph TD
   - [ ] Task 8.2: Confidential HOD bypass workflow for student grievances.
   - [ ] Task 8.3: Immutable response timeline with student right-to-respond and authorized action logging.
 - **Verification:** Permission test proving non-authorized users cannot access or view incident records.
-- **Status:** Locked
+- **Status:** Next Up
 
 ---
 
