@@ -8,6 +8,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeft, Award, Send, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { DriveFileUploader } from '@/components/drive/DriveFileUploader';
 
 export default function StudentSubmitAchievementPage() {
   const router = useRouter();
@@ -262,19 +263,13 @@ export default function StudentSubmitAchievementPage() {
               />
             </div>
 
-            <div>
-              <label htmlFor="driveUrl" className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
-                Certificate URL / Google Drive Document Link
-              </label>
-              <input
-                type="url"
-                id="driveUrl"
-                placeholder="https://drive.google.com/file/d/..."
-                value={formData.googleDriveUrl}
-                onChange={(e) => setFormData({ ...formData, googleDriveUrl: e.target.value })}
-                className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-            </div>
+            <DriveFileUploader
+              value={formData.googleDriveUrl}
+              onChange={(url) => setFormData({ ...formData, googleDriveUrl: url })}
+              label="Certificate Proof Document"
+              documentType="STUDENT_CERTIFICATE"
+              helpText="Upload certificate directly to Google Drive. It is automatically shared with view access for verification."
+            />
           </Card>
 
           {/* Team Members Section */}

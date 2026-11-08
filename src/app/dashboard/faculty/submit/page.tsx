@@ -8,6 +8,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeft, BookOpen, Send, CheckCircle2 } from 'lucide-react';
+import { DriveFileUploader } from '@/components/drive/DriveFileUploader';
 
 export default function FacultySubmitRecordPage() {
   const router = useRouter();
@@ -243,22 +244,13 @@ export default function FacultySubmitRecordPage() {
               />
             </div>
 
-            <div>
-              <label htmlFor="googleDriveUrl" className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
-                Manuscript / Certificate Document Link (Google Drive / Docs)
-              </label>
-              <input
-                type="url"
-                id="googleDriveUrl"
-                value={formData.googleDriveUrl}
-                onChange={(e) => setFormData({ ...formData, googleDriveUrl: e.target.value })}
-                placeholder="https://drive.google.com/file/d/..."
-                className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-              />
-              <p className="text-[11px] text-muted-foreground mt-1.5">
-                Ensure sharing permissions are set to viewable by institutional members.
-              </p>
-            </div>
+            <DriveFileUploader
+              value={formData.googleDriveUrl}
+              onChange={(url) => setFormData({ ...formData, googleDriveUrl: url })}
+              label="Manuscript / Proof Document"
+              documentType="FACULTY_PUBLICATION"
+              helpText="Upload paper, patent proof, or certificate directly to Google Drive. Automatically shared with view access."
+            />
           </Card>
 
           <div className="flex justify-end gap-3 pt-2">

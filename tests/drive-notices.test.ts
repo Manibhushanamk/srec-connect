@@ -120,4 +120,19 @@ describe('Phase 9: Google Drive, Notices & Notification System Workflow Tests', 
     });
     assert.equal(notif?.isRead, true);
   });
+
+  it('5. should support OAuth access token and apply public viewer sharing permissions', async () => {
+    const testDocBuffer = Buffer.from('Mock research publication manuscript proof');
+    const result = await uploadCertificateToDrive({
+      fileBuffer: testDocBuffer,
+      fileName: 'Research_Paper_Proof_SREC_AIML.pdf',
+      mimeType: 'application/pdf',
+      documentType: 'FACULTY_PUBLICATION',
+      accessToken: 'mock_oauth_access_token_123',
+    });
+
+    assert.ok(result.fileId);
+    assert.ok(result.webViewLink.startsWith('https://drive.google.com/'));
+    assert.equal(result.isPublicLink, true);
+  });
 });

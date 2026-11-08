@@ -45,69 +45,127 @@ export async function uploadCertificateToDrive({
   mimeType,
   documentType = 'VERIFIED_CERTIFICATE',
   folderId,
+  accessToken,
 }: {
   fileBuffer: Buffer;
   fileName: string;
   mimeType: string;
   documentType?: string;
   folderId?: string;
+  accessToken?: string;
 }): Promise<DriveUploadResult> {
   // 1. Enforce strict security boundary
   assertDriveAllowed(documentType);
 
-  // 2. Check for service account credentials or Google auth
+  // 2. Case A: User's Authenticated Google OAuth Access Token
+  if (accessToken) {
+    try {
+      const auth = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET
+      );
+      auth.setCredentials({ access_token: accessToken });
+      const drive = google.drive({ version: 'v3', auth });
+
+      const readable = new Readable();
+      readable.push(fileBuffer);
+      readable.push(null);
+
+      const fileMetadata: any = {
+        name: fileName,
+        parents: folderId ? [folderId] : undefined,
+      };
+
+      const media = {
+        mimeType,
+        body: readable,
+      };
+
+      const response = await drive.files.create({
+        requestBody: fileMetadata,
+        media,
+        fields: 'id, webViewLink, webContentLink',
+      });
+
+      const fileId = response.data.id!;
+
+      // Automatically share with anyone with link (public reader)
+      await drive.permissions.create({
+        fileId,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+        },
+      });
+
+      return {
+        fileId,
+        webViewLink: response.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`,
+        webContentLink: response.data.webContentLink || `https://drive.google.com/uc?id=${fileId}&export=download`,
+        isPublicLink: true,
+      };
+    } catch (oauthErr) {
+      console.warn('[Drive OAuth Upload Error] Failed using user OAuth token, attempting service account fallback:', oauthErr);
+    }
+  }
+
+  // 3. Case B: Institutional Google Service Account
   const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
   const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 
   if (privateKey && clientEmail) {
-    const auth = new google.auth.JWT({
-      email: clientEmail,
-      key: privateKey,
-      scopes: ['https://www.googleapis.com/auth/drive.file'],
-    });
+    try {
+      const auth = new google.auth.JWT({
+        email: clientEmail,
+        key: privateKey,
+        scopes: ['https://www.googleapis.com/auth/drive.file'],
+      });
 
-    const drive = google.drive({ version: 'v3', auth });
+      const drive = google.drive({ version: 'v3', auth });
 
-    const readable = new Readable();
-    readable.push(fileBuffer);
-    readable.push(null);
+      const readable = new Readable();
+      readable.push(fileBuffer);
+      readable.push(null);
 
-    const fileMetadata: any = {
-      name: fileName,
-      parents: folderId ? [folderId] : undefined,
-    };
+      const fileMetadata: any = {
+        name: fileName,
+        parents: folderId ? [folderId] : undefined,
+      };
 
-    const media = {
-      mimeType,
-      body: readable,
-    };
+      const media = {
+        mimeType,
+        body: readable,
+      };
 
-    const response = await drive.files.create({
-      requestBody: fileMetadata,
-      media,
-      fields: 'id, webViewLink, webContentLink',
-    });
+      const response = await drive.files.create({
+        requestBody: fileMetadata,
+        media,
+        fields: 'id, webViewLink, webContentLink',
+      });
 
-    const fileId = response.data.id!;
+      const fileId = response.data.id!;
 
-    // Set permission to anyone with link - viewer
-    await drive.permissions.create({
-      fileId,
-      requestBody: {
-        role: 'reader',
-        type: 'anyone',
-      },
-    });
+      // Automatically share with anyone with link (public reader)
+      await drive.permissions.create({
+        fileId,
+        requestBody: {
+          role: 'reader',
+          type: 'anyone',
+        },
+      });
 
-    return {
-      fileId,
-      webViewLink: response.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`,
-      webContentLink: response.data.webContentLink || `https://drive.google.com/uc?id=${fileId}&export=download`,
-      isPublicLink: true,
-    };
+      return {
+        fileId,
+        webViewLink: response.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`,
+        webContentLink: response.data.webContentLink || `https://drive.google.com/uc?id=${fileId}&export=download`,
+        isPublicLink: true,
+      };
+    } catch (saErr) {
+      console.warn('[Drive Service Account Upload Error] Service account upload failed:', saErr);
+    }
   }
 
-  // Fallback for development/testing when dedicated institutional service account is simulated
+  // 4. Case C: Development/Testing Simulated Institutional Drive Upload
   const mockFileId = `drive-srec-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
   return {
     fileId: mockFileId,

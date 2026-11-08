@@ -15,6 +15,7 @@ export const authOptions: NextAuthOptions = {
           prompt: 'select_account',
           access_type: 'offline',
           response_type: 'code',
+          scope: 'openid email profile https://www.googleapis.com/auth/drive.file',
         },
       },
     }),
@@ -163,7 +164,14 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
 
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
+      if (account?.access_token) {
+        token.accessToken = account.access_token;
+      }
+      if (account?.refresh_token) {
+        token.refreshToken = account.refresh_token;
+      }
+
       if (user?.email) {
         const normalizedEmail = user.email.toLowerCase().trim();
         const dbUser = await prisma.user.findUnique({
@@ -199,6 +207,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).studentId = token.studentId;
         (session.user as any).facultyId = token.facultyId;
       }
+      (session as any).accessToken = token.accessToken;
       return session;
     },
 
