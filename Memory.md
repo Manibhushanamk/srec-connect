@@ -9,14 +9,14 @@
 
 ## 1. Current Status & Phase Progress
 
-- **Active Goal:** Phase 2 (Database & Authentication Engine) Completed; Ready to start Phase 3 (User & Academic Administration: Bulk CSV/Excel Import & Roll Numbers).
+- **Active Goal:** Phase 2 and Hotfix Completed; Starting Phase 3 (User & Academic Administration: Bulk CSV/Excel Import & Roll Numbers).
 - **Current State:**
   - Synchronized and applied updated 5-role Prisma schema (`SUPER_ADMIN`, `HOD`, `WEB_MANAGER`, `FACULTY`, `STUDENT`) to Neon PostgreSQL (`v3_production` schema).
-  - Synchronized `ApprovedEmailDomain` and granular permission mappings (`DEFAULT_ROLE_PERMISSIONS`).
-  - Executed `scripts/bootstrap-super-admin.ts`, bootstrapping initial Super Admin (`manibhushanam4k@gmail.com`) linked with permanent student roll number `22091A3201`.
-  - Implemented and verified Google OAuth pre-provisioned matching, domain check, and session enrichment in `src/lib/auth.ts` and `src/lib/rbac.ts`.
-  - Empirically verified with `tests/auth-rbac.test.ts` (14/14 tests passing).
-  - Typecheck passed cleanly (`tsc --noEmit`).
+  - Resolved Next.js 15 App Router serialization boundary error by extracting dedicated client filter components (`EventsFilterBar.tsx`, `AchievementsFilterBar.tsx`, `StudentsFilterBar.tsx`, `FacultyFilterBar.tsx`) and removing `'use client'` from `src/app/(public)/layout.tsx`.
+  - All public routes (`/`, `/events`, `/achievements`, `/students`, `/faculty`) verified with HTTP 200 OK and captured via Playwright CLI.
+  - Integration test suite passing (14/14 tests in `tests/auth-rbac.test.ts`).
+  - TypeScript typecheck passing cleanly (`tsc --noEmit`).
+  - Commit landed: `ad4cb61`.
 
 ---
 

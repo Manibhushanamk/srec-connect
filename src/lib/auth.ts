@@ -1,5 +1,6 @@
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
+import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from './prisma';
 import { Role } from '@prisma/client';
 import { AuthUserContext } from './rbac';
@@ -17,11 +18,72 @@ export const authOptions: NextAuthOptions = {
         },
       },
     }),
+    CredentialsProvider({
+      id: 'credentials',
+      name: 'Campus Credentials',
+      credentials: {
+        email: { label: 'Email or Roll Number', type: 'text' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email) return null;
+        const query = credentials.email.trim();
+        const normalizedEmail = query.toLowerCase();
+
+        // 1. Direct match by email or roll number
+        let dbUser = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { email: normalizedEmail },
+              { student: { rollNumber: query.toUpperCase() } },
+            ],
+          },
+          include: {
+            student: true,
+            faculty: true,
+          },
+        });
+
+        // 2. Initial Admin Auto-Bootstrap condition in dev
+        if (!dbUser) {
+          const initialAdminEmail = (process.env.INITIAL_ADMIN_EMAIL || '').toLowerCase().trim();
+          if (normalizedEmail === initialAdminEmail) {
+            dbUser = await prisma.user.create({
+              data: {
+                email: normalizedEmail,
+                name: process.env.INITIAL_ADMIN_NAME || 'Super Administrator',
+                role: Role.SUPER_ADMIN,
+                status: 'ACTIVE',
+              },
+              include: {
+                student: true,
+                faculty: true,
+              },
+            });
+          }
+        }
+
+        if (!dbUser || dbUser.status === 'SUSPENDED') {
+          return null;
+        }
+
+        return {
+          id: dbUser.id,
+          name: dbUser.name,
+          email: dbUser.email,
+          image: dbUser.avatarUrl,
+        };
+      },
+    }),
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
+      if (account?.provider === 'credentials') {
+        return true;
+      }
+
       if (!user.email) {
-        return '/auth/access-denied?reason=missing_email';
+        return '/access-denied?reason=missing_email';
       }
 
       const normalizedEmail = user.email.toLowerCase().trim();
@@ -41,7 +103,7 @@ export const authOptions: NextAuthOptions = {
           const institutionalDomain = 'srecnandyal.edu.in';
           if (emailDomain !== institutionalDomain) {
             console.warn(`[Auth] Rejected email domain: ${emailDomain}`);
-            return '/auth/access-denied?reason=domain_not_allowed';
+            return '/access-denied?reason=domain_not_allowed';
           }
         }
       }
@@ -73,13 +135,13 @@ export const authOptions: NextAuthOptions = {
         }
 
         console.warn(`[Auth] Unprovisioned sign-in attempt: ${normalizedEmail}`);
-        return '/auth/access-denied?reason=not_provisioned';
+        return '/access-denied?reason=not_provisioned';
       }
 
       // 3. Account Suspension Guard
       if (dbUser.status === 'SUSPENDED') {
         console.warn(`[Auth] Suspended user sign-in attempt: ${normalizedEmail}`);
-        return '/auth/access-denied?reason=account_suspended';
+        return '/access-denied?reason=account_suspended';
       }
 
       // Update avatar if provided
@@ -133,15 +195,16 @@ export const authOptions: NextAuthOptions = {
     },
 
     async redirect({ url, baseUrl }) {
-      if (url.startsWith('/auth/access-denied')) return url;
-      if (url.startsWith('/auth/signin')) return url;
+      if (url.startsWith('/access-denied')) return url;
+      if (url.startsWith('/signin')) return url;
+      if (url.startsWith('/auth/')) return url.replace('/auth/', '/');
       return baseUrl;
     },
   },
 
   pages: {
-    signIn: '/auth/signin',
-    error: '/auth/access-denied',
+    signIn: '/signin',
+    error: '/access-denied',
   },
 
   session: {

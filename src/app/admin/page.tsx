@@ -8,6 +8,7 @@ import { AdminShell } from '@/components/layout/AdminShell';
 import { getServerSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { Role } from '@prisma/client';
+import { canAccessAdmin } from '@/lib/rbac';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -76,11 +77,11 @@ const MODULES = [
   { key: 'settings', label: 'Settings', icon: Settings, href: '/admin/settings', description: 'System configuration', roles: ['ROOT'] },
 ];
 
-async function getStats(userId: string, isRoot: boolean, departmentId: string | null) {
-  const where = isRoot ? {} : { departmentId };
+async function getStats(userId: string, isSuperAdmin: boolean, departmentId: string | null) {
+  const where = isSuperAdmin ? {} : { departmentId };
 
   const [users, departments, achievements, events, pendingAchievements, upcomingEvents] = await Promise.all([
-    prisma.user.count({ where: { role: 'ADMIN' } }),
+    prisma.user.count({ where: { status: 'ACTIVE' } }),
     prisma.department.count({ where: { isActive: true } }),
     prisma.achievement.count({ where: { ...where, status: 'PUBLISHED' } }),
     prisma.event.count({ where: { ...where, status: 'UPCOMING' } }),
@@ -123,21 +124,23 @@ export default async function AdminPage() {
   const session = await getServerSession();
   
   if (!session?.user) {
-    redirect('/auth/signin?callbackUrl=/admin');
+    redirect('/signin?callbackUrl=/admin');
   }
 
-  const userRole = (session.user as any).role;
-  const isRoot = (session.user as any).isRoot;
-  const userDepartmentId = (session.user as any).departmentId;
-  const userAdminType = (session.user as any).adminType;
+  const user = session.user as any;
+  if (!canAccessAdmin(user)) {
+    redirect('/access-denied');
+  }
+
+  const userRole = user.role;
+  const isSuperAdmin = userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || Boolean(user.isRoot);
+  const isRoot = isSuperAdmin;
+  const userDepartmentId = user.departmentId;
+  const userAdminType = userRole === 'HOD' ? 'DEPARTMENT' : userRole === 'WEB_MANAGER' ? 'MANAGER' : 'ROOT';
   const userName = session.user?.name || 'Admin';
   const userEmail = session.user?.email || '';
 
-  if (userRole !== Role.ADMIN && !isRoot) {
-    redirect('/auth/access-denied');
-  }
-
-  const stats = await getStats((session.user as any).id, isRoot, userDepartmentId);
+  const stats = await getStats(user.id, isSuperAdmin, userDepartmentId);
 
   const accessibleModules = MODULES.filter((m) => {
     if (isRoot) return true;

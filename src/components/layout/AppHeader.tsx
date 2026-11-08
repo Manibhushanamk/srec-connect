@@ -82,7 +82,7 @@ export const AppHeader: React.FC = () => {
             </Link>
           ) : (
             <Link
-              href="/login"
+              href="/signin"
               className="btn-primary text-xs py-2 px-3.5"
             >
               <LogIn className="w-3.5 h-3.5" />
