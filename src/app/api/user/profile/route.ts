@@ -41,39 +41,50 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
+  // URL safety validator (must be https:// or empty)
+  const sanitizeHttpsUrl = (url: any): string | undefined => {
+    if (!url) return undefined;
+    const s = String(url).trim();
+    if (!s) return undefined;
+    return s.startsWith('https://') ? s : undefined;
+  };
+
   // Update user avatar
   if (body.avatarUrl) {
-    await prisma.user.update({
-      where: { id: dbUser.id },
-      data: { avatarUrl: body.avatarUrl },
-    });
+    const safeAvatar = sanitizeHttpsUrl(body.avatarUrl);
+    if (safeAvatar) {
+      await prisma.user.update({
+        where: { id: dbUser.id },
+        data: { avatarUrl: safeAvatar },
+      });
+    }
   }
 
-  // Update student profile (locked fields: rollNumber, departmentId, batch)
+  // Update student profile (strictly immutable fields: rollNumber, departmentId, batch)
   if (dbUser.studentId) {
     await prisma.student.update({
       where: { id: dbUser.studentId },
       data: {
-        bio: body.bio !== undefined ? body.bio : undefined,
-        phone: body.phone !== undefined ? body.phone : undefined,
-        githubUrl: body.githubUrl !== undefined ? body.githubUrl : undefined,
-        linkedinUrl: body.linkedinUrl !== undefined ? body.linkedinUrl : undefined,
-        portfolioUrl: body.portfolioUrl !== undefined ? body.portfolioUrl : undefined,
-        avatarUrl: body.avatarUrl !== undefined ? body.avatarUrl : undefined,
+        bio: typeof body.bio === 'string' ? body.bio.substring(0, 1000) : undefined,
+        phone: typeof body.phone === 'string' ? body.phone.substring(0, 20) : undefined,
+        githubUrl: sanitizeHttpsUrl(body.githubUrl),
+        linkedinUrl: sanitizeHttpsUrl(body.linkedinUrl),
+        portfolioUrl: sanitizeHttpsUrl(body.portfolioUrl),
+        avatarUrl: sanitizeHttpsUrl(body.avatarUrl),
       },
     });
   }
 
-  // Update faculty profile (locked fields: designation, departmentId)
+  // Update faculty profile (strictly immutable fields: designation, departmentId)
   if (dbUser.facultyId) {
     await prisma.faculty.update({
       where: { id: dbUser.facultyId },
       data: {
-        bio: body.bio !== undefined ? body.bio : undefined,
-        cabin: body.cabin !== undefined ? body.cabin : undefined,
-        specialization: body.specialization !== undefined ? body.specialization : undefined,
-        googleScholar: body.googleScholar !== undefined ? body.googleScholar : undefined,
-        avatarUrl: body.avatarUrl !== undefined ? body.avatarUrl : undefined,
+        bio: typeof body.bio === 'string' ? body.bio.substring(0, 1000) : undefined,
+        cabin: typeof body.cabin === 'string' ? body.cabin.substring(0, 50) : undefined,
+        specialization: typeof body.specialization === 'string' ? body.specialization.substring(0, 200) : undefined,
+        googleScholar: sanitizeHttpsUrl(body.googleScholar),
+        avatarUrl: sanitizeHttpsUrl(body.avatarUrl),
       },
     });
   }

@@ -27,6 +27,13 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email) return null;
+
+        // Security Guard: Disable credentials fallback in production
+        if (process.env.NODE_ENV === 'production' && process.env.ENABLE_CREDENTIALS_AUTH !== 'true') {
+          console.warn('[Security] Credentials provider sign-in rejected in production mode. Use institutional Google OAuth.');
+          return null;
+        }
+
         const query = credentials.email.trim();
         const normalizedEmail = query.toLowerCase();
 

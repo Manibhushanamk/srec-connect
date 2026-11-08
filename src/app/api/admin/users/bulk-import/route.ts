@@ -18,6 +18,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No rows provided for import' }, { status: 400 });
     }
 
+    // Security: Bound bulk payload size to mitigate memory exhaustion
+    const MAX_BULK_ROWS = 1000;
+    if (rows.length > MAX_BULK_ROWS) {
+      return NextResponse.json(
+        { error: `Batch size exceeds limit of ${MAX_BULK_ROWS} rows per ingestion. Please split your file.` },
+        { status: 400 }
+      );
+    }
+
     // Pre-fetch departments for mapping
     const departments = await prisma.department.findMany({ select: { id: true, code: true, name: true } });
     const deptMap = new Map(departments.map(d => [d.code.toUpperCase(), d.id]));

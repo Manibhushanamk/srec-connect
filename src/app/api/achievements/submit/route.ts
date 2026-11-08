@@ -40,6 +40,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
+  // Security: Protocol and host validation on googleDriveUrl
+  if (googleDriveUrl) {
+    const trimmedUrl = String(googleDriveUrl).trim();
+    const isValidGoogleUrl = /^https:\/\/(drive|docs)\.google\.com\//.test(trimmedUrl);
+    if (!isValidGoogleUrl) {
+      return NextResponse.json(
+        { error: 'Invalid certificate URL. Only verified Google Drive/Docs links (https://drive.google.com/...) are accepted.' },
+        { status: 400 }
+      );
+    }
+  }
+
   const isFaculty = dbUser.role === 'FACULTY';
   const personType = isFaculty ? PersonType.FACULTY : PersonType.STUDENT;
 
