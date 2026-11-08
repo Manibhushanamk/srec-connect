@@ -96,6 +96,30 @@ export function ScholarDirectoryCard({
 
   const displaySkills = skills.length > 0 ? skills : defaultSkills;
 
+  const formatRank = (rank?: string | null) => {
+    if (!rank) return '1st';
+    const r = rank.toLowerCase();
+    if (r.includes('first') || r.includes('1st') || r === '1') return '1st';
+    if (r.includes('second') || r.includes('2nd') || r === '2') return '2nd';
+    if (r.includes('third') || r.includes('3rd') || r === '3') return '3rd';
+    if (r.includes('grand') || r.includes('winner')) return 'Winner';
+    if (r.includes('best') || r.includes('q1')) return 'Q1 Rank';
+    return rank.length > 8 ? rank.slice(0, 8) : rank;
+  };
+
+  const formatLevel = (lvl?: string | null) => {
+    if (!lvl) return 'National';
+    const mapping: Record<string, string> = {
+      INTERNATIONAL: 'Global',
+      NATIONAL: 'National',
+      STATE: 'State',
+      UNIVERSITY: 'Univ',
+      COLLEGE: 'College',
+      DEPARTMENT: 'Dept',
+    };
+    return mapping[lvl.toUpperCase()] || (lvl.length > 8 ? lvl.slice(0, 8) : lvl);
+  };
+
   const defaultHeadline =
     headline ||
     (type === 'STUDENT'
@@ -249,8 +273,8 @@ export function ScholarDirectoryCard({
         {/* 5. Four Metric Stat Boxes Row */}
         <div className="grid grid-cols-4 gap-2 mb-4">
           <div className="p-2.5 rounded-2xl bg-secondary/40 border border-border/60 text-center">
-            <p className="text-base sm:text-lg font-extrabold text-foreground truncate">
-              {type === 'ACHIEVEMENT' ? (positionRank || '1st') : (stats?.postsCount ?? 14)}
+            <p className="text-sm sm:text-base font-extrabold text-foreground truncate" title={positionRank || '1st'}>
+              {type === 'ACHIEVEMENT' ? formatRank(positionRank) : (stats?.postsCount ?? 14)}
             </p>
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">
               {type === 'STUDENT' ? 'Posts' : type === 'FACULTY' ? 'Papers' : 'Rank'}
@@ -267,8 +291,8 @@ export function ScholarDirectoryCard({
           </div>
 
           <div className="p-2.5 rounded-2xl bg-secondary/40 border border-border/60 text-center">
-            <p className="text-base sm:text-lg font-extrabold text-foreground truncate">
-              {type === 'ACHIEVEMENT' ? (level ? (level.length > 7 ? level.slice(0, 7) + '..' : level) : 'National') : (stats?.eventsCount ?? 12)}
+            <p className="text-sm sm:text-base font-extrabold text-foreground truncate" title={level || 'National'}>
+              {type === 'ACHIEVEMENT' ? formatLevel(level) : (stats?.eventsCount ?? 12)}
             </p>
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">
               {type === 'STUDENT' ? 'Events' : type === 'FACULTY' ? 'Mentored' : 'Level'}

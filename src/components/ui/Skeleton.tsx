@@ -132,7 +132,7 @@ export const DirectoryPageSkeleton: React.FC<{
       </div>
 
       {/* Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {Array.from({ length: count }).map((_, i) => (
           <ScholarDirectoryCardSkeleton key={i} />
         ))}

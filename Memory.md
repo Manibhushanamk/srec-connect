@@ -95,7 +95,16 @@
   - `/admin` -> `src/app/admin/loading.tsx` (Admin KPI grid + Table Skeletons).
   - Root -> `src/components/ui/LoadingScreen.tsx` with official SREC crest.
 
-### G. Comprehensive Multi-Role Testing & RBAC Access Matrix
+### I. Two-Column Balanced Grid Architecture for Laptop Screens
+- **Switch to 2-Column Responsive Grids**:
+  - Replaced cramped 3-column layout (`grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3`) with spacious 2-column layout (`grid grid-cols-1 lg:grid-cols-2 gap-6`) across:
+    - `/achievements` ([`src/app/(public)/achievements/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/(public)/achievements/page.tsx))
+    - `/students` ([`src/app/(public)/students/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/(public)/students/page.tsx))
+    - `/faculty` ([`src/app/(public)/faculty/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/(public)/faculty/page.tsx))
+    - Skeletons ([`src/components/ui/Skeleton.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/components/ui/Skeleton.tsx))
+  - **Eliminated Metric Card Truncation**:
+    - Cards now enjoy ample horizontal width next to the navigation sidebar.
+    - Added smart formatting (`formatRank` and `formatLevel`) in `ScholarDirectoryCard.tsx` preventing truncation down to "1...", "N..", "B..", etc., keeping labels like "1st", "Winner", "Q1 Rank", "National", "Global" fully readable.
 - **Student Role (`viswanadhum9985559753@gmail.com`)**:
   - Verified access to Student Dashboard (`/dashboard/student`), Achievement Submission (`/dashboard/student/submit`), Feed (`/`), Grievances (`/grievances`), and Events (`/events`).
   - Admin quick actions and sensitive admin endpoints are properly restricted.
