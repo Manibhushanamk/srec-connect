@@ -8,6 +8,7 @@ import { FeedCard, FeedPostProps } from '@/components/social/FeedCard';
 import { FeedCardSkeleton } from '@/components/ui/Skeleton';
 import { PostComposer } from '@/components/social/PostComposer';
 import { ProfileHeader } from '@/components/portfolio/ProfileHeader';
+import { ScholarDirectoryCard } from '@/components/cards/ScholarDirectoryCard';
 import {
   Sparkles,
   Award,
@@ -106,7 +107,7 @@ const FALLBACK_POSTS: FeedPostProps[] = [
 export default function HomePage() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') === 'portfolios' ? 'PORTFOLIOS' : 'FEED';
-  const [activeTab, setActiveTab] = useState<'FEED' | 'PORTFOLIOS' | 'DEPARTMENT'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'FEED' | 'PORTFOLIOS'>(initialTab);
   const [feedFilter, setFeedFilter] = useState<'ALL' | 'STUDENT' | 'FACULTY'>('ALL');
   const [posts, setPosts] = useState<FeedPostProps[]>(FALLBACK_POSTS);
   const [isLoading, setIsLoading] = useState(false);
@@ -115,8 +116,6 @@ export default function HomePage() {
     const tabParam = searchParams.get('tab');
     if (tabParam === 'portfolios') {
       setActiveTab('PORTFOLIOS');
-    } else if (tabParam === 'department') {
-      setActiveTab('DEPARTMENT');
     }
   }, [searchParams]);
 
@@ -214,17 +213,6 @@ export default function HomePage() {
             <Award className="w-3.5 h-3.5" />
             <span>Verified Portfolios</span>
           </button>
-          <button
-            onClick={() => setActiveTab('DEPARTMENT')}
-            className={`flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-xs whitespace-nowrap transition-all duration-200 ${
-              activeTab === 'DEPARTMENT'
-                ? 'bg-primary text-white shadow-sm font-semibold'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/80 font-medium'
-            }`}
-          >
-            <Brain className="w-3.5 h-3.5" />
-            <span>About CSE (AI & ML)</span>
-          </button>
         </div>
       </div>
 
@@ -303,72 +291,105 @@ export default function HomePage() {
 
       {/* 5. Tab 2: Verified Academic Portfolios Preview */}
       {activeTab === 'PORTFOLIOS' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs">
-            <span className="text-muted-foreground">
-              Featured Verified Scholar Portfolio from CSE (AI & ML) Department
+        <div className="space-y-6">
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-card border border-border text-xs">
+            <span className="text-muted-foreground font-medium">
+              Featured Verified Scholar Portfolios from CSE (AI & ML) Department
             </span>
             <Link href="/students" className="font-semibold text-primary hover:underline flex items-center gap-1">
-              <span>View All Portfolios</span>
+              <span>View All Students</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          <ProfileHeader
-            name="P. Sai Kumar"
-            rollNumber="22091A3202"
-            role="STUDENT"
-            department="Computer Science & Engineering (AI & ML)"
-            batch="2022-2026"
-            section="A"
-            headline="Undergraduate AI Researcher & Machine Learning Engineer | SREC Nandyal"
-            bio="Building intelligent systems, deep learning computer vision architectures, and real-time inference pipelines. Passionate about AI research and distributed full-stack platforms."
-            email="22091a3202@srecnandyal.edu.in"
-            isVerified={true}
-            stats={{
-              postsCount: 14,
-              verifiedAchievementsCount: 8,
-              eventsCount: 12,
-              skillsCount: 6,
-            }}
-            skills={['PyTorch', 'TensorFlow', 'Computer Vision', 'Next.js', 'PostgreSQL', 'Docker']}
-            isOwner={false}
-          />
-        </div>
-      )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <ScholarDirectoryCard
+              type="STUDENT"
+              id="sai-kumar"
+              name="P. Sai Kumar"
+              role="STUDENT"
+              departmentName="Computer Science & Engineering (AI & ML)"
+              headline="Undergraduate AI Researcher & Machine Learning Engineer | SREC Nandyal"
+              rollNumber="22091A3202"
+              batch="2022-2026"
+              section="A"
+              email="22091a3202@srecnandyal.edu.in"
+              stats={{
+                postsCount: 14,
+                verifiedCount: 8,
+                eventsCount: 12,
+                skillsCount: 6,
+              }}
+              skills={['PyTorch', 'TensorFlow', 'Computer Vision', 'Next.js', 'PostgreSQL', 'Docker']}
+              actionLabel="Connect"
+              href="/students/22091A3202"
+            />
 
-      {/* 6. Tab 3: About Department Overview */}
-      {activeTab === 'DEPARTMENT' && (
-        <div className="social-card p-6 border-border space-y-4">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center">
-              <Brain className="w-6 h-6" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-foreground">Department of CSE (AI & ML)</h2>
-              <p className="text-xs text-muted-foreground">Santhiram Engineering College (SREC), Nandyal</p>
-            </div>
-          </div>
-          <p className="text-xs text-foreground/80 leading-relaxed">
-            The Department of Computer Science & Engineering (Artificial Intelligence and Machine Learning) is committed to fostering innovation and research excellence. With state-of-the-art GPU labs, curriculum aligned with industry standards, and active hackathon culture, our students and faculty pioneer cutting-edge developments.
-          </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3">
-            <div className="p-3 rounded-xl bg-muted/40 text-center">
-              <p className="text-lg font-bold text-foreground">180</p>
-              <p className="text-[11px] text-muted-foreground">Annual Intake</p>
-            </div>
-            <div className="p-3 rounded-xl bg-muted/40 text-center">
-              <p className="text-lg font-bold text-primary">15+</p>
-              <p className="text-[11px] text-muted-foreground">Faculty Members</p>
-            </div>
-            <div className="p-3 rounded-xl bg-muted/40 text-center">
-              <p className="text-lg font-bold text-emerald-500">92%</p>
-              <p className="text-[11px] text-muted-foreground">Placement Rate</p>
-            </div>
-            <div className="p-3 rounded-xl bg-muted/40 text-center">
-              <p className="text-lg font-bold text-amber-500">24+</p>
-              <p className="text-[11px] text-muted-foreground">Hackathon Wins</p>
-            </div>
+            <ScholarDirectoryCard
+              type="FACULTY"
+              id="mallikarjuna"
+              name="Dr. S. Mallikarjuna"
+              role="HOD"
+              departmentName="Computer Science & Engineering (AI & ML)"
+              headline="Professor & Head of Department | Artificial Intelligence & Machine Learning"
+              designation="Professor & HOD"
+              qualification="Ph.D. in Computer Science"
+              specialization="Machine Learning, Edge AI, Distributed Systems"
+              email="hod.aiml@srecnandyal.edu.in"
+              stats={{
+                postsCount: 28,
+                verifiedCount: 16,
+                eventsCount: 24,
+                skillsCount: 5,
+              }}
+              skills={['Deep Learning', 'Edge AI', 'Reinforcement Learning', 'NLP', 'Robotics']}
+              actionLabel="Connect"
+              href="/faculty"
+            />
+
+            <ScholarDirectoryCard
+              type="STUDENT"
+              id="manideep"
+              name="K. Manideep"
+              role="STUDENT"
+              departmentName="Computer Science & Engineering (AI & ML)"
+              headline="Full Stack AI Systems Engineer & System Architect | SREC Nandyal"
+              rollNumber="22091A3201"
+              batch="2022-2026"
+              section="A"
+              email="22091a3201@srecnandyal.edu.in"
+              stats={{
+                postsCount: 19,
+                verifiedCount: 11,
+                eventsCount: 15,
+                skillsCount: 6,
+              }}
+              skills={['TypeScript', 'Next.js', 'Prisma', 'PyTorch', 'System Architecture', 'PostgreSQL']}
+              actionLabel="Connect"
+              href="/students/22091A3201"
+            />
+
+            <ScholarDirectoryCard
+              type="STUDENT"
+              id="akhila"
+              name="M. Akhila"
+              role="STUDENT"
+              departmentName="Computer Science & Engineering (AI & ML)"
+              headline="Data Scientist & Computer Vision Researcher | SREC Nandyal"
+              rollNumber="22091A3203"
+              batch="2022-2026"
+              section="A"
+              email="22091a3203@srecnandyal.edu.in"
+              stats={{
+                postsCount: 12,
+                verifiedCount: 7,
+                eventsCount: 9,
+                skillsCount: 5,
+              }}
+              skills={['Computer Vision', 'PyTorch', 'Data Analysis', 'Scikit-Learn', 'FastAPI']}
+              actionLabel="Connect"
+              href="/students/22091A3203"
+            />
           </div>
         </div>
       )}

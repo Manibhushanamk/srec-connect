@@ -15,9 +15,9 @@ export const AppHeader: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
         {/* Brand & Department Emblem */}
         <Link href="/" className="flex items-center gap-3 focus:outline-none group">
-          {/* Authentic Crest Placeholder */}
-          <div className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center font-bold text-sm tracking-wider shadow-sm group-hover:scale-105 transition-transform">
-            <span className="font-serif">SREC</span>
+          {/* Official SREC Emblem */}
+          <div className="w-10 h-10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+            <img src="/images/srec-logo.png" alt="SREC Logo" className="w-10 h-10 object-contain drop-shadow-sm" />
           </div>
 
           <div className="flex flex-col">

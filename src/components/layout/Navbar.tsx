@@ -92,9 +92,8 @@ export function Navbar() {
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-full" aria-label="Main navigation">
         <div className="flex items-center justify-between h-full">
           <Link href="/" className="flex items-center gap-2" aria-label="SREC Connect Home">
-            <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-brand-500 via-brand-600 to-cyan-500 flex items-center justify-center shadow-[0_0_20px_-5px_rgba(37,99,235,0.5)]">
-              <Shield className="w-5 h-5 text-white" />
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-brand-500/30 via-cyan-500/20 to-emerald-500/30 blur-xl opacity-50 animate-pulse" />
+            <div className="relative w-9 h-9 flex items-center justify-center">
+              <img src="/images/srec-logo.png" alt="SREC Logo" className="w-9 h-9 object-contain drop-shadow-sm" />
             </div>
             <span className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand-400 via-cyan-400 to-emerald-400">
               SREC Connect

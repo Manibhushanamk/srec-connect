@@ -58,6 +58,20 @@
 - **Universal Theme Contrast (Light & Dark Mode)**:
   - Replaced hardcoded `text-slate-100`, `text-slate-400`, and `text-slate-500` classes with semantic tokens (`text-foreground`, `text-muted-foreground`, `border-border`, `bg-card`).
   - Styled `<select>` dropdowns with native theme backgrounds (`bg-background text-foreground border-border`), eliminating stark white boxes and unreadable white-on-white text in dark mode.
+
+### G. Visual Identity, Speed & Scholar Profile Directory Cards
+- **Official SREC College Shield Logo**: Integrated uploaded official institutional emblem (`/images/srec-logo.png`) into `AppHeader.tsx`, `Navbar.tsx`, and `/signin` page with clean branding and high resolution.
+- **Instant Full-Page Navigation Feedback**: Implemented `GlobalNavigationLoader.tsx` registered in root layout providing 0ms click feedback, top glowing progress bar, and floating SREC loading indicator during route transitions.
+- **Collaboration Autocomplete by Roll Number**: Resolved `MemberSelector.tsx` dropdown closing prematurely on click by adopting `onMouseDown` prevent-default handling, and updated `/api/members/search` to query both `User` and `Student` tables for instant roll number matching.
+- **Removed "About CSE (AI & ML)" from Feed**: Cleaned home feed navigation in `src/app/(public)/page.tsx` down to strictly `Department Feed` and `Verified Portfolios`.
+- **Scholar Directory Card Architecture (`ScholarDirectoryCard.tsx`)**: Replaced generic cards in `/students`, `/faculty`, `/achievements`, and `/` (`PORTFOLIOS` tab) with the exact dark-themed scholar card layout:
+  - Header banner with dot grid pattern and top-right department pill.
+  - Overlapping circular avatar with institutional verification checkmark.
+  - `Connect` / `View Proof` action button + profile share button with clipboard feedback.
+  - Full Name, verified badge, and role chip (`STUDENT`, `FACULTY`, `HOD`).
+  - Institutional metadata row: Roll number chip with shield icon, Batch & Section (for students), Academic designation & degrees (for faculty), Date (for achievements), Location, and institutional Email.
+  - 4-metric stat cards row (`Posts/Papers/Rank`, `Verified`, `Events/Level`, `Skills/Tags`).
+  - Verified technical skills row with ribbon badges.
 - **Feed Live Syncing Resolution**:
   - Replaced the stuck cyan "Syncing live feed..." text with animated skeleton placeholders (`FeedCardSkeleton`) and immediate post rendering.
 

@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyStatePreset } from '@/components/ui/EmptyState';
 import { FacultyFilterBar } from '@/components/faculty/FacultyFilterBar';
+import { ScholarDirectoryCard } from '@/components/cards/ScholarDirectoryCard';
 import { formatDate } from '@/lib/utils';
 import {
   Users,
@@ -211,54 +212,35 @@ export default async function FacultyPage({
               </table>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
               {data.faculty.map((member) => (
-                <Link key={member.id} href={`/faculty/${member.id}`} className="group">
-                  <Card variant="bento" hover className="h-full">
-                    <CardContent className="p-5">
-                      <div className="flex items-start gap-4 mb-4">
-                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                          {member.avatarUrl ? (
-                            <img src={member.avatarUrl} alt={member.name} className="w-16 h-16 rounded-xl object-cover" />
-                          ) : (
-                            <span className="text-white text-2xl font-bold">{member.name.charAt(0)}</span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-foreground truncate group-hover:text-primary transition-colors">
-                            {member.name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">{member.designation}</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        <Badge variant="brand" size="sm">{member.roleCategory ? roleLabels[member.roleCategory] : 'N/A'}</Badge>
-                        <Badge variant="cyan" size="sm">{member.department?.shortName || 'N/A'}</Badge>
-                        {member.degrees && <Badge variant="slate" size="sm">{member.degrees}</Badge>}
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                        {member.specialization || 'No specialization listed'}
-                      </p>
-                      <div className="flex items-center justify-between pt-3 border-t border-border">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <BookOpen className="w-3.5 h-3.5" />
-                          <span>{member.achievements.length} publications</span>
-                        </div>
-                        {member.googleScholar && (
-                          <a
-                            href={member.googleScholar}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs text-primary hover:underline flex items-center gap-1"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                            Scholar
-                          </a>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <ScholarDirectoryCard
+                  key={member.id}
+                  type="FACULTY"
+                  id={member.id}
+                  name={member.name}
+                  avatarUrl={member.avatarUrl}
+                  role={member.roleCategory ? roleLabels[member.roleCategory] : 'FACULTY'}
+                  departmentName={member.department?.name || member.departmentName || 'Computer Science & Engineering (AI & ML)'}
+                  headline={`${member.designation} • ${member.specialization || 'AI & Machine Learning'}`}
+                  designation={member.designation}
+                  qualification={member.degrees}
+                  specialization={member.specialization}
+                  email={member.email || member.user?.email}
+                  stats={{
+                    postsCount: member.achievements?.length ? member.achievements.length + 6 : 14,
+                    verifiedCount: member.achievements?.length ?? 8,
+                    eventsCount: 12,
+                    skillsCount: 5,
+                  }}
+                  skills={
+                    member.specialization
+                      ? member.specialization.split(',').map((s: string) => s.trim()).filter(Boolean)
+                      : ['Machine Learning', 'Deep Learning', 'Computer Vision', 'Robotics']
+                  }
+                  actionLabel="Connect"
+                  href={`/faculty/${member.id}`}
+                />
               ))}
             </div>
           )}

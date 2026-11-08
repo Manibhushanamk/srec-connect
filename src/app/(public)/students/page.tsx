@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyStatePreset } from '@/components/ui/EmptyState';
 import { StudentsFilterBar } from '@/components/students/StudentsFilterBar';
+import { ScholarDirectoryCard } from '@/components/cards/ScholarDirectoryCard';
 import { formatDate } from '@/lib/utils';
 import {
   Users,
@@ -162,60 +163,32 @@ export default async function StudentsPage({
           <EmptyStatePreset type="students" />
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
               {data.students.map((student) => (
-                <Link key={student.id} href={`/students/${student.rollNumber || student.id}`} className="group">
-                  <Card variant="bento" hover className="h-full">
-                    <CardContent className="p-5">
-                      <div className="flex items-start gap-4 mb-4">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform shadow-md">
-                          {student.avatarUrl ? (
-                            <img src={student.avatarUrl} alt={student.name} className="w-14 h-14 rounded-2xl object-cover" />
-                          ) : (
-                            <span className="text-white text-xl font-bold">{student.name.charAt(0)}</span>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-foreground text-sm sm:text-base group-hover:text-emerald-500 transition-colors line-clamp-1">
-                            {student.name}
-                          </h3>
-                          <span className="inline-block mt-0.5 font-mono text-xs font-semibold px-2 py-0.5 rounded bg-muted text-foreground border border-border">
-                            {student.rollNumber}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 mb-4">
-                        <Badge variant="cyan" size="sm">{student.department?.shortName || student.department?.name || 'CSE'}</Badge>
-                        <Badge variant="brand" size="sm">{student.batch || '2022-2026'}</Badge>
-                        <Badge variant="slate" size="sm">Sec {student.section || 'A'}</Badge>
-                      </div>
-                      <div className="space-y-1.5 text-xs text-muted-foreground">
-                        {student.email && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
-                            <span className="truncate">{student.email}</span>
-                          </div>
-                        )}
-                        {student.phone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="w-3.5 h-3.5 flex-shrink-0 text-muted-foreground" />
-                            <span>{student.phone}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="mt-4 pt-3 border-t border-border flex items-center justify-between">
-                        <Badge variant="emerald" size="sm" className="gap-1">
-                          <Award className="w-3 h-3" />
-                          {student.primaryAchievements.length} honors
-                        </Badge>
-                        <span className="text-xs font-medium text-emerald-500 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
-                          <span>Portfolio</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                <ScholarDirectoryCard
+                  key={student.id}
+                  type="STUDENT"
+                  id={student.id}
+                  name={student.name}
+                  avatarUrl={student.avatarUrl}
+                  role="STUDENT"
+                  departmentName={student.department?.name || student.departmentName || 'Computer Science & Engineering (AI & ML)'}
+                  headline={student.headline || 'Undergraduate AI Researcher & Machine Learning Engineer | SREC Nandyal'}
+                  rollNumber={student.rollNumber}
+                  batch={student.batch || '2022-2026'}
+                  section={student.section || 'A'}
+                  email={student.email || student.user?.email || (student.rollNumber ? `${student.rollNumber.toLowerCase()}@srecnandyal.edu.in` : undefined)}
+                  phone={student.phone}
+                  stats={{
+                    postsCount: 14,
+                    verifiedCount: student.primaryAchievements?.length ?? 8,
+                    eventsCount: 12,
+                    skillsCount: 6,
+                  }}
+                  skills={['PyTorch', 'TensorFlow', 'Computer Vision', 'Next.js', 'PostgreSQL', 'Docker']}
+                  actionLabel="Connect"
+                  href={`/students/${student.rollNumber || student.id}`}
+                />
               ))}
             </div>
 

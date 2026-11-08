@@ -6,6 +6,7 @@ import { Badge, StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyStatePreset } from '@/components/ui/EmptyState';
 import { AchievementsFilterBar } from '@/components/achievements/AchievementsFilterBar';
+import { ScholarDirectoryCard } from '@/components/cards/ScholarDirectoryCard';
 import { formatDate } from '@/lib/utils';
 import {
   Award,
@@ -201,45 +202,43 @@ export default async function AchievementsPage({
           <EmptyStatePreset type="achievements" />
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-6 mb-6">
-                {data.achievements.map((achievement) => (
-                  <Link key={achievement.id} href={`/achievements/${achievement.id}`} className="group">
-                    <Card variant="bento" hover className="h-full">
-                      <CardContent className="p-5">
-                        <div className="flex items-start justify-between gap-3 mb-3">
-                          <div className="flex-1 min-w-0">
-                            <LevelBadge level={achievement.level} />
-                          </div>
-                          <ParticipationBadge type={achievement.participationType} />
-                        </div>
-                        <h3 className="font-semibold text-foreground mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                          {achievement.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                          {achievement.description}
-                        </p>
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          <Badge variant="slate" size="sm">{achievement.category.name}</Badge>
-                          <Badge variant="brand" size="sm">{achievement.department?.shortName || 'N/A'}</Badge>
-                          <Badge variant="slate" size="sm">{achievement.academicYear}</Badge>
-                        </div>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5" />
-                            {formatDate(achievement.achievementDate)}
-                          </div>
-                          {achievement.primaryStudentRoll && (
-                            <Badge variant="cyan" size="sm" className="gap-1">
-                              <GraduationCap className="w-2.5 h-2.5" />
-                              {achievement.primaryStudentRoll}
-                            </Badge>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+              {data.achievements.map((achievement) => (
+                <ScholarDirectoryCard
+                  key={achievement.id}
+                  type="ACHIEVEMENT"
+                  id={achievement.id}
+                  name={achievement.title}
+                  avatarUrl={achievement.media?.[0]?.url}
+                  role={achievement.personType || 'STUDENT'}
+                  departmentName={achievement.department?.name || achievement.departmentName || 'Computer Science & Engineering (AI & ML)'}
+                  headline={`${achievement.personName} • ${achievement.organizationEventName}`}
+                  achievementTitle={achievement.title}
+                  category={achievement.category?.name}
+                  level={achievement.level}
+                  positionRank={achievement.positionRank}
+                  achievementDate={formatDate(achievement.achievementDate)}
+                  organization={achievement.organizationEventName}
+                  googleDriveUrl={achievement.googleDriveUrl || achievement.certificateUrl}
+                  rollNumber={achievement.primaryStudentRoll || achievement.primaryStudent?.rollNumber}
+                  batch={achievement.academicYear}
+                  stats={{
+                    postsCount: 1,
+                    verifiedCount: 1,
+                    eventsCount: 1,
+                    skillsCount: 4,
+                  }}
+                  skills={[
+                    achievement.level,
+                    achievement.category?.name,
+                    achievement.academicYear,
+                    achievement.participationType === 'TEAM' ? 'Team Project' : 'Solo Entry',
+                  ].filter(Boolean)}
+                  actionLabel="View Proof"
+                  href={`/achievements/${achievement.id}`}
+                />
+              ))}
+            </div>
 
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2">
