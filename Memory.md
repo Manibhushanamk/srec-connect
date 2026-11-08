@@ -55,22 +55,36 @@
 
 ## 3. Empirical Verification Evidence
 - **Automated Tests:** 39/39 passing across all 8 suites (`npm test`).
-- **Production Build:** 50/50 routes compiled cleanly with 0 errors (`npm run build`).
-- **Interactive Elements Verification:** Verified all admin accordions, modals, and filters via Playwright (`scripts/verify_admin_interactive_elements.js`).
-- **Headless Screenshots:**
-  - `verified_clean_signin.png`
-  - `verified_admin_sidebar_expanded.png`
-  - `verified_admin_user_modal.png`
-  - `verified_admin_event_modal.png`
-  - `verified_admin_discipline_modal.png`
-  - `verified_admin_notice_modal.png`
-  - `verified_admin_export.png`
-  - `verified_admin_deduplication.png`
-  - `verified_admin_mobile_drawer.png`
-  - `verified_collab_composer.png`
-  - `verified_grievances_portal.png`
-  - `verified_grievance_form.png`
-  - `verified_admin_discipline_list.png`
-  - `verified_official_action_letter.png`
-  - `verified_super_admin_launchpad.png`
-  - `verified_mobile_all.png`
+- **Production Build:** 51/51 routes compiled cleanly with 0 TypeScript/ESLint errors (`npm run build`).
+- **Full-Site Visual & Console Inspection (`capture_and_inspect_all_pages.js`):**
+  - Inspected 20 distinct routes on Desktop (1280px) and Mobile (375px).
+  - Total Issues / Horizontal Overflows: **0**
+  - Console Errors / Uncaught Exceptions: **0**
+  - High-res visual artifacts generated: 38 full-page screenshots + `inspection_report.json`.
+- **Admin Shell & Modal Hardening:**
+  - `AdminSidebar.tsx`: Resolved React hook ordering violation in `MenuGroup`.
+  - `Modal.tsx`: Added client-mount guard to ensure 100% hydration safety in React 19 / Next.js 15.
+  - `/api/departments`: Implemented active department query route matching Prisma schema.
+- **Visual Artifacts:**
+  - `site_home_feed_public_desktop.png` / `_mobile.png`
+  - `site_sign_in_page_desktop.png` / `_mobile.png`
+  - `site_achievements_honors_wall_desktop.png` / `_mobile.png`
+  - `site_events_directory_desktop.png` / `_mobile.png`
+  - `site_students_directory_desktop.png` / `_mobile.png`
+  - `site_faculty_directory_desktop.png` / `_mobile.png`
+  - `site_departments_page_desktop.png` / `_mobile.png`
+  - `site_about_page_desktop.png` / `_mobile.png`
+  - `site_home_feed_authenticated_desktop.png` / `_mobile.png`
+  - `site_user_profile_workspace_desktop.png` / `_mobile.png`
+  - `site_grievances_student_portal_desktop.png` / `_mobile.png`
+  - `site_student_portfolio_22091a3201_desktop.png` / `_mobile.png`
+  - `site_admin_command_center_desktop.png` / `_mobile.png`
+  - `site_admin_users_directory_desktop.png` / `_mobile.png`
+  - `site_admin_achievements_verification_desktop.png` / `_mobile.png`
+  - `site_admin_events_manager_desktop.png` / `_mobile.png`
+  - `site_admin_discipline_manager_desktop.png` / `_mobile.png`
+  - `site_admin_notices_broadcast_desktop.png` / `_mobile.png`
+  - `site_admin_bulk_ingestion_desktop.png` / `_mobile.png`
+  - `site_admin_data_export_desktop.png` / `_mobile.png`
+  - `site_admin_deduplication_radar_desktop.png` / `_mobile.png`
+  - `site_admin_analytics_hub_desktop.png` / `_mobile.png`
