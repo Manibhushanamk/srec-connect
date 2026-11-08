@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const user = session?.user as any;
 
   const url = req.nextUrl.clone();
-  if (user?.role === 'FACULTY') {
+  if (user?.role === 'FACULTY' || user?.role === 'HOD') {
     url.pathname = '/dashboard/faculty/submit';
   } else {
     url.pathname = '/dashboard/student/submit';

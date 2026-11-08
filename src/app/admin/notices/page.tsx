@@ -9,6 +9,7 @@ import {
   Bell,
   Plus,
   Trash2,
+  Edit,
   Users,
   Clock,
   Send,
@@ -24,9 +25,21 @@ export default function AdminNoticesPage() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [updating, setUpdating] = useState(false);
 
   const [form, setForm] = useState({
+    title: '',
+    content: '',
+    priority: 'NORMAL',
+    targetRole: 'ALL',
+    batch: '',
+    section: '',
+  });
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
     title: '',
     content: '',
     priority: 'NORMAL',
@@ -85,6 +98,59 @@ export default function AdminNoticesPage() {
     }
   };
 
+  const handleStartEdit = (a: any) => {
+    setEditingId(a.id);
+    setEditForm({
+      title: a.title,
+      content: a.content,
+      priority: a.priority || 'NORMAL',
+      targetRole: a.targetRole || 'ALL',
+      batch: a.batch || '',
+      section: a.section || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingId) return;
+    setUpdating(true);
+    try {
+      const res = await fetch(`/api/announcements/${editingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setShowEditModal(false);
+        setEditingId(null);
+        fetchAnnouncements();
+      } else {
+        alert(data.error || 'Failed to update notice');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error updating notice');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to remove this notice?')) return;
+    try {
+      const res = await fetch(`/api/announcements/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchAnnouncements();
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Failed to delete notice');
+      }
+    } catch (e: any) {
+      alert(e.message || 'Error deleting notice');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -125,7 +191,7 @@ export default function AdminNoticesPage() {
       ) : (
         <div className="space-y-4">
           {announcements.map((a) => (
-            <Card key={a.id} className="p-5 border-slate-800 bg-slate-900/60">
+            <Card key={a.id} className="p-5 border-slate-800 bg-slate-900/60 hover:border-slate-700 transition-all">
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap items-center gap-2">
@@ -136,10 +202,30 @@ export default function AdminNoticesPage() {
                       Target: {a.targetRole} {a.batch ? `(${a.batch})` : ''} {a.section ? `Sec ${a.section}` : ''}
                     </Badge>
                   </div>
-                  <span className="text-[11px] text-slate-500 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" />
-                    Published {formatDate(a.createdAt)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" />
+                      Published {formatDate(a.createdAt)}
+                    </span>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleStartEdit(a)}
+                      className="text-xs text-amber-300 border-amber-800/60 hover:bg-amber-950/40 py-1 px-2.5 h-auto"
+                    >
+                      <Edit className="w-3.5 h-3.5 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(a.id)}
+                      className="text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 py-1 px-2.5 h-auto"
+                      title="Remove Notice"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
                 </div>
 
                 <h3 className="text-base font-bold text-white">{a.title}</h3>
@@ -149,7 +235,7 @@ export default function AdminNoticesPage() {
                 </p>
 
                 <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
-                  <span>Author: {a.author?.name} ({a.author?.role})</span>
+                  <span>Author: {a.author?.name || 'Department Authority'} ({a.author?.role || 'Admin'})</span>
                   <span>Expires: {a.expiresAt ? formatDate(a.expiresAt) : '30 days'}</span>
                 </div>
               </div>
@@ -249,6 +335,110 @@ export default function AdminNoticesPage() {
             <Button variant="primary" type="submit" disabled={publishing}>
               {publishing && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
               Publish Notice & Send Alerts
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Notice Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingId(null);
+        }}
+        title="Modify Department Notice"
+      >
+        <form onSubmit={handleUpdate} className="space-y-4 text-xs">
+          <div>
+            <label className="block text-slate-300 font-medium mb-1">Notice Title *</label>
+            <input
+              type="text"
+              required
+              value={editForm.title}
+              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-slate-300 font-medium mb-1">Target Audience *</label>
+              <select
+                value={editForm.targetRole}
+                onChange={(e) => setEditForm({ ...editForm, targetRole: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+              >
+                <option value="ALL">All Department (Students & Staff)</option>
+                <option value="STUDENT">Students Only</option>
+                <option value="FACULTY">Faculty & Staff Only</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-300 font-medium mb-1">Priority Level *</label>
+              <select
+                value={editForm.priority}
+                onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+              >
+                <option value="NORMAL">Normal Circular</option>
+                <option value="URGENT">Urgent Notice</option>
+              </select>
+            </div>
+          </div>
+
+          {editForm.targetRole === 'STUDENT' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-950/60 rounded-xl border border-slate-800">
+              <div>
+                <label className="block text-slate-400 mb-1">Batch Filter (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 2022-2026 (or blank for all)"
+                  value={editForm.batch}
+                  onChange={(e) => setEditForm({ ...editForm, batch: e.target.value })}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 mb-1">Section Filter (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. A (or blank for all)"
+                  value={editForm.section}
+                  onChange={(e) => setEditForm({ ...editForm, section: e.target.value.toUpperCase() })}
+                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+            </div>
+          )}
+
+          <div>
+            <label className="block text-slate-300 font-medium mb-1">Notice Content *</label>
+            <textarea
+              required
+              rows={4}
+              value={editForm.content}
+              onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
+              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => {
+                setShowEditModal(false);
+                setEditingId(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" disabled={updating}>
+              {updating && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              Save Changes
             </Button>
           </div>
         </form>

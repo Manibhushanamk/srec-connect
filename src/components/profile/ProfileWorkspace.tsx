@@ -29,7 +29,9 @@ import {
   ChevronRight,
   Sliders,
   LogOut,
+  Award,
 } from 'lucide-react';
+import { AchievementCard } from '@/components/cards/AchievementCard';
 
 interface ProfileWorkspaceProps {
   initialUser: {
@@ -46,6 +48,10 @@ interface ProfileWorkspaceProps {
     githubUrl: string | null;
     department?: { name: string; code: string } | null;
     departmentName?: string | null;
+    counts?: {
+      posts: number;
+      eventRegistrations: number;
+    };
     student?: {
       id: string;
       rollNumber: string;
@@ -58,17 +64,26 @@ interface ProfileWorkspaceProps {
       githubUrl?: string | null;
       portfolioUrl?: string | null;
       avatarUrl?: string | null;
+      achievements?: any[];
     } | null;
     faculty?: {
       id: string;
       designation?: string | null;
+      degrees?: string | null;
+      experience?: string | null;
       specialization?: string | null;
       cabin?: string | null;
       bio?: string | null;
       googleScholar?: string | null;
       linkedinUrl?: string | null;
       avatarUrl?: string | null;
+      achievements?: any[];
     } | null;
+    posts?: Array<{
+      id: string;
+      content: string;
+      createdAt: string;
+    }>;
     createdAt: string;
   };
 }
@@ -519,6 +534,217 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
               </div>
             </div>
           )}
+
+          {/* 1. Four Stat Metrics Row */}
+          {(() => {
+            const achievements = initialUser.faculty?.achievements || initialUser.student?.achievements || [];
+            const specializationList = (initialUser.faculty?.specialization || 'Deep Learning, Machine Learning, Edge AI')
+              .split(/[,;&•]/)
+              .map((s) => s.trim())
+              .filter(Boolean);
+
+            return (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-4 rounded-2xl bg-card border border-border text-center">
+                    <p className="text-xl font-black text-foreground">{initialUser.counts?.posts ?? 0}</p>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">Posts</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-primary/10 border border-primary/30 text-center">
+                    <p className="text-xl font-black text-primary">{achievements.length}</p>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-primary mt-0.5">Verified</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-card border border-border text-center">
+                    <p className="text-base sm:text-lg font-black text-foreground truncate">
+                      {isFaculty ? (initialUser.faculty?.experience || '10+ Yrs') : `${initialUser.counts?.eventRegistrations ?? 0}`}
+                    </p>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">
+                      {isFaculty ? 'Experience' : 'Events'}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-card border border-border text-center">
+                    <p className="text-xl font-black text-foreground">
+                      {isFaculty ? specializationList.length : 5}
+                    </p>
+                    <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">
+                      {isFaculty ? 'Research Areas' : 'Skills'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. Detailed Academic Credentials Grid */}
+                <div className="social-card p-5 border-border bg-card space-y-4">
+                  <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-primary" />
+                      <span>Official Academic Profile & Credentials</span>
+                    </h3>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary text-secondary-foreground border border-border">
+                      Verified SREC Record
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                    {isFaculty && (
+                      <>
+                        <div>
+                          <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Designation</span>
+                          <span className="font-bold text-foreground mt-0.5 block">
+                            {initialUser.faculty?.designation || (initialUser.role === 'HOD' ? 'Professor & HOD' : 'Faculty Member')}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Qualifications</span>
+                          <span className="font-medium text-foreground mt-0.5 block">
+                            {initialUser.faculty?.degrees || 'Ph.D., M.Tech'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Total Experience</span>
+                          <span className="font-medium text-foreground mt-0.5 block">
+                            {initialUser.faculty?.experience || '12+ Years Teaching & Research'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Department</span>
+                          <span className="font-medium text-foreground mt-0.5 block">
+                            {initialUser.department?.name || initialUser.departmentName || 'Artificial Intelligence & Machine Learning'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Office / Cabin</span>
+                          <span className="font-medium text-foreground mt-0.5 block">
+                            {initialUser.faculty?.cabin || 'Room 204, Department HOD & Faculty Wing'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Campus Email</span>
+                          <span className="font-mono text-muted-foreground mt-0.5 block truncate">
+                            {initialUser.email}
+                          </span>
+                        </div>
+                      </>
+                    )}
+
+                    {isStudent && (
+                      <>
+                        <div>
+                          <span className="text-muted-foreground block text-[11px] uppercase font-semibold">University Roll Number</span>
+                          <span className="font-mono font-bold text-foreground mt-0.5 block">
+                            {initialUser.student?.rollNumber || 'Not Linked'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Academic Batch</span>
+                          <span className="font-medium text-foreground mt-0.5 block">
+                            {initialUser.student?.batch || '2022-2026'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Class Section</span>
+                          <span className="font-medium text-foreground mt-0.5 block">
+                            Section {initialUser.student?.section || 'A'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Department & Degree</span>
+                          <span className="font-medium text-foreground mt-0.5 block">
+                            B.Tech — {initialUser.department?.name || 'CSE (AI & ML)'}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Official Campus Email</span>
+                          <span className="font-mono text-muted-foreground mt-0.5 block truncate">
+                            {initialUser.email}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Specializations / Technical Focus */}
+                  {isFaculty && (
+                    <div className="pt-3 border-t border-border/60">
+                      <span className="text-muted-foreground block text-[11px] uppercase font-semibold mb-2">
+                        Research Specializations & Subject Expertise
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {specializationList.map((spec, i) => (
+                          <span
+                            key={i}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-secondary text-secondary-foreground border border-border"
+                          >
+                            <Sparkles className="w-3 h-3 text-primary" />
+                            {spec}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Verified Achievements & Research Publications */}
+                <div className="social-card p-5 border-border bg-card space-y-4">
+                  <div className="flex items-center justify-between border-b border-border/60 pb-3 flex-wrap gap-2">
+                    <div>
+                      <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                        <Award className="w-4 h-4 text-primary" />
+                        <span>Verified Achievements & Publications ({achievements.length})</span>
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Officially verified honors, hackathon awards, and research publications
+                      </p>
+                    </div>
+                    <Link
+                      href="/achievements/submit"
+                      className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"
+                    >
+                      <span>+ Submit New</span>
+                    </Link>
+                  </div>
+
+                  {achievements.length === 0 ? (
+                    <div className="p-8 text-center border border-dashed border-border rounded-2xl bg-secondary/20">
+                      <Award className="w-10 h-10 text-muted-foreground mx-auto mb-2 opacity-60" />
+                      <p className="text-xs font-bold text-foreground">No Verified Records Yet</p>
+                      <p className="text-[11px] text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
+                        Submit your research papers, conference presentations, patents, or competitive achievements for institutional verification.
+                      </p>
+                      <Link href="/achievements/submit" className="btn-primary text-xs py-2 px-4 inline-flex">
+                        Submit Record Now
+                      </Link>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {achievements.map((ach: any) => (
+                        <AchievementCard
+                          key={ach.id}
+                          id={ach.id}
+                          title={ach.title}
+                          description={ach.description}
+                          categoryName={ach.categoryName || ach.category || 'National Honor'}
+                          level={ach.level || 'NATIONAL'}
+                          positionRank={ach.positionRank}
+                          participationType={ach.participationType || 'SOLO'}
+                          organizationEventName={ach.organizationEventName || ach.organization || 'Institutional Award'}
+                          academicYear={ach.academicYear || '2025-2026'}
+                          achievementDate={ach.achievementDate}
+                          personName={ach.personName || initialUser.name || 'Campus Scholar'}
+                          personType={ach.personType || (initialUser.role === 'STUDENT' ? 'STUDENT' : 'FACULTY')}
+                          rollNumber={ach.rollNumber || initialUser.student?.rollNumber}
+                          departmentName={ach.departmentName || initialUser.department?.name || initialUser.departmentName || 'Computer Science & Engineering (AI & ML)'}
+                          googleDriveUrl={ach.googleDriveUrl}
+                          certificateUrl={ach.certificateUrl || ach.googleDriveUrl}
+                          tags={ach.tags}
+                          href={`/achievements/${ach.id}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Quick Details Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

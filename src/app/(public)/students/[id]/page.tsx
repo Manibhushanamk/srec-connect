@@ -9,12 +9,14 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyStatePreset } from '@/components/ui/EmptyState';
 import { ProfileHeader } from '@/components/portfolio/ProfileHeader';
+import { AchievementCard } from '@/components/cards/AchievementCard';
 import { formatDate } from '@/lib/utils';
 import {
   Award,
   Calendar,
   ExternalLink,
   ShieldCheck,
+  ShieldAlert,
   ArrowLeft,
   Edit,
   CheckCircle,
@@ -81,6 +83,32 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
       session.user.email.toLowerCase() === student.user.email.toLowerCase()
   );
 
+  const viewerEmail = session?.user?.email?.toLowerCase().trim();
+  let viewerRole = '';
+  let isStaffOrAdmin = false;
+  if (viewerEmail) {
+    const viewer = await prisma.user.findUnique({
+      where: { email: viewerEmail },
+      select: { role: true },
+    });
+    if (viewer) {
+      viewerRole = viewer.role;
+      isStaffOrAdmin = ['SUPER_ADMIN', 'HOD', 'FACULTY'].includes(viewer.role);
+    }
+  }
+
+  let studentIncidents: any[] = [];
+  if (viewerRole === 'HOD' || viewerRole === 'SUPER_ADMIN') {
+    studentIncidents = await prisma.incident.findMany({
+      where: { studentId: student.id, deletedAt: null },
+      include: {
+        reporter: { select: { name: true, role: true } },
+        actions: { orderBy: { createdAt: 'desc' } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   const verifiedAchievements = student.primaryAchievements || [];
   const teamVerifiedAchievements = (student.teamAchievements || [])
     .map((ta) => ta.achievement)
@@ -90,7 +118,7 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Top Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <Link
           href="/students"
           className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors font-medium"
@@ -98,14 +126,24 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
           <ArrowLeft className="w-4 h-4" />
           Back to Students Directory
         </Link>
-        {isOwner && (
-          <Link href="/dashboard/student/settings">
-            <Button size="sm" variant="outline" className="gap-2">
-              <Edit className="w-3.5 h-3.5" />
-              Edit Portfolio
-            </Button>
-          </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {isStaffOrAdmin && (
+            <Link href={`/grievances?action=file_incident&studentRoll=${student.rollNumber}`}>
+              <Button size="sm" variant="outline" className="gap-1.5 border-rose-500/40 text-rose-500 hover:bg-rose-500/10 hover:text-rose-600">
+                <ShieldAlert className="w-3.5 h-3.5" />
+                Report Incident
+              </Button>
+            </Link>
+          )}
+          {isOwner && (
+            <Link href="/profile">
+              <Button size="sm" variant="outline" className="gap-2">
+                <Edit className="w-3.5 h-3.5" />
+                Edit Portfolio
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Profile Header (Instagram & LinkedIn Hybrid) */}
@@ -226,60 +264,81 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
                   description="Achievements submitted by this student will appear here once verified by faculty and HOD."
                 />
               ) : (
-                <div className="space-y-3">
-                  {allAchievements.map((achievement) => (
-                    <div
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {allAchievements.map((achievement: any) => (
+                    <AchievementCard
                       key={achievement.id}
-                      className="p-4 rounded-2xl border border-border bg-card/60 hover:bg-accent/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-sm text-foreground">
-                            {achievement.title}
-                          </span>
-                          {achievement.category && (
-                            <Badge variant="cyan" className="text-[10px]">
-                              {achievement.category.name}
-                            </Badge>
-                          )}
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
-                            <CheckCircle className="w-3 h-3" />
-                            Verified
-                          </span>
-                        </div>
-                        {achievement.description && (
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {achievement.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground pt-1">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {formatDate(achievement.achievementDate)}
-                          </span>
-                          {achievement.organizationEventName && (
-                            <span>Organized by: {achievement.organizationEventName}</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {(achievement.certificateUrl || achievement.googleDriveUrl) && (
-                        <a
-                          href={achievement.certificateUrl || achievement.googleDriveUrl || '#'}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border transition-colors"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          View Certificate
-                        </a>
-                      )}
-                    </div>
+                      id={achievement.id}
+                      title={achievement.title}
+                      description={achievement.description}
+                      categoryName={achievement.category?.name || 'Academic Honor'}
+                      level={achievement.level || 'NATIONAL'}
+                      positionRank={achievement.positionRank}
+                      participationType={achievement.participationType || 'SOLO'}
+                      organizationEventName={achievement.organizationEventName || 'Institutional Body'}
+                      academicYear={achievement.academicYear || '2025-2026'}
+                      achievementDate={achievement.achievementDate instanceof Date ? achievement.achievementDate.toISOString() : String(achievement.achievementDate)}
+                      personName={student.name}
+                      personType="STUDENT"
+                      rollNumber={student.rollNumber}
+                      departmentName={student.department?.name || 'CSE (AI & ML)'}
+                      googleDriveUrl={achievement.googleDriveUrl}
+                      certificateUrl={achievement.certificateUrl || achievement.googleDriveUrl}
+                      tags={achievement.tags}
+                      href={`/achievements/${achievement.id}`}
+                    />
                   ))}
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {/* Confidential Conduct & Disciplinary Record (HOD / Admin Eyes Only) */}
+          {(viewerRole === 'HOD' || viewerRole === 'SUPER_ADMIN') && (
+            <Card className="border-rose-500/30 bg-rose-500/5">
+              <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-rose-500/20">
+                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-rose-500">
+                  <ShieldAlert className="w-4 h-4" />
+                  Confidential Conduct & Disciplinary Record ({studentIncidents.length})
+                </CardTitle>
+                <Link href={`/grievances?action=file_incident&studentRoll=${student.rollNumber}`}>
+                  <Button size="sm" variant="outline" className="text-xs border-rose-500/40 text-rose-500 hover:bg-rose-500/10">
+                    + Record Incident
+                  </Button>
+                </Link>
+              </CardHeader>
+              <CardContent className="pt-4 space-y-3">
+                {studentIncidents.length === 0 ? (
+                  <p className="text-xs text-muted-foreground flex items-center gap-2 py-2">
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                    Clean Disciplinary Record — Zero infractions recorded against this scholar.
+                  </p>
+                ) : (
+                  studentIncidents.map((inc) => (
+                    <div key={inc.id} className="p-3.5 rounded-xl border border-rose-500/20 bg-background/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-foreground">{inc.title}</span>
+                          <Badge variant={inc.status === 'RESOLVED' ? 'emerald' : 'rose'} size="sm">
+                            {inc.status}
+                          </Badge>
+                          <span className="text-[10px] text-muted-foreground uppercase">{inc.category}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Reported by {inc.reporter?.name} ({inc.reporter?.role}) • {formatDate(inc.createdAt)}
+                        </p>
+                      </div>
+                      <Link href={`/admin/discipline/${inc.id}`}>
+                        <Button size="sm" variant="ghost" className="text-xs text-primary">
+                          Assess Case &rarr;
+                        </Button>
+                      </Link>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

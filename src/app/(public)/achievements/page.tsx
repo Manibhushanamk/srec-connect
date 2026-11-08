@@ -6,7 +6,7 @@ import { Badge, StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyStatePreset } from '@/components/ui/EmptyState';
 import { AchievementsFilterBar } from '@/components/achievements/AchievementsFilterBar';
-import { ScholarDirectoryCard } from '@/components/cards/ScholarDirectoryCard';
+import { AchievementCard } from '@/components/cards/AchievementCard';
 import { formatDate } from '@/lib/utils';
 import {
   Award,
@@ -204,32 +204,24 @@ export default async function AchievementsPage({
           <>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               {data.achievements.map((achievement) => (
-                <ScholarDirectoryCard
+                <AchievementCard
                   key={achievement.id}
-                  type="ACHIEVEMENT"
                   id={achievement.id}
-                  name={achievement.title}
-                  avatarUrl={achievement.media?.[0]?.url}
-                  role={achievement.personType || 'STUDENT'}
-                  departmentName={achievement.department?.name || achievement.departmentName || 'Computer Science & Engineering (AI & ML)'}
-                  headline={`Achiever: ${achievement.personName} • ${achievement.organizationEventName}`}
-                  achievementTitle={achievement.title}
-                  category={achievement.category?.name}
+                  title={achievement.title}
+                  description={achievement.description}
+                  categoryName={achievement.category?.name || 'Honor'}
                   level={achievement.level}
                   positionRank={achievement.positionRank}
-                  participationType={achievement.participationType === 'TEAM' ? 'Team' : 'Solo'}
+                  participationType={achievement.participationType}
+                  organizationEventName={achievement.organizationEventName}
+                  academicYear={achievement.academicYear}
                   achievementDate={formatDate(achievement.achievementDate)}
-                  organization={achievement.organizationEventName}
-                  googleDriveUrl={achievement.googleDriveUrl || achievement.certificateUrl}
+                  personName={achievement.personName}
+                  personType={achievement.personType as any}
                   rollNumber={achievement.primaryStudentRoll || achievement.primaryStudent?.rollNumber}
-                  batch={achievement.academicYear}
-                  skills={[
-                    achievement.category?.name,
-                    `${achievement.level} Level`,
-                    `AY ${achievement.academicYear}`,
-                    achievement.participationType === 'TEAM' ? 'Team Project' : 'Solo Honor',
-                  ].filter(Boolean) as string[]}
-                  actionLabel="View Proof"
+                  departmentName={achievement.department?.name || achievement.departmentName || 'Computer Science & Engineering (AI & ML)'}
+                  googleDriveUrl={achievement.googleDriveUrl || achievement.certificateUrl}
+                  tags={achievement.tags}
                   href={`/achievements/${achievement.id}`}
                 />
               ))}

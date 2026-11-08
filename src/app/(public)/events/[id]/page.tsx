@@ -6,6 +6,8 @@ import { Badge, StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EventRegistrationBox } from '@/components/events/EventRegistrationBox';
 import { formatDate, formatDateTime } from '@/lib/utils';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import {
   Calendar,
   Clock,
@@ -18,6 +20,7 @@ import {
   User,
   GraduationCap,
   ExternalLink,
+  Edit,
 } from 'lucide-react';
 
 interface EventDetailPageProps {
@@ -65,10 +68,22 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
 
   const registeredCount = event._count.registrations;
 
+  const session = await getServerSession(authOptions);
+  let canEdit = false;
+  if (session?.user?.email) {
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email.toLowerCase().trim() },
+      select: { id: true, role: true },
+    });
+    if (user && (user.role === 'SUPER_ADMIN' || user.role === 'HOD' || user.role === 'FACULTY' || event.createdById === user.id)) {
+      canEdit = true;
+    }
+  }
+
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-      {/* Back button */}
-      <div>
+      {/* Top Bar with Back and Edit Action */}
+      <div className="flex items-center justify-between">
         <Link
           href="/events"
           className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -76,6 +91,15 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to Events Directory
         </Link>
+
+        {canEdit && (
+          <Link href={`/admin/events`}>
+            <Button variant="secondary" size="sm" className="gap-1.5 text-xs text-amber-500 border-amber-500/30">
+              <Edit className="w-3.5 h-3.5" />
+              Edit in Event Desk
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Main Event Header & Hero */}

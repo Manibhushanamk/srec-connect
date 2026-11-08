@@ -24,8 +24,34 @@ export default async function ProfilePage() {
     where: { email: session.user.email.toLowerCase().trim() },
     include: {
       department: true,
-      student: true,
-      faculty: true,
+      student: {
+        include: {
+          primaryAchievements: {
+            where: { status: { in: ['APPROVED', 'PUBLISHED'] } },
+            include: { category: true, media: true },
+            orderBy: { achievementDate: 'desc' },
+          },
+        },
+      },
+      faculty: {
+        include: {
+          achievements: {
+            where: { status: { in: ['APPROVED', 'PUBLISHED'] } },
+            include: { category: true, media: true },
+            orderBy: { achievementDate: 'desc' },
+          },
+        },
+      },
+      posts: {
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+      },
+      _count: {
+        select: {
+          posts: true,
+          eventRegistrations: true,
+        },
+      },
     },
   });
 
@@ -47,6 +73,10 @@ export default async function ProfilePage() {
     githubUrl: user.githubUrl,
     department: user.department ? { name: user.department.name, code: user.department.code } : null,
     departmentName: user.departmentName,
+    counts: {
+      posts: user._count.posts,
+      eventRegistrations: user._count.eventRegistrations,
+    },
     student: user.student
       ? {
           id: user.student.id,
@@ -60,20 +90,65 @@ export default async function ProfilePage() {
           githubUrl: user.student.githubUrl,
           portfolioUrl: user.student.portfolioUrl,
           avatarUrl: user.student.avatarUrl,
+          achievements: (user.student.primaryAchievements || []).map((a) => ({
+            id: a.id,
+            title: a.title,
+            description: a.description,
+            categoryName: a.category?.name || 'Honor',
+            organizationEventName: a.organizationEventName,
+            level: a.level,
+            positionRank: a.positionRank,
+            participationType: a.participationType,
+            academicYear: a.academicYear,
+            achievementDate: a.achievementDate.toISOString(),
+            personName: user.name,
+            personType: 'STUDENT' as const,
+            rollNumber: user.student?.rollNumber,
+            departmentName: user.department?.name || user.departmentName || 'Computer Science & Engineering (AI & ML)',
+            googleDriveUrl: a.googleDriveUrl || a.certificateUrl,
+            certificateUrl: a.certificateUrl || a.googleDriveUrl,
+            tags: a.tags,
+          })),
         }
       : null,
     faculty: user.faculty
       ? {
           id: user.faculty.id,
           designation: user.faculty.designation,
+          degrees: user.faculty.degrees,
+          experience: user.faculty.experience,
           specialization: user.faculty.specialization,
           cabin: user.faculty.cabin,
           bio: user.faculty.bio,
           googleScholar: user.faculty.googleScholar,
           linkedinUrl: user.linkedinUrl,
           avatarUrl: user.faculty.avatarUrl,
+          achievements: (user.faculty.achievements || []).map((a) => ({
+            id: a.id,
+            title: a.title,
+            description: a.description,
+            categoryName: a.category?.name || 'Research Publication',
+            organizationEventName: a.organizationEventName,
+            level: a.level,
+            positionRank: a.positionRank,
+            participationType: a.participationType,
+            academicYear: a.academicYear,
+            achievementDate: a.achievementDate.toISOString(),
+            personName: user.name,
+            personType: 'FACULTY' as const,
+            rollNumber: null,
+            departmentName: user.department?.name || user.departmentName || 'Computer Science & Engineering (AI & ML)',
+            googleDriveUrl: a.googleDriveUrl || a.certificateUrl,
+            certificateUrl: a.certificateUrl || a.googleDriveUrl,
+            tags: a.tags,
+          })),
         }
       : null,
+    posts: (user.posts || []).map((p) => ({
+      id: p.id,
+      content: p.content,
+      createdAt: p.createdAt.toISOString(),
+    })),
     createdAt: user.createdAt.toISOString(),
   };
 

@@ -20,12 +20,15 @@ export default function FacultySubmitRecordPage() {
     title: '',
     description: '',
     categoryId: '',
-    level: 'NATIONAL',
-    positionRank: '',
+    level: 'INTERNATIONAL',
+    positionRank: 'First Author',
     organizationEventName: '',
-    academicYear: '2024-2025',
+    academicYear: '2025-2026',
     achievementDate: new Date().toISOString().split('T')[0],
     googleDriveUrl: '',
+    doiOrIsbn: '',
+    grantAmount: '',
+    collaboratorStudents: '',
   });
 
   useEffect(() => {
@@ -46,10 +49,20 @@ export default function FacultySubmitRecordPage() {
     e.preventDefault();
     setLoading(true);
 
+    const payload = {
+      ...formData,
+      description: [
+        formData.description,
+        formData.doiOrIsbn ? `DOI / ISBN: ${formData.doiOrIsbn}` : null,
+        formData.grantAmount ? `Sanctioned Grant: ₹${formData.grantAmount}` : null,
+        formData.collaboratorStudents ? `Student Co-Authors: ${formData.collaboratorStudents}` : null,
+      ].filter(Boolean).join('\n\n'),
+    };
+
     const res = await fetch('/api/achievements/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
+      body: JSON.stringify(payload),
     });
 
     setLoading(false);
@@ -72,13 +85,20 @@ export default function FacultySubmitRecordPage() {
             </div>
             <h2 className="text-xl font-bold text-foreground mb-2">Academic Record Submitted!</h2>
             <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
-              Your research publication / academic record has been submitted. It will be verified and published to your institutional faculty profile.
+              Your research publication, patent, or academic record has been successfully logged. It is now published directly to your institutional profile.
             </p>
-            <Link href="/dashboard/faculty">
-              <Button variant="primary" size="md" className="w-full">
-                Return to Faculty Dashboard
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+              <Link href="/profile">
+                <Button variant="primary" size="md" className="w-full">
+                  View My Profile
+                </Button>
+              </Link>
+              <Link href="/achievements">
+                <Button variant="secondary" size="md" className="w-full">
+                  View Verified Achievements
+                </Button>
+              </Link>
+            </div>
           </Card>
         </main>
         <Footer />
@@ -91,23 +111,31 @@ export default function FacultySubmitRecordPage() {
       <Navbar />
 
       <main className="flex-1 max-w-3xl mx-auto px-4 sm:px-6 py-10 w-full">
-        <Link
-          href="/dashboard/faculty"
-          className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors mb-6"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Faculty Dashboard
-        </Link>
+        <div className="flex items-center justify-between gap-4 mb-6">
+          <Link
+            href="/profile"
+            className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Profile
+          </Link>
+          <Link
+            href="/achievements"
+            className="text-xs text-primary hover:underline font-medium"
+          >
+            View Achievements Directory &rarr;
+          </Link>
+        </div>
 
         <div className="mb-8">
           <div className="flex items-center gap-2 text-primary text-xs font-semibold uppercase tracking-wider mb-2">
-            <BookOpen className="w-4 h-4" /> Faculty Research & Honors Submission
+            <BookOpen className="w-4 h-4" /> HOD & Faculty Research Desk
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
-            Record Publication, Patent, or Grant
+            Record Research Paper, Patent, Grant or Honor
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Submit your peer-reviewed papers, patents, consultancy, or student-guided accomplishments for department records.
+            Submit peer-reviewed publications, intellectual property, sanctioned grants, or guided student accomplishments to your institutional profile.
           </p>
         </div>
 
@@ -230,16 +258,60 @@ export default function FacultySubmitRecordPage() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="doiOrIsbn" className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
+                  DOI / ISBN / Patent Number
+                </label>
+                <input
+                  type="text"
+                  id="doiOrIsbn"
+                  value={formData.doiOrIsbn}
+                  onChange={(e) => setFormData({ ...formData, doiOrIsbn: e.target.value })}
+                  placeholder="e.g. 10.1109/ICAIVC.2026.104231 or 202641012345"
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 font-mono"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="grantAmount" className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
+                  Sanctioned Grant Amount (₹) <span className="text-muted-foreground font-normal">(If funded project)</span>
+                </label>
+                <input
+                  type="text"
+                  id="grantAmount"
+                  value={formData.grantAmount}
+                  onChange={(e) => setFormData({ ...formData, grantAmount: e.target.value })}
+                  placeholder="e.g. 15,00,000 (DST-SERB / AICTE RPS)"
+                  className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="collaboratorStudents" className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
+                Student Scholars Guided / Co-Authors <span className="text-muted-foreground font-normal">(Optional roll numbers or names)</span>
+              </label>
+              <input
+                type="text"
+                id="collaboratorStudents"
+                value={formData.collaboratorStudents}
+                onChange={(e) => setFormData({ ...formData, collaboratorStudents: e.target.value })}
+                placeholder="e.g. 22091A3201 (K. V. Naveen Kumar), 22091A3202 (P. Sai Kumar)"
+                className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+
             <div>
               <label htmlFor="description" className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
-                Abstract / Description
+                Abstract / Research Summary
               </label>
               <textarea
                 id="description"
                 rows={4}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Key contributions, DOI, impact factor, methodology, and grant highlights..."
+                placeholder="Key contributions, methodology, impact factor, journal volume, and conference highlights..."
                 className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
               />
             </div>

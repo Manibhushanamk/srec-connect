@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyStatePreset } from '@/components/ui/EmptyState';
 import { ProfileHeader } from '@/components/portfolio/ProfileHeader';
+import { AchievementCard } from '@/components/cards/AchievementCard';
 import { formatDate } from '@/lib/utils';
 import {
   Award,
@@ -238,55 +239,29 @@ export default async function FacultyProfilePage({ params }: FacultyProfilePageP
                   description="Publications, patents, and faculty development achievements will be listed here once recorded and verified."
                 />
               ) : (
-                <div className="space-y-3">
-                  {achievements.map((achievement) => (
-                    <div
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {achievements.map((achievement: any) => (
+                    <AchievementCard
                       key={achievement.id}
-                      className="p-4 rounded-2xl border border-border bg-card/60 hover:bg-accent/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3"
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-sm text-foreground">
-                            {achievement.title}
-                          </span>
-                          {achievement.category && (
-                            <Badge variant="cyan" className="text-[10px]">
-                              {achievement.category.name}
-                            </Badge>
-                          )}
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
-                            <CheckCircle className="w-3 h-3" />
-                            Verified
-                          </span>
-                        </div>
-                        {achievement.description && (
-                          <p className="text-xs text-muted-foreground line-clamp-2">
-                            {achievement.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground pt-1">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {formatDate(achievement.achievementDate)}
-                          </span>
-                          {achievement.organizationEventName && (
-                            <span>Publisher/Body: {achievement.organizationEventName}</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {(achievement.certificateUrl || achievement.googleDriveUrl) && (
-                        <a
-                          href={achievement.certificateUrl || achievement.googleDriveUrl || '#'}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border transition-colors"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                          View Paper
-                        </a>
-                      )}
-                    </div>
+                      id={achievement.id}
+                      title={achievement.title}
+                      description={achievement.description}
+                      categoryName={achievement.category?.name || 'Research Publication'}
+                      level={achievement.level || 'NATIONAL'}
+                      positionRank={achievement.positionRank || 'Faculty Research'}
+                      participationType={achievement.participationType || 'SOLO'}
+                      organizationEventName={achievement.organizationEventName || 'Publisher / Body'}
+                      academicYear={achievement.academicYear || '2025-2026'}
+                      achievementDate={achievement.achievementDate instanceof Date ? achievement.achievementDate.toISOString() : String(achievement.achievementDate)}
+                      personName={faculty.name}
+                      personType="FACULTY"
+                      rollNumber={null}
+                      departmentName={faculty.department?.name || faculty.departmentName || 'CSE (AI & ML)'}
+                      googleDriveUrl={achievement.googleDriveUrl}
+                      certificateUrl={achievement.certificateUrl || achievement.googleDriveUrl}
+                      tags={achievement.tags}
+                      href={`/achievements/${achievement.id}`}
+                    />
                   ))}
                 </div>
               )}

@@ -52,28 +52,29 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const isFaculty = dbUser.role === 'FACULTY';
-  const personType = isFaculty ? PersonType.FACULTY : PersonType.STUDENT;
+  const isFacultyOrHOD = dbUser.role === 'FACULTY' || dbUser.role === 'HOD';
+  const personType = isFacultyOrHOD ? PersonType.FACULTY : PersonType.STUDENT;
+  const facultyId = dbUser.facultyId || dbUser.faculty?.id || null;
 
   const achievement = await prisma.achievement.create({
     data: {
       title,
       description,
-      personName: dbUser.name || 'Student',
+      personName: dbUser.name || (isFacultyOrHOD ? 'Faculty Scholar' : 'Student Scholar'),
       personType,
       participationType: teamMembers && teamMembers.length > 0 ? 'TEAM' : 'SOLO',
-      level: level || 'COLLEGE',
+      level: level || 'NATIONAL',
       positionRank,
       organizationEventName,
-      academicYear: academicYear || '2024-2025',
+      academicYear: academicYear || '2025-2026',
       achievementDate: new Date(achievementDate || Date.now()),
-      departmentId: dbUser.departmentId,
+      departmentId: dbUser.departmentId || dbUser.faculty?.departmentId || null,
       categoryId,
-      primaryStudentId: dbUser.studentId,
-      primaryStudentRoll: dbUser.student?.rollNumber,
-      facultyId: dbUser.facultyId,
+      primaryStudentId: isFacultyOrHOD ? null : dbUser.studentId,
+      primaryStudentRoll: isFacultyOrHOD ? null : dbUser.student?.rollNumber,
+      facultyId,
       googleDriveUrl,
-      status: SubmissionStatus.PENDING,
+      status: isFacultyOrHOD ? SubmissionStatus.APPROVED : SubmissionStatus.PENDING,
       createdById: dbUser.id,
     },
   });

@@ -103,6 +103,81 @@ export default function AdminEventsPage() {
       .catch(() => setDepartments([]));
   }, []);
 
+  // Edit Modal State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    categoryId: '',
+    departmentId: '',
+    startDate: '',
+    endDate: '',
+    venue: '',
+    organizer: '',
+    speaker: '',
+    capacity: 100,
+    status: 'UPCOMING',
+    registrationDeadline: '',
+    whatsappGroupUrl: '',
+    posterUrl: '',
+  });
+
+  const formatDateTimeLocal = (dateStr?: string | Date | null) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const handleEdit = (event: any) => {
+    setEditingEventId(event.id);
+    setEditForm({
+      title: event.title || '',
+      description: event.description || '',
+      categoryId: event.categoryId || event.category?.id || '',
+      departmentId: event.departmentId || event.department?.id || '',
+      startDate: formatDateTimeLocal(event.startDate),
+      endDate: formatDateTimeLocal(event.endDate),
+      venue: event.venue || '',
+      organizer: event.organizer || '',
+      speaker: event.speaker || '',
+      capacity: event.capacity || 100,
+      status: event.status || 'UPCOMING',
+      registrationDeadline: formatDateTimeLocal(event.registrationDeadline),
+      whatsappGroupUrl: event.whatsappGroupUrl || '',
+      posterUrl: event.posterUrl || '',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEventId) return;
+    setUpdating(true);
+    try {
+      const res = await fetch(`/api/events/${editingEventId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setShowEditModal(false);
+        setEditingEventId(null);
+        fetchEvents();
+      } else {
+        alert(data.error || 'Failed to update event');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error updating event');
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
@@ -294,10 +369,21 @@ export default function AdminEventsPage() {
                   </Link>
 
                   <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleEdit(event)}
+                    className="text-xs text-amber-300 border-amber-800/60 hover:bg-amber-950/40"
+                  >
+                    <Edit className="w-3.5 h-3.5 mr-1.5" />
+                    Edit Event
+                  </Button>
+
+                  <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleDelete(event.id)}
                     className="text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-950/30"
+                    title="Cancel and Remove Event"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </Button>
@@ -518,6 +604,237 @@ export default function AdminEventsPage() {
             <Button variant="primary" type="submit" disabled={creating}>
               {creating && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
               Publish Event
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Event Modal */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setEditingEventId(null);
+        }}
+        title="Edit Campus Event"
+      >
+        <form onSubmit={handleUpdate} className="space-y-4 text-xs">
+          <div>
+            <label className="block text-slate-300 font-medium mb-1">Event Title *</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. National Symposium on Deep Learning & Vision"
+              value={editForm.title}
+              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-slate-300 font-medium mb-1">Category *</label>
+              <select
+                required
+                value={editForm.categoryId}
+                onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+              >
+                <option value="">Select Category</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-300 font-medium mb-1">Department</label>
+              <select
+                value={editForm.departmentId}
+                onChange={(e) => setEditForm({ ...editForm, departmentId: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+              >
+                <option value="">Select Department (or All)</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-slate-300 font-medium mb-1">Event Status *</label>
+              <select
+                required
+                value={editForm.status}
+                onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+              >
+                <option value="UPCOMING">UPCOMING</option>
+                <option value="ONGOING">ONGOING</option>
+                <option value="COMPLETED">COMPLETED</option>
+                <option value="CANCELLED">CANCELLED</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-slate-300 font-medium mb-1">Start Date & Time *</label>
+              <input
+                type="datetime-local"
+                required
+                value={editForm.startDate}
+                onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-300 font-medium mb-1">End Date & Time *</label>
+              <input
+                type="datetime-local"
+                required
+                value={editForm.endDate}
+                onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-slate-300 font-medium mb-1">Venue *</label>
+              <input
+                type="text"
+                required
+                placeholder="e.g. APJ Abdul Kalam Auditorium"
+                value={editForm.venue}
+                onChange={(e) => setEditForm({ ...editForm, venue: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-300 font-medium mb-1">Seat Capacity *</label>
+              <input
+                type="number"
+                min="1"
+                required
+                value={editForm.capacity}
+                onChange={(e) => setEditForm({ ...editForm, capacity: Number(e.target.value) })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-slate-300 font-medium mb-1">Speaker / Resource Person</label>
+              <input
+                type="text"
+                placeholder="e.g. Dr. K. Subhashini"
+                value={editForm.speaker}
+                onChange={(e) => setEditForm({ ...editForm, speaker: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+            <div>
+              <label className="block text-slate-300 font-medium mb-1">Organizer Title</label>
+              <input
+                type="text"
+                placeholder="e.g. CSE (AI & ML) Department"
+                value={editForm.organizer}
+                onChange={(e) => setEditForm({ ...editForm, organizer: e.target.value })}
+                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-slate-300 font-medium mb-1">
+              WhatsApp Group Link (Registrants-Only Post-Registration Disclosure)
+            </label>
+            <input
+              type="url"
+              placeholder="https://chat.whatsapp.com/..."
+              value={editForm.whatsappGroupUrl}
+              onChange={(e) => setEditForm({ ...editForm, whatsappGroupUrl: e.target.value })}
+              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-slate-300 font-medium mb-1">Description</label>
+            <textarea
+              rows={3}
+              placeholder="Event agenda, topics, prerequisites, and instructions..."
+              value={editForm.description}
+              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+            />
+          </div>
+
+          {/* Event Banner & Poster */}
+          <div className="space-y-2 p-3.5 rounded-xl bg-slate-950/80 border border-slate-800">
+            <div className="flex items-center justify-between">
+              <label className="block text-slate-300 font-medium flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Event Poster / Banner Image</span>
+              </label>
+              <span className="text-[10px] text-cyan-400">High-Resolution (16:9 Recommended)</span>
+            </div>
+
+            <input
+              type="url"
+              placeholder="Paste public banner/poster URL"
+              value={editForm.posterUrl}
+              onChange={(e) => setEditForm({ ...editForm, posterUrl: e.target.value })}
+              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 text-xs"
+            />
+
+            <div>
+              <p className="text-[10px] text-slate-400 mb-1.5">Preset Posters:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {EVENT_POSTER_PRESETS.map((preset) => (
+                  <button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => setEditForm({ ...editForm, posterUrl: preset.url })}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-medium border transition-all ${
+                      editForm.posterUrl === preset.url
+                        ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/60 shadow-xs'
+                        : 'bg-slate-900 text-slate-400 border-slate-700/80 hover:text-white hover:bg-slate-800'
+                    }`}
+                  >
+                    {preset.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {editForm.posterUrl && (
+              <div className="relative h-32 w-full rounded-xl overflow-hidden border border-slate-700 mt-2">
+                <img
+                  src={editForm.posterUrl}
+                  alt="Poster preview"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={() => {
+                setShowEditModal(false);
+                setEditingEventId(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button variant="primary" type="submit" disabled={updating}>
+              {updating && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              Save Changes
             </Button>
           </div>
         </form>

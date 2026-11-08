@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ShieldAlert,
@@ -34,10 +35,13 @@ export default function StudentGrievancesPage() {
   const [selectedIncident, setSelectedIncident] = useState<any>(null);
   const [activeLetterAction, setActiveLetterAction] = useState<any>(null);
 
+  const searchParams = useSearchParams();
+
   // Form State
   const [form, setForm] = useState({
     title: '',
     description: '',
+    studentRollNumber: '',
     category: 'FACULTY_GRIEVANCE',
     priority: 'MEDIUM',
     isConfidentialHOD: false,
@@ -48,6 +52,22 @@ export default function StudentGrievancesPage() {
   // Response message state
   const [responseMsg, setResponseMsg] = useState('');
   const [sendingResponse, setSendingResponse] = useState(false);
+
+  useEffect(() => {
+    const action = searchParams.get('action');
+    const studentRoll = searchParams.get('studentRoll');
+    if (action === 'file_incident' || studentRoll) {
+      setActiveTab('FILE_GRIEVANCE');
+      if (studentRoll) {
+        setForm((prev) => ({
+          ...prev,
+          studentRollNumber: studentRoll.toUpperCase(),
+          category: 'CLASSROOM_DISCIPLINE',
+          title: `Disciplinary Incident Report — ${studentRoll.toUpperCase()}`,
+        }));
+      }
+    }
+  }, [searchParams]);
 
   const fetchMyCases = async () => {
     setLoading(true);
@@ -88,6 +108,7 @@ export default function StudentGrievancesPage() {
         setForm({
           title: '',
           description: '',
+          studentRollNumber: '',
           category: 'FACULTY_GRIEVANCE',
           priority: 'MEDIUM',
           isConfidentialHOD: false,
@@ -171,29 +192,41 @@ export default function StudentGrievancesPage() {
           </p>
         </div>
 
-        {/* Tab Buttons */}
-        <div className="flex items-center gap-2 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 text-xs font-semibold">
-          <button
-            onClick={() => setActiveTab('MY_CASES')}
-            className={`px-4 py-2 rounded-lg transition-all ${
-              activeTab === 'MY_CASES'
-                ? 'bg-primary text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            My Cases ({incidents.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('FILE_GRIEVANCE')}
-            className={`px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
-              activeTab === 'FILE_GRIEVANCE'
-                ? 'bg-rose-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            File Grievance
-          </button>
+        {/* Tab & Action Buttons */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {(session?.user && ((session.user as any).role === 'HOD' || (session.user as any).role === 'SUPER_ADMIN')) && (
+            <Link
+              href="/admin/discipline"
+              className="px-3.5 py-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all"
+            >
+              <Shield className="w-3.5 h-3.5 text-amber-400" />
+              <span>Assessment & Conduct Desk</span>
+            </Link>
+          )}
+
+          <div className="flex items-center gap-2 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 text-xs font-semibold">
+            <button
+              onClick={() => setActiveTab('MY_CASES')}
+              className={`px-4 py-2 rounded-lg transition-all ${
+                activeTab === 'MY_CASES'
+                  ? 'bg-primary text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              My Cases ({incidents.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('FILE_GRIEVANCE')}
+              className={`px-4 py-2 rounded-lg transition-all flex items-center gap-1.5 ${
+                activeTab === 'FILE_GRIEVANCE'
+                  ? 'bg-rose-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              File Report
+            </button>
+          </div>
         </div>
       </div>
 
@@ -251,6 +284,19 @@ export default function StudentGrievancesPage() {
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                   className="w-full px-3 py-2.5 rounded-xl border border-input bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-foreground mb-1">
+                  Target Student University Roll Number <span className="text-muted-foreground font-normal">(Required if filing disciplinary report; leave blank for general campus grievances)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 22091A3201"
+                  value={form.studentRollNumber}
+                  onChange={(e) => setForm({ ...form, studentRollNumber: e.target.value.toUpperCase() })}
+                  className="w-full px-3 py-2.5 rounded-xl border border-input bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary/30 uppercase font-mono"
                 />
               </div>
 

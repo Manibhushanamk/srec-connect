@@ -15,6 +15,9 @@ import {
   Plus,
   ShieldCheck,
   CheckCircle2,
+  Trash2,
+  Pencil,
+  Settings2,
 } from 'lucide-react';
 
 export interface StoryItem {
@@ -24,7 +27,7 @@ export interface StoryItem {
   authorName?: string;
   authorRole?: string;
   iconType?: string;
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
   imageUrl?: string;
   date: string;
   description: string;
@@ -53,10 +56,9 @@ const DEFAULT_STORIES: StoryItem[] = [
     id: 's1',
     title: 'HOD Desk',
     category: 'Official Notice',
-    authorName: 'Dr. K. Subhashini',
+    authorName: 'Dr. K. Srinivas Rao',
     authorRole: 'Head of Department (HOD)',
     iconType: 'GraduationCap',
-    icon: <GraduationCap className="w-5 h-5 text-white" />,
     date: 'Today',
     description: 'Welcome CSE (AI & ML) students to the new semester! Focus on research projects, patents, and national hackathons.',
     hasUnseen: true,
@@ -68,7 +70,6 @@ const DEFAULT_STORIES: StoryItem[] = [
     authorName: 'Faculty Innovation Coordinator',
     authorRole: 'Faculty Mentor',
     iconType: 'Trophy',
-    icon: <Trophy className="w-5 h-5 text-white" />,
     date: 'Yesterday',
     description: 'AIML 3rd year team secured 1st prize at Smart India Hackathon internal rounds with their Agri-AI project.',
     hasUnseen: true,
@@ -80,7 +81,6 @@ const DEFAULT_STORIES: StoryItem[] = [
     authorName: 'Training & Placement Cell',
     authorRole: 'Placement Officer',
     iconType: 'Briefcase',
-    icon: <Briefcase className="w-5 h-5 text-white" />,
     date: 'Nov 6',
     description: '14 AIML students received pre-placement offers from top AI research & engineering firms.',
     hasUnseen: false,
@@ -92,7 +92,6 @@ const DEFAULT_STORIES: StoryItem[] = [
     authorName: 'Technical Club Executive',
     authorRole: 'Department Admin',
     iconType: 'Cpu',
-    icon: <Cpu className="w-5 h-5 text-white" />,
     date: 'Nov 5',
     description: 'Annual National AI Symposium & Bot Challenge registrations are now open. Check the Events tab.',
     hasUnseen: true,
@@ -104,7 +103,6 @@ const DEFAULT_STORIES: StoryItem[] = [
     authorName: 'IEEE Faculty Advisor',
     authorRole: 'Faculty Coordinator',
     iconType: 'Award',
-    icon: <Award className="w-5 h-5 text-white" />,
     date: 'Nov 3',
     description: 'Hands-on Generative AI & Deep Learning workshop held with industry experts from Bengaluru.',
     hasUnseen: false,
@@ -120,12 +118,36 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
   const [stories, setStories] = useState<StoryItem[]>(initialStories || DEFAULT_STORIES);
   const [activeStoryIndex, setActiveStoryIndex] = useState<number | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isManageMode, setIsManageMode] = useState(false);
 
   // Form State for creating a new highlight
   const [formTitle, setFormTitle] = useState('');
   const [formCategory, setFormCategory] = useState('Official Notice');
   const [formDescription, setFormDescription] = useState('');
   const [formIcon, setFormIcon] = useState('Sparkles');
+
+  // Form State for editing an existing highlight
+  const [editingStoryId, setEditingStoryId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editCategory, setEditCategory] = useState('Official Notice');
+  const [editDescription, setEditDescription] = useState('');
+  const [editIcon, setEditIcon] = useState('Sparkles');
+
+  // Helper to persist stories to localStorage
+  const saveStories = (updatedStories: StoryItem[]) => {
+    if (typeof window !== 'undefined') {
+      try {
+        const serialized = updatedStories.map(({ icon, ...rest }) => ({
+          ...rest,
+          iconType: rest.iconType || 'Sparkles',
+        }));
+        localStorage.setItem('srec_highlights_v3', JSON.stringify(serialized));
+      } catch (err) {
+        console.error('Failed to save highlights:', err);
+      }
+    }
+  };
 
   // Load custom stories from localStorage on client mount
   useEffect(() => {
@@ -139,11 +161,20 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
               ...item,
               icon: getIconComponent(item.iconType || 'Sparkles'),
             }));
-            setStories([...rehydrated, ...DEFAULT_STORIES]);
+            setStories(rehydrated);
+            return;
           }
         }
+        // If not in storage, initialize storage with the default stories
+        saveStories(DEFAULT_STORIES);
+        setStories(
+          DEFAULT_STORIES.map((item) => ({
+            ...item,
+            icon: getIconComponent(item.iconType || 'Sparkles'),
+          }))
+        );
       } catch (err) {
-        console.error('Failed to load custom highlights:', err);
+        console.error('Failed to load highlights:', err);
       }
     }
   }, []);
@@ -183,29 +214,65 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
 
     const updated = [newStory, ...stories];
     setStories(updated);
-
-    // Save to localStorage
-    if (typeof window !== 'undefined') {
-      try {
-        const customOnly = updated.filter((s) => !DEFAULT_STORIES.some((d) => d.id === s.id));
-        localStorage.setItem(
-          'srec_highlights_v3',
-          JSON.stringify(
-            customOnly.map(({ icon, ...rest }) => ({
-              ...rest,
-              iconType: rest.iconType || 'Sparkles',
-            }))
-          )
-        );
-      } catch (err) {
-        console.error('Failed to persist highlight:', err);
-      }
-    }
+    saveStories(updated);
 
     // Reset and close
     setFormTitle('');
     setFormDescription('');
     setIsCreateOpen(false);
+  };
+
+  const handleRemoveStory = (id: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!confirm('Are you sure you want to remove this highlight?')) return;
+
+    const updated = stories.filter((s) => s.id !== id);
+    setStories(updated);
+    saveStories(updated);
+
+    if (activeStoryIndex !== null) {
+      setActiveStoryIndex(null);
+    }
+  };
+
+  const handleStartEdit = (story: StoryItem, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setEditingStoryId(story.id);
+    setEditTitle(story.title);
+    setEditCategory(story.category);
+    setEditDescription(story.description);
+    setEditIcon(story.iconType || 'Sparkles');
+    setIsEditOpen(true);
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStoryId || !editTitle.trim() || !editDescription.trim()) return;
+
+    const updated = stories.map((s) => {
+      if (s.id === editingStoryId) {
+        return {
+          ...s,
+          title: editTitle.trim(),
+          category: editCategory,
+          description: editDescription.trim(),
+          iconType: editIcon,
+          icon: getIconComponent(editIcon),
+        };
+      }
+      return s;
+    });
+
+    setStories(updated);
+    saveStories(updated);
+    setIsEditOpen(false);
+    setEditingStoryId(null);
   };
 
   return (
@@ -217,13 +284,28 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
         </div>
         <div className="flex items-center gap-2">
           {canPostHighlight && (
-            <button
-              onClick={() => setIsCreateOpen(true)}
-              className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1"
-            >
-              <Plus className="w-3 h-3" />
-              <span>Post Highlight</span>
-            </button>
+            <>
+              <button
+                onClick={() => setIsManageMode(!isManageMode)}
+                className={`text-[11px] font-semibold px-2 py-0.5 rounded-lg border transition-all flex items-center gap-1 ${
+                  isManageMode
+                    ? 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                    : 'text-muted-foreground hover:text-foreground border-transparent'
+                }`}
+                title="Toggle remove controls on highlights"
+              >
+                <Settings2 className="w-3 h-3" />
+                <span>{isManageMode ? 'Done' : 'Manage'}</span>
+              </button>
+
+              <button
+                onClick={() => setIsCreateOpen(true)}
+                className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Post Highlight</span>
+              </button>
+            </>
           )}
           <span className="text-xs text-muted-foreground">Tap to view</span>
         </div>
@@ -250,29 +332,42 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
 
         {/* Stories List */}
         {stories.map((story, idx) => (
-          <button
-            key={story.id}
-            onClick={() => setActiveStoryIndex(idx)}
-            className="flex flex-col items-center gap-1.5 focus:outline-none group flex-shrink-0"
-            aria-label={`View highlight: ${story.title}`}
-          >
-            <div
-              className={`p-[2.5px] rounded-full transition-transform duration-200 group-hover:scale-105 ${
-                story.hasUnseen
-                  ? 'bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600'
-                  : 'bg-border'
-              }`}
+          <div key={story.id} className="relative group flex-shrink-0">
+            {/* Quick Remove Button on avatar for authorized users in manage mode or hover */}
+            {canPostHighlight && (isManageMode || false) && (
+              <button
+                onClick={(e) => handleRemoveStory(story.id, e)}
+                className="absolute -top-1 -right-1 z-20 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-md hover:bg-rose-700 transition-colors"
+                title="Remove highlight"
+                aria-label={`Remove highlight ${story.title}`}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+
+            <button
+              onClick={() => setActiveStoryIndex(idx)}
+              className="flex flex-col items-center gap-1.5 focus:outline-none group"
+              aria-label={`View highlight: ${story.title}`}
             >
-              <div className="w-14 h-14 rounded-full bg-card p-0.5 flex items-center justify-center">
-                <div className="w-full h-full rounded-full bg-gradient-to-br from-primary/90 to-primary flex items-center justify-center shadow-inner">
-                  {story.icon}
+              <div
+                className={`p-[2.5px] rounded-full transition-transform duration-200 group-hover:scale-105 ${
+                  story.hasUnseen
+                    ? 'bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600'
+                    : 'bg-border'
+                }`}
+              >
+                <div className="w-14 h-14 rounded-full bg-card p-0.5 flex items-center justify-center">
+                  <div className="w-full h-full rounded-full bg-gradient-to-br from-primary/90 to-primary flex items-center justify-center shadow-inner">
+                    {story.icon || getIconComponent(story.iconType || 'Sparkles')}
+                  </div>
                 </div>
               </div>
-            </div>
-            <span className="text-xs font-medium text-foreground truncate max-w-[64px] text-center">
-              {story.title}
-            </span>
-          </button>
+              <span className="text-xs font-medium text-foreground truncate max-w-[64px] text-center">
+                {story.title}
+              </span>
+            </button>
+          </div>
         ))}
       </div>
 
@@ -382,6 +477,108 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
         </div>
       )}
 
+      {/* Edit Highlight Modal */}
+      {isEditOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md bg-card rounded-2xl border border-border shadow-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
+                  <Pencil className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground">Modify Department Highlight</h3>
+                  <p className="text-[11px] text-muted-foreground">Update title, text, or category</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEditOpen(false)}
+                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-semibold text-foreground mb-1">Highlight Title</label>
+                <input
+                  type="text"
+                  required
+                  maxLength={24}
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-background border border-border text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-foreground mb-1">Category</label>
+                  <select
+                    value={editCategory}
+                    onChange={(e) => setEditCategory(e.target.value)}
+                    className="w-full px-2.5 py-2 rounded-xl bg-background border border-border text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  >
+                    <option value="Official Notice">Official Notice</option>
+                    <option value="Achievement">Achievement</option>
+                    <option value="Career">Career & Placement</option>
+                    <option value="Department Event">Department Event</option>
+                    <option value="Workshop">Workshop</option>
+                    <option value="Research">Research & Grants</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-foreground mb-1">Icon Style</label>
+                  <select
+                    value={editIcon}
+                    onChange={(e) => setEditIcon(e.target.value)}
+                    className="w-full px-2.5 py-2 rounded-xl bg-background border border-border text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  >
+                    <option value="Sparkles">Sparkles (General)</option>
+                    <option value="GraduationCap">HOD / Academic</option>
+                    <option value="Trophy">Trophy / Award</option>
+                    <option value="Briefcase">Placement / Job</option>
+                    <option value="Cpu">Tech / Hackathon</option>
+                    <option value="Award">Certificate / Honor</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-foreground mb-1">Highlight Description</label>
+                <textarea
+                  required
+                  rows={3}
+                  maxLength={200}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-background border border-border text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsEditOpen(false)}
+                  className="px-3 py-2 rounded-xl text-xs font-medium text-muted-foreground hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-amber-500 text-white hover:bg-amber-600 flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Instagram Story Lightbox Modal */}
       {activeStory && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -427,7 +624,7 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
             {/* Story Card Body */}
             <div className="pt-24 pb-8 px-6 flex-1 flex flex-col justify-center items-center text-center bg-gradient-to-b from-primary/10 via-background to-card min-h-[340px]">
               <div className="w-20 h-20 rounded-full bg-primary/15 border-2 border-primary/40 flex items-center justify-center mb-5 text-primary scale-125">
-                {activeStory.icon}
+                {activeStory.icon || getIconComponent(activeStory.iconType || 'Sparkles')}
               </div>
               <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-primary/15 text-primary mb-2">
                 {activeStory.category}
@@ -438,12 +635,35 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
               </p>
 
               {/* Attribution Footer */}
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted border border-border text-[11px] text-muted-foreground">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted border border-border text-[11px] text-muted-foreground mb-3">
                 <ShieldCheck className="w-3.5 h-3.5 text-primary" />
                 <span>
                   Posted by <strong className="text-foreground">{activeStory.authorName || 'Department Authority'}</strong> ({activeStory.authorRole || 'Official'})
                 </span>
               </div>
+
+              {/* Authorized Remove & Edit Action Bar */}
+              {canPostHighlight && (
+                <div className="flex items-center gap-2 pt-2 border-t border-border/60 w-full justify-center">
+                  <button
+                    type="button"
+                    onClick={(e) => handleStartEdit(activeStory, e)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 transition-all"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    <span>Modify Highlight</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => handleRemoveStory(activeStory.id, e)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-all"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Remove Highlight</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Controls */}
