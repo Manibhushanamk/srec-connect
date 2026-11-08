@@ -3,7 +3,6 @@
 import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { AdminShell } from '@/components/layout/AdminShell';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -121,31 +120,27 @@ export default function AdminIncidentDossierPage({
 
   if (loading) {
     return (
-      <AdminShell>
-        <div className="py-24 flex justify-center">
-          <Loader2 className="w-8 h-8 text-rose-400 animate-spin" />
-        </div>
-      </AdminShell>
+      <div className="py-24 flex justify-center">
+        <Loader2 className="w-8 h-8 text-rose-400 animate-spin" />
+      </div>
     );
   }
 
   if (error || !incident) {
     return (
-      <AdminShell>
-        <div className="p-8 text-center bg-slate-900/60 border border-slate-800 rounded-2xl max-w-lg mx-auto space-y-4">
-          <AlertCircle className="w-10 h-10 text-rose-400 mx-auto" />
-          <h2 className="text-base font-bold text-white">Access Restricted</h2>
-          <p className="text-xs text-slate-400">{error || 'Case dossier could not be found or you do not have permission.'}</p>
-          <Link href="/admin/discipline">
-            <Button variant="secondary" size="sm">Back to Cases</Button>
-          </Link>
-        </div>
-      </AdminShell>
+      <div className="p-8 text-center bg-slate-900/60 border border-slate-800 rounded-2xl max-w-lg mx-auto space-y-4">
+        <AlertCircle className="w-10 h-10 text-rose-400 mx-auto" />
+        <h2 className="text-base font-bold text-white">Access Restricted</h2>
+        <p className="text-xs text-slate-400">{error || 'Case dossier could not be found or you do not have permission.'}</p>
+        <Link href="/admin/discipline">
+          <Button variant="secondary" size="sm">Back to Cases</Button>
+        </Link>
+      </div>
     );
   }
 
   return (
-    <AdminShell>
+    <div className="space-y-6">
       {/* Back button */}
       <div>
         <Link
@@ -410,6 +405,6 @@ export default function AdminIncidentDossierPage({
           </div>
         </div>
       )}
-    </AdminShell>
+    </div>
   );
 }

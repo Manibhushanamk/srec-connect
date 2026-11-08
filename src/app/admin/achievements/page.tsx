@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { AdminShell } from '@/components/layout/AdminShell';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -103,7 +102,7 @@ export default function AdminAchievementsPage() {
   });
 
   return (
-    <AdminShell>
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
@@ -446,6 +445,6 @@ export default function AdminAchievementsPage() {
           </form>
         )}
       </Modal>
-    </AdminShell>
+    </div>
   );
 }

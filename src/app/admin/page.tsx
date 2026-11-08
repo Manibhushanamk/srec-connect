@@ -4,7 +4,6 @@ import { prisma } from '@/lib/prisma';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge, StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { AdminShell } from '@/components/layout/AdminShell';
 import { getServerSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { Role } from '@prisma/client';
@@ -146,11 +145,15 @@ export default async function AdminPage() {
   });
 
   return (
-    <AdminShell
-      title="Command Center"
-      description={isRoot ? 'Sovereign control across all 11 departments' : `Scoped to your department • ${userAdminType}`}
-      breadcrumbs={[]}
-    >
+    <div className="space-y-6">
+      <div className="border-b border-slate-800 pb-5">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          Executive Command Center
+        </h1>
+        <p className="mt-1 text-slate-400 text-xs sm:text-sm">
+          {isRoot ? 'Sovereign institutional oversight across all 11 departments' : `Scoped to your department • ${userAdminType}`}
+        </p>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {QUICK_STATS.map((stat) => (
           <Card key={stat.label} variant="bento" hover>
@@ -265,6 +268,6 @@ export default async function AdminPage() {
           </CardContent>
         </Card>
       </div>
-    </AdminShell>
+    </div>
   );
 }

@@ -29,7 +29,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         {...props}
       >
         {variant === 'bento' && (
-          <div className="absolute inset-0 bg-gradient-to-tr from-brand-500/10 via-transparent to-cyan-500/10 opacity-0 hover:opacity-100 transition-opacity duration-500" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-brand-500/10 via-transparent to-cyan-500/10 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
         )}
         {children}
       </div>

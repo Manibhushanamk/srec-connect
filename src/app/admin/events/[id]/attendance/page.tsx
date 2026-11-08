@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import { AdminShell } from '@/components/layout/AdminShell';
 import { Card } from '@/components/ui/Card';
 import { Badge, StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -149,7 +148,7 @@ export default function AdminEventAttendancePage({
   });
 
   return (
-    <AdminShell>
+    <div className="space-y-6">
       {/* Back button */}
       <div>
         <Link
@@ -394,6 +393,6 @@ export default function AdminEventAttendancePage({
           </table>
         </div>
       )}
-    </AdminShell>
+    </div>
   );
 }

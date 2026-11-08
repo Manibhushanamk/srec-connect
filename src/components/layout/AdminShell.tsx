@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Menu, X, ChevronRight, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AdminSidebar } from './AdminSidebar';
+import { AppHeader } from './AppHeader';
 
 interface AdminShellProps {
   children: ReactNode;
@@ -19,7 +20,10 @@ export function AdminShell({ children, title, description, breadcrumbs, actions 
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-space-900 overflow-x-hidden w-full">
+    <div className="min-h-screen bg-space-900 overflow-x-hidden w-full flex flex-col">
+      {/* 1. Sticky Top Navigation */}
+      <AppHeader />
+
       {/* Desktop Fixed Sidebar */}
       <div className="hidden lg:block">
         <AdminSidebar />
@@ -60,7 +64,7 @@ export function AdminShell({ children, title, description, breadcrumbs, actions 
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto">
-                <AdminSidebar />
+                <AdminSidebar className="relative top-0 w-full h-full border-r-0" />
               </div>
             </div>
           </div>

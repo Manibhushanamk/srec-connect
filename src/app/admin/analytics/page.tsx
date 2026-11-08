@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AdminShell } from '@/components/layout/AdminShell';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -57,11 +56,9 @@ export default function AdminAnalyticsPage() {
 
   if (loading) {
     return (
-      <AdminShell>
-        <div className="py-24 flex justify-center">
-          <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-        </div>
-      </AdminShell>
+      <div className="py-24 flex justify-center">
+        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+      </div>
     );
   }
 
@@ -71,7 +68,7 @@ export default function AdminAnalyticsPage() {
   const categoryDistribution = data?.categoryDistribution || [];
 
   return (
-    <AdminShell>
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
@@ -234,6 +231,6 @@ export default function AdminAnalyticsPage() {
           ))}
         </div>
       </Card>
-    </AdminShell>
+    </div>
   );
 }

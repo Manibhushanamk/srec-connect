@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -103,8 +104,7 @@ const MENU_GROUPS = {
 type MenuGroupKey = keyof typeof MENU_GROUPS;
 
 interface MenuGroupProps {
-  key: MenuGroupKey;
-  group: typeof MENU_GROUPS[MenuGroupKey];
+  group: (typeof MENU_GROUPS)[MenuGroupKey];
   pathname: string;
   visibleGroups: Set<MenuGroupKey>;
   isRoot: boolean;
@@ -114,66 +114,83 @@ interface MenuGroupProps {
 }
 
 function MenuGroup({
-  key,
   group,
   pathname,
   visibleGroups,
-  isRoot,
-  adminType,
-  departmentId,
   menuKey,
 }: MenuGroupProps) {
   if (!visibleGroups.has(menuKey)) return null;
 
-  const isActive = group.items.some((item) => pathname.startsWith(item.href));
+  const isActive = group.items.some(
+    (item) => pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href + '/'))
+  );
   const [isOpen, setIsOpen] = useState(isActive);
 
+  useEffect(() => {
+    if (isActive) {
+      setIsOpen(true);
+    }
+  }, [isActive]);
+
   return (
-    <details className={cn('group', isOpen && 'open')} open={isActive}>
-      <summary
+    <div className="space-y-1">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
         className={cn(
-          'flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200',
+          'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 text-left select-none',
           'text-slate-300 hover:text-white hover:bg-space-700/50',
-          isActive && 'text-brand-400 bg-brand-500/10'
+          isActive && 'text-brand-400 bg-brand-500/10 font-semibold'
         )}
-        onClick={(e) => {
-          e.preventDefault();
-          setIsOpen(!isOpen);
-        }}
+        aria-expanded={isOpen}
       >
-        <group.icon className={cn('w-5 h-5 flex-shrink-0 transition-transform duration-200', isOpen && 'rotate-90')} aria-hidden="true" />
+        <group.icon
+          className={cn(
+            'w-5 h-5 flex-shrink-0 transition-colors duration-200',
+            isActive ? 'text-brand-400' : 'text-slate-400 group-hover:text-white'
+          )}
+          aria-hidden="true"
+        />
         <span className="font-medium text-sm flex-1 truncate">{group.label}</span>
-        <ChevronRight className={cn('w-4 h-4 text-slate-500 transition-transform duration-200 flex-shrink-0', isOpen && 'rotate-90')} aria-hidden="true" />
-      </summary>
-      <ul className="mt-1 space-y-1 pl-8 animate-slide-up" role="list">
-        {group.items.map((item) => {
-          const isItemActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href + '/'));
-          return (
-            <li key={item.href}>
-              <Link
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200',
-                  isItemActive
-                    ? 'text-brand-400 bg-brand-500/10'
-                    : 'text-slate-400 hover:text-white hover:bg-space-700/30'
-                )}
-                aria-current={isItemActive ? 'page' : undefined}
-              >
-                <item.icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
-                <span className="truncate">{item.label}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </details>
+        <ChevronRight
+          className={cn(
+            'w-4 h-4 text-slate-500 transition-transform duration-200 flex-shrink-0',
+            isOpen && 'rotate-90 text-brand-400'
+          )}
+          aria-hidden="true"
+        />
+      </button>
+
+      {isOpen && (
+        <ul className="mt-1 space-y-1 pl-7 animate-slide-up" role="list">
+          {group.items.map((item) => {
+            const isItemActive =
+              pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href + '/'));
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200',
+                    isItemActive
+                      ? 'text-brand-400 bg-brand-500/10 font-medium'
+                      : 'text-slate-400 hover:text-white hover:bg-space-700/30'
+                  )}
+                  aria-current={isItemActive ? 'page' : undefined}
+                >
+                  <item.icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
-import { useState } from 'react';
-
-export function AdminSidebar() {
+export function AdminSidebar({ className }: { className?: string } = {}) {
   const pathname = usePathname();
   const { data: session } = useSession();
 
@@ -195,11 +212,14 @@ export function AdminSidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-16 bottom-0 w-72 bg-space-900/95 backdrop-blur-2xl border-r border-slate-800/50 z-30 overflow-y-auto scrollbar-thin"
+      className={cn(
+        'left-0 top-16 bottom-0 w-72 bg-space-900/95 backdrop-blur-2xl border-r border-slate-800/50 z-30 overflow-y-auto scrollbar-thin',
+        className || 'fixed'
+      )}
       aria-label="Admin navigation"
     >
-      <nav className="p-4 space-y-6" aria-label="Admin menu">
-        {(Object.entries(MENU_GROUPS) as [MenuGroupKey, typeof MENU_GROUPS[MenuGroupKey]][]).map(([key, group]) => (
+      <nav className="p-4 space-y-4" aria-label="Admin menu">
+        {(Object.entries(MENU_GROUPS) as [MenuGroupKey, (typeof MENU_GROUPS)[MenuGroupKey]][]).map(([key, group]) => (
           <MenuGroup
             key={key}
             group={group}
@@ -212,44 +232,44 @@ export function AdminSidebar() {
           />
         ))}
 
-        <div className="pt-6 border-t border-slate-800/50">
-          <p className="px-3 text-xs font-medium text-slate-500 uppercase tracking-wider mb-3">
+        <div className="pt-5 border-t border-slate-800/50">
+          <p className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
             Quick Actions
           </p>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Link
               href="/admin/achievements?status=PENDING"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
             >
-              <AlertTriangle className="w-5 h-5 text-amber-400" />
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
               <span>Review Pending</span>
             </Link>
             <Link
               href="/admin/bulk-upload"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
             >
-              <Upload className="w-5 h-5 text-cyan-400" />
+              <Upload className="w-4 h-4 text-cyan-400" />
               <span>Bulk Upload</span>
             </Link>
             <Link
-              href="/admin/export"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+              href="/admin/users"
+              className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
             >
-              <Download className="w-5 h-5 text-emerald-400" />
-              <span>Export Data</span>
+              <Users className="w-4 h-4 text-emerald-400" />
+              <span>User Directory</span>
             </Link>
           </div>
         </div>
       </nav>
 
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-800/50 bg-space-900/95 backdrop-blur-2xl">
+      <div className="p-4 border-t border-slate-800/50 bg-space-900/95 backdrop-blur-2xl">
         <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-space-800/50">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center flex-shrink-0">
-            <Crown className="w-5 h-5 text-white" />
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center flex-shrink-0 shadow-sm">
+            <Crown className="w-4 h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-slate-100 truncate">SREC Connect v3.0</p>
-            <p className="text-[10px] text-slate-500">Sovereign Admin Portal</p>
+            <p className="text-xs font-semibold text-slate-100 truncate">SREC Connect v3.0</p>
+            <p className="text-[10px] text-slate-400">Institutional Console</p>
           </div>
         </div>
       </div>
