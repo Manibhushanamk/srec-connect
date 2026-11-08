@@ -16,6 +16,7 @@ import {
   Sparkles,
   ArrowRight,
   FileCheck,
+  Building2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
@@ -42,6 +43,7 @@ export interface ScholarDirectoryCardProps {
   category?: string;
   level?: string;
   positionRank?: string | null;
+  participationType?: string | null;
   achievementDate?: string;
   organization?: string;
   googleDriveUrl?: string | null;
@@ -77,6 +79,7 @@ export function ScholarDirectoryCard({
   category,
   level,
   positionRank,
+  participationType,
   achievementDate,
   organization,
   googleDriveUrl,
@@ -257,10 +260,19 @@ export function ScholarDirectoryCard({
             </div>
           )}
 
-          <div className="flex items-center gap-1">
-            <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
-            <span>Nandyal, Andhra Pradesh</span>
-          </div>
+          {type === 'ACHIEVEMENT' ? (
+            organization && (
+              <div className="flex items-center gap-1 max-w-[260px]">
+                <Building2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                <span className="truncate" title={organization}>{organization}</span>
+              </div>
+            )
+          ) : (
+            <div className="flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+              <span>Nandyal, Andhra Pradesh</span>
+            </div>
+          )}
 
           {email && (
             <div className="flex items-center gap-1">
@@ -274,7 +286,7 @@ export function ScholarDirectoryCard({
         <div className="grid grid-cols-4 gap-2 mb-4">
           <div className="p-2.5 rounded-2xl bg-secondary/40 border border-border/60 text-center">
             <p className="text-sm sm:text-base font-extrabold text-foreground truncate" title={positionRank || '1st'}>
-              {type === 'ACHIEVEMENT' ? formatRank(positionRank) : (stats?.postsCount ?? 14)}
+              {type === 'ACHIEVEMENT' ? formatRank(positionRank) : (stats?.postsCount ?? 0)}
             </p>
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">
               {type === 'STUDENT' ? 'Posts' : type === 'FACULTY' ? 'Papers' : 'Rank'}
@@ -283,28 +295,28 @@ export function ScholarDirectoryCard({
 
           <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/30 text-center">
             <p className="text-base sm:text-lg font-extrabold text-primary">
-              {stats?.verifiedCount ?? (type === 'ACHIEVEMENT' ? 1 : 8)}
+              {type === 'ACHIEVEMENT' ? formatLevel(level) : (stats?.verifiedCount ?? 0)}
             </p>
             <p className="text-[10px] uppercase tracking-wider font-semibold text-primary mt-0.5">
-              Verified
+              {type === 'ACHIEVEMENT' ? 'Level' : 'Verified'}
             </p>
           </div>
 
           <div className="p-2.5 rounded-2xl bg-secondary/40 border border-border/60 text-center">
-            <p className="text-sm sm:text-base font-extrabold text-foreground truncate" title={level || 'National'}>
-              {type === 'ACHIEVEMENT' ? formatLevel(level) : (stats?.eventsCount ?? 12)}
+            <p className="text-sm sm:text-base font-extrabold text-foreground truncate">
+              {type === 'ACHIEVEMENT' ? (batch || '2025-26') : (stats?.eventsCount ?? 0)}
             </p>
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">
-              {type === 'STUDENT' ? 'Events' : type === 'FACULTY' ? 'Mentored' : 'Level'}
+              {type === 'STUDENT' ? 'Events' : type === 'FACULTY' ? 'Exp (Yrs)' : 'Year'}
             </p>
           </div>
 
           <div className="p-2.5 rounded-2xl bg-secondary/40 border border-border/60 text-center">
-            <p className="text-base sm:text-lg font-extrabold text-foreground">
-              {stats?.skillsCount ?? displaySkills.length}
+            <p className="text-sm sm:text-base font-extrabold text-foreground truncate">
+              {type === 'ACHIEVEMENT' ? (participationType || 'Solo') : (stats?.skillsCount ?? displaySkills.length)}
             </p>
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">
-              {type === 'ACHIEVEMENT' ? 'Tags' : 'Skills'}
+              {type === 'ACHIEVEMENT' ? 'Entry' : type === 'FACULTY' ? 'Areas' : 'Skills'}
             </p>
           </div>
         </div>
@@ -312,7 +324,11 @@ export function ScholarDirectoryCard({
         {/* 6. Skills / Specialization Chips */}
         <div className="mt-auto space-y-2">
           <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            {type === 'FACULTY' ? 'RESEARCH SPECIALIZATIONS' : 'VERIFIED TECHNICAL SKILLS'}
+            {type === 'FACULTY'
+              ? 'RESEARCH SPECIALIZATIONS'
+              : type === 'ACHIEVEMENT'
+              ? 'VERIFIED RECOGNITION HIGHLIGHTS'
+              : 'VERIFIED TECHNICAL SKILLS'}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {displaySkills.slice(0, 6).map((skill, idx) => (

@@ -61,13 +61,13 @@ const FALLBACK_POSTS: FeedPostProps[] = [
     id: 'post-2',
     author: {
       id: 'f1',
-      name: 'Dr. B. Ramanjaneyulu',
-      role: 'FACULTY',
-      designation: 'Associate Professor & HOD',
+      name: 'Dr. K. Srinivas Rao',
+      role: 'HOD',
+      designation: 'Professor & Head of Department',
       department: 'CSE (AI & ML)',
       isVerified: true,
     },
-    content: `📢 Congratulations to the CSE (AI & ML) Department for successfully publishing 8 research papers in Scopus-indexed IEEE conferences this semester! \n\nEvery student working on AI ethics and large-scale vision transformers is encouraged to register for the upcoming Hands-on PyTorch Workshop scheduled next Friday.\n\n#ResearchExcellence #SRECAIML #IEEE #MachineLearning`,
+    content: `📢 Congratulations to the CSE (AI & ML) Department scholars for successfully publishing research in Scopus-indexed IEEE conferences and winning National AI Hackathons this semester! \n\nEvery student working on AI ethics and edge vision transformers is encouraged to register for the upcoming Hands-on PyTorch Workshop scheduled next Friday.\n\n#ResearchExcellence #SRECAIML #IEEE #MachineLearning`,
     createdAt: '5 hours ago',
     likesCount: 88,
     commentsCount: 16,
@@ -78,13 +78,13 @@ const FALLBACK_POSTS: FeedPostProps[] = [
     id: 'post-3',
     author: {
       id: 'u2',
-      name: 'A. Sneha Reddy',
+      name: 'P. Sai Kumar',
       role: 'STUDENT',
-      rollNumber: '22091A3215',
+      rollNumber: '22091A3202',
       department: 'CSE (AI & ML)',
       isVerified: true,
     },
-    content: `Excited to present our NLP research paper on "Low-Resource Indic Language Translation using Optimized Transformer Ensembles" at the upcoming International Conference on AI & Robotics! 📚✨\n\n#NLP #MachineLearning #ResearchPaper #AIML`,
+    content: `Excited to announce our Scopus Q1 indexed research paper on "Multi-Modal Edge Vision for Crop Health" has been published with IEEE Computer Society (ICAIVC-2026)! 📚✨ Special thanks to our faculty mentors for their constant support.\n\n#NLP #MachineLearning #ResearchPaper #AIML #IEEE`,
     images: [
       'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
     ],
@@ -95,10 +95,10 @@ const FALLBACK_POSTS: FeedPostProps[] = [
     isBookmarked: false,
     achievement: {
       id: 'ach-2',
-      title: 'Scopus Indexed Paper Acceptance (ICAIR-2026)',
+      title: 'Scopus Q1 Indexed Research Paper (ICAIVC-2026)',
       category: 'Research Publication',
       issuer: 'IEEE Computer Society',
-      date: 'Oct 2026',
+      date: 'Sep 2026',
       isVerified: true,
     },
   },
@@ -302,93 +302,93 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <ScholarDirectoryCard
               type="STUDENT"
-              id="sai-kumar"
+              id="cmw7bcqo90008ik9rnhnvbarx"
               name="P. Sai Kumar"
               role="STUDENT"
-              departmentName="Computer Science & Engineering (AI & ML)"
-              headline="Undergraduate AI Researcher & Machine Learning Engineer | SREC Nandyal"
+              departmentName="Artificial Intelligence & Machine Learning"
+              headline="Student & AI Researcher | JNTUA Roll 22091A3202"
               rollNumber="22091A3202"
               batch="2022-2026"
               section="A"
               email="22091a3202@srecnandyal.edu.in"
               stats={{
-                postsCount: 14,
-                verifiedCount: 8,
-                eventsCount: 12,
-                skillsCount: 6,
+                postsCount: 0,
+                verifiedCount: 1,
+                eventsCount: 2,
+                skillsCount: 5,
               }}
-              skills={['PyTorch', 'TensorFlow', 'Computer Vision', 'Next.js', 'PostgreSQL', 'Docker']}
+              skills={['PyTorch', 'TensorFlow', 'Computer Vision', 'Deep Learning', 'Docker']}
               actionLabel="Connect"
               href="/students/22091A3202"
             />
 
             <ScholarDirectoryCard
               type="FACULTY"
-              id="mallikarjuna"
-              name="Dr. S. Mallikarjuna"
+              id="cmw7jtpt30011ikhmx621nfsr"
+              name="Dr. K. Srinivas Rao"
               role="HOD"
-              departmentName="Computer Science & Engineering (AI & ML)"
+              departmentName="Artificial Intelligence & Machine Learning"
               headline="Professor & Head of Department | Artificial Intelligence & Machine Learning"
               designation="Professor & HOD"
-              qualification="Ph.D. in Computer Science"
-              specialization="Machine Learning, Edge AI, Distributed Systems"
-              email="hod.aiml@srecnandyal.edu.in"
+              qualification="Ph.D., M.Tech"
+              specialization="Edge AI, Distributed Computing, Deep Learning"
+              email="manibhushanam5k@gmail.com"
               stats={{
-                postsCount: 28,
-                verifiedCount: 16,
-                eventsCount: 24,
-                skillsCount: 5,
+                postsCount: 0,
+                verifiedCount: 1,
+                eventsCount: 15,
+                skillsCount: 3,
               }}
-              skills={['Deep Learning', 'Edge AI', 'Reinforcement Learning', 'NLP', 'Robotics']}
+              skills={['Edge AI', 'Distributed Computing', 'Deep Learning']}
               actionLabel="Connect"
-              href="/faculty"
+              href="/faculty/cmw7jtpt30011ikhmx621nfsr"
             />
 
             <ScholarDirectoryCard
               type="STUDENT"
-              id="manideep"
-              name="K. Manideep"
+              id="cmw79c5v0004kikd6kyjzv8tg"
+              name="K. V. Naveen Kumar"
               role="STUDENT"
-              departmentName="Computer Science & Engineering (AI & ML)"
-              headline="Full Stack AI Systems Engineer & System Architect | SREC Nandyal"
+              departmentName="Artificial Intelligence & Machine Learning"
+              headline="Undergraduate AI Researcher | JNTUA Roll 22091A3201"
               rollNumber="22091A3201"
               batch="2022-2026"
               section="A"
               email="22091a3201@srecnandyal.edu.in"
               stats={{
-                postsCount: 19,
-                verifiedCount: 11,
-                eventsCount: 15,
-                skillsCount: 6,
+                postsCount: 0,
+                verifiedCount: 2,
+                eventsCount: 3,
+                skillsCount: 5,
               }}
-              skills={['TypeScript', 'Next.js', 'Prisma', 'PyTorch', 'System Architecture', 'PostgreSQL']}
+              skills={['Smart Agriculture', 'IoT Hardware', 'Edge AI', 'Full Stack', 'Python']}
               actionLabel="Connect"
               href="/students/22091A3201"
             />
 
             <ScholarDirectoryCard
-              type="STUDENT"
-              id="akhila"
-              name="M. Akhila"
-              role="STUDENT"
-              departmentName="Computer Science & Engineering (AI & ML)"
-              headline="Data Scientist & Computer Vision Researcher | SREC Nandyal"
-              rollNumber="22091A3203"
-              batch="2022-2026"
-              section="A"
-              email="22091a3203@srecnandyal.edu.in"
+              type="FACULTY"
+              id="cmw7bbzt10006ik59bnc32odt"
+              name="A. Ramesh"
+              role="Assistant Professor"
+              departmentName="Artificial Intelligence & Machine Learning"
+              headline="Assistant Professor • Deep Learning & Natural Language Processing"
+              designation="Assistant Professor"
+              qualification="M.Tech (CSE)"
+              specialization="Deep Learning & Natural Language Processing"
+              email="faculty.aiml@srecnandyal.edu.in"
               stats={{
-                postsCount: 12,
-                verifiedCount: 7,
-                eventsCount: 9,
-                skillsCount: 5,
+                postsCount: 0,
+                verifiedCount: 0,
+                eventsCount: 6,
+                skillsCount: 2,
               }}
-              skills={['Computer Vision', 'PyTorch', 'Data Analysis', 'Scikit-Learn', 'FastAPI']}
+              skills={['Deep Learning', 'Natural Language Processing']}
               actionLabel="Connect"
-              href="/students/22091A3203"
+              href="/faculty/cmw7bbzt10006ik59bnc32odt"
             />
           </div>
         </div>

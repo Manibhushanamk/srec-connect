@@ -212,28 +212,23 @@ export default async function AchievementsPage({
                   avatarUrl={achievement.media?.[0]?.url}
                   role={achievement.personType || 'STUDENT'}
                   departmentName={achievement.department?.name || achievement.departmentName || 'Computer Science & Engineering (AI & ML)'}
-                  headline={`${achievement.personName} • ${achievement.organizationEventName}`}
+                  headline={`Achiever: ${achievement.personName} • ${achievement.organizationEventName}`}
                   achievementTitle={achievement.title}
                   category={achievement.category?.name}
                   level={achievement.level}
                   positionRank={achievement.positionRank}
+                  participationType={achievement.participationType === 'TEAM' ? 'Team' : 'Solo'}
                   achievementDate={formatDate(achievement.achievementDate)}
                   organization={achievement.organizationEventName}
                   googleDriveUrl={achievement.googleDriveUrl || achievement.certificateUrl}
                   rollNumber={achievement.primaryStudentRoll || achievement.primaryStudent?.rollNumber}
                   batch={achievement.academicYear}
-                  stats={{
-                    postsCount: 1,
-                    verifiedCount: 1,
-                    eventsCount: 1,
-                    skillsCount: 4,
-                  }}
                   skills={[
-                    achievement.level,
                     achievement.category?.name,
-                    achievement.academicYear,
-                    achievement.participationType === 'TEAM' ? 'Team Project' : 'Solo Entry',
-                  ].filter(Boolean)}
+                    `${achievement.level} Level`,
+                    `AY ${achievement.academicYear}`,
+                    achievement.participationType === 'TEAM' ? 'Team Project' : 'Solo Honor',
+                  ].filter(Boolean) as string[]}
                   actionLabel="View Proof"
                   href={`/achievements/${achievement.id}`}
                 />

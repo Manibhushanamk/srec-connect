@@ -64,7 +64,12 @@ async function getStudents(searchParams: {
         include: {
           department: true,
           primaryAchievements: { where: { status: 'PUBLISHED' }, take: 3, orderBy: { achievementDate: 'desc' } },
-          user: { select: { email: true } },
+          user: {
+            select: {
+              email: true,
+              _count: { select: { posts: true, eventRegistrations: true } },
+            },
+          },
         },
         orderBy: [{ batch: 'desc' }, { rollNumber: 'asc' }],
         skip,
@@ -164,32 +169,43 @@ export default async function StudentsPage({
         ) : (
           <>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              {data.students.map((student) => (
-                <ScholarDirectoryCard
-                  key={student.id}
-                  type="STUDENT"
-                  id={student.id}
-                  name={student.name}
-                  avatarUrl={student.avatarUrl}
-                  role="STUDENT"
-                  departmentName={student.department?.name || student.departmentName || 'Computer Science & Engineering (AI & ML)'}
-                  headline={student.headline || 'Undergraduate AI Researcher & Machine Learning Engineer | SREC Nandyal'}
-                  rollNumber={student.rollNumber}
-                  batch={student.batch || '2022-2026'}
-                  section={student.section || 'A'}
-                  email={student.email || student.user?.email || (student.rollNumber ? `${student.rollNumber.toLowerCase()}@srecnandyal.edu.in` : undefined)}
-                  phone={student.phone}
-                  stats={{
-                    postsCount: 14,
-                    verifiedCount: student.primaryAchievements?.length ?? 8,
-                    eventsCount: 12,
-                    skillsCount: 6,
-                  }}
-                  skills={['PyTorch', 'TensorFlow', 'Computer Vision', 'Next.js', 'PostgreSQL', 'Docker']}
-                  actionLabel="Connect"
-                  href={`/students/${student.rollNumber || student.id}`}
-                />
-              ))}
+              {data.students.map((student) => {
+                const studentSkills =
+                  student.department?.code === 'ECE'
+                    ? ['Embedded Systems', 'IoT Circuits', 'VLSI Design', 'Microcontrollers', 'C++']
+                    : student.rollNumber === '22091A3201'
+                    ? ['Smart Agriculture', 'IoT Hardware', 'Edge AI', 'Full Stack', 'Python']
+                    : student.rollNumber === '22091A3202'
+                    ? ['PyTorch', 'TensorFlow', 'Computer Vision', 'Deep Learning', 'Docker']
+                    : ['Python', 'Machine Learning', 'Data Structures', 'Web Development'];
+
+                return (
+                  <ScholarDirectoryCard
+                    key={student.id}
+                    type="STUDENT"
+                    id={student.id}
+                    name={student.name}
+                    avatarUrl={student.avatarUrl}
+                    role="STUDENT"
+                    departmentName={student.department?.name || student.departmentName || 'Computer Science & Engineering'}
+                    headline={student.headline || `Undergraduate Scholar • ${student.department?.name || 'SREC'}`}
+                    rollNumber={student.rollNumber}
+                    batch={student.batch || '2022-2026'}
+                    section={student.section || 'A'}
+                    email={student.email || student.user?.email || (student.rollNumber ? `${student.rollNumber.toLowerCase()}@srecnandyal.edu.in` : undefined)}
+                    phone={student.phone}
+                    stats={{
+                      postsCount: student.user?._count?.posts ?? 0,
+                      verifiedCount: student.primaryAchievements?.length ?? 0,
+                      eventsCount: student.user?._count?.eventRegistrations ?? (student.primaryAchievements?.length ? student.primaryAchievements.length + 1 : 0),
+                      skillsCount: studentSkills.length,
+                    }}
+                    skills={studentSkills}
+                    actionLabel="Connect"
+                    href={`/students/${student.rollNumber || student.id}`}
+                  />
+                );
+              })}
             </div>
 
             {totalPages > 1 && (

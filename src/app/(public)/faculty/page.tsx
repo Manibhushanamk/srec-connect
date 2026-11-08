@@ -64,9 +64,14 @@ async function getFaculty(searchParams: {
         include: {
           department: true,
           achievements: { where: { status: 'PUBLISHED' }, take: 5, orderBy: { achievementDate: 'desc' } },
-          user: { select: { email: true } },
+          user: {
+            select: {
+              email: true,
+              _count: { select: { posts: true } },
+            },
+          },
         },
-        orderBy: [{ roleCategory: 'asc' }, { displayOrder: 'asc' }, { name: 'asc' }],
+        orderBy: [{ displayOrder: 'asc' }, { roleCategory: 'asc' }, { name: 'asc' }],
         skip,
         take: limit,
       }),
@@ -213,35 +218,41 @@ export default async function FacultyPage({
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              {data.faculty.map((member) => (
-                <ScholarDirectoryCard
-                  key={member.id}
-                  type="FACULTY"
-                  id={member.id}
-                  name={member.name}
-                  avatarUrl={member.avatarUrl}
-                  role={member.roleCategory ? roleLabels[member.roleCategory] : 'FACULTY'}
-                  departmentName={member.department?.name || member.departmentName || 'Computer Science & Engineering (AI & ML)'}
-                  headline={`${member.designation} • ${member.specialization || 'AI & Machine Learning'}`}
-                  designation={member.designation}
-                  qualification={member.degrees}
-                  specialization={member.specialization}
-                  email={member.email || member.user?.email}
-                  stats={{
-                    postsCount: member.achievements?.length ? member.achievements.length + 6 : 14,
-                    verifiedCount: member.achievements?.length ?? 8,
-                    eventsCount: 12,
-                    skillsCount: 5,
-                  }}
-                  skills={
-                    member.specialization
-                      ? member.specialization.split(',').map((s: string) => s.trim()).filter(Boolean)
-                      : ['Machine Learning', 'Deep Learning', 'Computer Vision', 'Robotics']
-                  }
-                  actionLabel="Connect"
-                  href={`/faculty/${member.id}`}
-                />
-              ))}
+              {data.faculty.map((member) => {
+                const facultySkills = member.specialization
+                  ? member.specialization
+                      .split(/[,;&•]/)
+                      .map((s: string) => s.trim())
+                      .filter(Boolean)
+                  : ['Artificial Intelligence', 'Machine Learning'];
+                const expYears = parseInt(member.experience || '8', 10) || 8;
+
+                return (
+                  <ScholarDirectoryCard
+                    key={member.id}
+                    type="FACULTY"
+                    id={member.id}
+                    name={member.name}
+                    avatarUrl={member.avatarUrl}
+                    role={member.roleCategory ? roleLabels[member.roleCategory] : 'FACULTY'}
+                    departmentName={member.department?.name || member.departmentName || 'Computer Science & Engineering (AI & ML)'}
+                    headline={`${member.designation} • ${member.specialization || 'AI & Machine Learning'}`}
+                    designation={member.designation}
+                    qualification={member.degrees}
+                    specialization={member.specialization}
+                    email={member.email || member.user?.email}
+                    stats={{
+                      postsCount: member.user?._count?.posts ?? 0,
+                      verifiedCount: member.achievements?.length ?? 0,
+                      eventsCount: expYears,
+                      skillsCount: facultySkills.length,
+                    }}
+                    skills={facultySkills}
+                    actionLabel="Connect"
+                    href={`/faculty/${member.id}`}
+                  />
+                );
+              })}
             </div>
           )}
 
