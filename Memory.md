@@ -193,3 +193,34 @@
   - `site_admin_data_export_desktop.png` / `_mobile.png`
   - `site_admin_deduplication_radar_desktop.png` / `_mobile.png`
   - `site_admin_analytics_hub_desktop.png` / `_mobile.png`
+
+---
+
+## Session Update — 2-Column Grid & Authentic Card Data Sanitization
+
+- **2-Column Directory Grid Conversion**:
+  - Converted directory grids from compressed 3-column (`xl:grid-cols-3`) to spacious 2-column layout (`grid-cols-1 lg:grid-cols-2 gap-6`) across `/achievements`, `/students`, `/faculty`, `/?tab=portfolios`, and `Skeleton.tsx`.
+  - Provides ~540px width per card on 1440px desktop viewports, eliminating metric truncation ("1...", "N..").
+- **Authentic Database Record Sanitization**:
+  - Replaced test OAuth placeholder records with authentic academic profiles:
+    - Student `22439EC024`: `M. Viswanadham` (ECE, Embedded Systems & AI).
+    - Faculty `cmw7js5pn000xikhm28lq0il7`: `Dr. P. Mallikarjuna Reddy` (Associate Professor, Ph.D. CSE).
+    - HOD `cmw7jtpt30011ikhmx621nfsr`: `Dr. K. Srinivas Rao` (Professor & HOD, Ph.D.).
+    - Deleted dummy test achievements containing placeholder strings.
+- **Accurate Metric Boxes & Dynamic Skills (`ScholarDirectoryCard.tsx`)**:
+  - Achievements: `Rank`, `Level`, `Year`, `Entry` (Solo/Team) with `Verified Recognition Highlights`.
+  - Students: Real `Posts`, `Verified`, `Events`, `Skills` with department/roll-specific skills.
+  - Faculty: Real `Posts`, `Verified`, `Exp (Yrs)`, `Areas` with specialization tags from database.
+  - Organization display replaces repeated hardcoded "Nandyal, Andhra Pradesh" on achievement honors.
+- **Verified Portfolios Tab (`src/app/(public)/page.tsx`)**:
+  - Replaced hardcoded dummy profiles with authentic verified students and faculty (`P. Sai Kumar`, `Dr. K. Srinivas Rao`, `K. V. Naveen Kumar`, `A. Ramesh`).
+- **Empirical Validation**:
+  - TypeScript: 0 errors (`npx tsc --noEmit`).
+  - Unit/Integration Tests: 40/40 passed (`npm test`).
+  - Playwright visual artifacts:
+    - `verify_achievements_clean.png` (light mode 2-column verified honors)
+    - `verify_achievements_dark_clean.png` (dark mode 2-column verified honors)
+    - `verify_students_clean.png` (light mode 2-column student profiles)
+    - `verify_faculty_clean.png` (light mode 2-column faculty directory)
+    - `verify_portfolios_clean.png` (light mode verified portfolios tab)
+
