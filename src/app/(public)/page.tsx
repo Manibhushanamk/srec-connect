@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { StoryHighlights } from '@/components/social/StoryHighlights';
-import { FeedCard } from '@/components/social/FeedCard';
+import { FeedCard, FeedPostProps } from '@/components/social/FeedCard';
+import { PostComposer } from '@/components/social/PostComposer';
 import { ProfileHeader } from '@/components/portfolio/ProfileHeader';
 import {
   Sparkles,
@@ -24,13 +25,13 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-const SAMPLE_POSTS = [
+const FALLBACK_POSTS: FeedPostProps[] = [
   {
     id: 'post-1',
     author: {
       id: 'u1',
       name: 'Mani Bhushanam K',
-      role: 'STUDENT' as const,
+      role: 'STUDENT',
       rollNumber: '22091A3201',
       department: 'CSE (AI & ML)',
       isVerified: true,
@@ -59,7 +60,7 @@ const SAMPLE_POSTS = [
     author: {
       id: 'f1',
       name: 'Dr. B. Ramanjaneyulu',
-      role: 'FACULTY' as const,
+      role: 'FACULTY',
       designation: 'Associate Professor & HOD',
       department: 'CSE (AI & ML)',
       isVerified: true,
@@ -76,7 +77,7 @@ const SAMPLE_POSTS = [
     author: {
       id: 'u2',
       name: 'A. Sneha Reddy',
-      role: 'STUDENT' as const,
+      role: 'STUDENT',
       rollNumber: '22091A3215',
       department: 'CSE (AI & ML)',
       isVerified: true,
@@ -106,6 +107,8 @@ export default function HomePage() {
   const initialTab = searchParams.get('tab') === 'portfolios' ? 'PORTFOLIOS' : 'FEED';
   const [activeTab, setActiveTab] = useState<'FEED' | 'PORTFOLIOS' | 'DEPARTMENT'>(initialTab);
   const [feedFilter, setFeedFilter] = useState<'ALL' | 'STUDENT' | 'FACULTY'>('ALL');
+  const [posts, setPosts] = useState<FeedPostProps[]>(FALLBACK_POSTS);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const tabParam = searchParams.get('tab');
@@ -116,7 +119,54 @@ export default function HomePage() {
     }
   }, [searchParams]);
 
-  const filteredPosts = SAMPLE_POSTS.filter((post) => {
+  // Fetch live posts from API
+  useEffect(() => {
+    async function loadLivePosts() {
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/api/posts?filter=${feedFilter}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.posts && data.posts.length > 0) {
+            setPosts(data.posts);
+          } else {
+            // Keep fallback posts if database currently has 0 posts
+            setPosts(FALLBACK_POSTS);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch live posts, displaying fallback:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadLivePosts();
+  }, [feedFilter]);
+
+  const handlePostCreated = (newPost: any) => {
+    const formatted: FeedPostProps = {
+      id: newPost.id,
+      content: newPost.content,
+      createdAt: 'Just now',
+      author: {
+        id: newPost.author?.id || 'u',
+        name: newPost.author?.name || 'Campus Member',
+        role: newPost.author?.role || 'STUDENT',
+        rollNumber: newPost.author?.student?.rollNumber,
+        designation: newPost.author?.faculty?.designation,
+        department: newPost.author?.student?.departmentName || newPost.author?.faculty?.departmentName || 'CSE (AI & ML)',
+        isVerified: true,
+      },
+      images: (newPost.media || []).map((m: any) => m.url),
+      likesCount: 0,
+      commentsCount: 0,
+      isLiked: false,
+      isBookmarked: false,
+    };
+    setPosts((prev) => [formatted, ...prev]);
+  };
+
+  const filteredPosts = posts.filter((post) => {
     if (feedFilter === 'ALL') return true;
     return post.author.role === feedFilter;
   });
@@ -126,26 +176,8 @@ export default function HomePage() {
       {/* 1. Instagram Stories Bar (Department Highlights) */}
       <StoryHighlights />
 
-      {/* 2. Instagram/LinkedIn Quick Post Composer Trigger */}
-      <div className="social-card p-3.5 mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold text-sm">
-            AI
-          </div>
-          <Link
-            href="/login"
-            className="flex-1 px-4 py-2.5 rounded-full bg-secondary/80 border border-border text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors cursor-pointer"
-          >
-            Share an academic update, project or paper...
-          </Link>
-          <button className="p-2 rounded-xl text-muted-foreground hover:text-primary hover:bg-secondary transition-colors">
-            <Image className="w-5 h-5 text-emerald-500" />
-          </button>
-          <button className="p-2 rounded-xl text-muted-foreground hover:text-primary hover:bg-secondary transition-colors">
-            <Award className="w-5 h-5 text-amber-500" />
-          </button>
-        </div>
-      </div>
+      {/* 2. Interactive Post Composer */}
+      <PostComposer onPostCreated={handlePostCreated} />
 
       {/* 3. Instagram / LinkedIn Feed Tabs */}
       <div className="flex items-center justify-between border-b border-border pb-2 px-1">
@@ -186,24 +218,24 @@ export default function HomePage() {
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <button
               onClick={() => setFeedFilter('ALL')}
-              className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${
-                feedFilter === 'ALL' ? 'bg-secondary text-foreground font-semibold' : ''
+              className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
+                feedFilter === 'ALL' ? 'bg-secondary text-foreground font-semibold shadow-xs' : 'hover:text-foreground'
               }`}
             >
               All
             </button>
             <button
               onClick={() => setFeedFilter('STUDENT')}
-              className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${
-                feedFilter === 'STUDENT' ? 'bg-secondary text-foreground font-semibold' : ''
+              className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
+                feedFilter === 'STUDENT' ? 'bg-secondary text-foreground font-semibold shadow-xs' : 'hover:text-foreground'
               }`}
             >
               Students
             </button>
             <button
               onClick={() => setFeedFilter('FACULTY')}
-              className={`px-2 py-0.5 rounded-md text-[11px] font-medium ${
-                feedFilter === 'FACULTY' ? 'bg-secondary text-foreground font-semibold' : ''
+              className={`px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
+                feedFilter === 'FACULTY' ? 'bg-secondary text-foreground font-semibold shadow-xs' : 'hover:text-foreground'
               }`}
             >
               Faculty
@@ -212,91 +244,77 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* 4. Tab 1: Community Feed (Instagram + LinkedIn hybrid) */}
+      {/* 4. Tab 1: Department Community Feed */}
       {activeTab === 'FEED' && (
-        <div className="space-y-4 pt-1">
+        <div className="space-y-4">
+          {isLoading && (
+            <div className="text-center py-4 text-xs font-mono text-cyan-500 animate-pulse">
+              Syncing live feed...
+            </div>
+          )}
           {filteredPosts.map((post) => (
             <FeedCard key={post.id} {...post} />
           ))}
         </div>
       )}
 
-      {/* 5. Tab 2: LinkedIn-Style Portfolios Showcase */}
+      {/* 5. Tab 2: Verified Academic Portfolios Preview */}
       {activeTab === 'PORTFOLIOS' && (
-        <div className="space-y-6 pt-2">
-          <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 text-xs text-primary flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold text-sm">Verified Department Talents</p>
-              <p className="text-muted-foreground text-xs mt-0.5">
-                Portfolios displayed here are authenticated with verified college roll numbers, faculty endorsements, and official achievement certificates.
-              </p>
-            </div>
-          </div>
-
+        <div className="space-y-4">
           <ProfileHeader
             name="Mani Bhushanam K"
             rollNumber="22091A3201"
             role="STUDENT"
-            department="CSE (AI & ML)"
+            department="Computer Science & Engineering (AI & ML)"
             batch="2022-2026"
             section="A"
-            headline="Undergraduate Researcher • Deep Learning & Mobile Vision Specialist"
+            headline="Undergraduate Researcher & Machine Learning Engineer | SREC Nandyal"
+            bio="Building intelligent systems, deep learning computer vision architectures, and real-time inference pipelines. Passionate about AI research and distributed full-stack platforms."
+            email="22091a3201@srecnandyal.edu.in"
             isVerified={true}
             stats={{
               postsCount: 14,
-              verifiedAchievementsCount: 6,
-              eventsCount: 8,
-              skillsCount: 12,
+              verifiedAchievementsCount: 8,
+              eventsCount: 12,
+              skillsCount: 6,
             }}
-            githubUrl="https://github.com"
-            linkedinUrl="https://linkedin.com"
-            skills={['PyTorch', 'Computer Vision', 'Next.js 15', 'TypeScript', 'TensorFlow', 'PostgreSQL']}
-            isOwner={false}
+            skills={['PyTorch', 'TensorFlow', 'Computer Vision', 'Next.js', 'PostgreSQL', 'Docker']}
+            isOwner={true}
           />
         </div>
       )}
 
-      {/* 6. Tab 3: Official Department Overview */}
+      {/* 6. Tab 3: About Department Overview */}
       {activeTab === 'DEPARTMENT' && (
-        <div className="space-y-4 pt-2">
-          <div className="social-card p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center font-bold text-lg">
-                <Brain className="w-6 h-6" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-foreground">
-                  Department of Computer Science & Engineering
-                </h2>
-                <p className="text-xs font-semibold text-primary">
-                  Artificial Intelligence & Machine Learning (Autonomous)
-                </p>
-              </div>
+        <div className="social-card p-6 border-border space-y-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-12 h-12 rounded-2xl bg-primary text-white flex items-center justify-center">
+              <Brain className="w-6 h-6" />
             </div>
-
-            <div className="space-y-3 text-xs leading-relaxed text-muted-foreground">
-              <p>
-                The Department of CSE (AI & ML) at Santhiram Engineering College, Nandyal was established to impart world-class technical education in artificial intelligence, deep learning, computer vision, and cognitive systems.
-              </p>
-              <p>
-                With state-of-the-art computational labs, accredited curriculum, and active industry-sponsored hackathons, the department empowers students to build impactful AI applications solving real-world challenges.
-              </p>
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Department of CSE (AI & ML)</h2>
+              <p className="text-xs text-muted-foreground">Santhiram Engineering College (SREC), Nandyal</p>
             </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-6 pt-4 border-t border-border">
-              <div className="p-3 rounded-xl bg-secondary/50">
-                <p className="text-base font-bold text-foreground">60 Intake</p>
-                <p className="text-[11px] text-muted-foreground">Annual Intake</p>
-              </div>
-              <div className="p-3 rounded-xl bg-secondary/50">
-                <p className="text-base font-bold text-foreground">2022</p>
-                <p className="text-[11px] text-muted-foreground">Established</p>
-              </div>
-              <div className="p-3 rounded-xl bg-secondary/50 col-span-2 sm:col-span-1">
-                <p className="text-base font-bold text-primary">100% Verified</p>
-                <p className="text-[11px] text-muted-foreground">Digital Portfolios</p>
-              </div>
+          </div>
+          <p className="text-xs text-foreground/80 leading-relaxed">
+            The Department of Computer Science & Engineering (Artificial Intelligence and Machine Learning) is committed to fostering innovation and research excellence. With state-of-the-art GPU labs, curriculum aligned with industry standards, and active hackathon culture, our students and faculty pioneer cutting-edge developments.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3">
+            <div className="p-3 rounded-xl bg-muted/40 text-center">
+              <p className="text-lg font-bold text-foreground">180</p>
+              <p className="text-[11px] text-muted-foreground">Annual Intake</p>
+            </div>
+            <div className="p-3 rounded-xl bg-muted/40 text-center">
+              <p className="text-lg font-bold text-primary">15+</p>
+              <p className="text-[11px] text-muted-foreground">Faculty Members</p>
+            </div>
+            <div className="p-3 rounded-xl bg-muted/40 text-center">
+              <p className="text-lg font-bold text-emerald-500">92%</p>
+              <p className="text-[11px] text-muted-foreground">Placement Rate</p>
+            </div>
+            <div className="p-3 rounded-xl bg-muted/40 text-center">
+              <p className="text-lg font-bold text-amber-500">24+</p>
+              <p className="text-[11px] text-muted-foreground">Hackathon Wins</p>
             </div>
           </div>
         </div>

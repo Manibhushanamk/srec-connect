@@ -3,26 +3,30 @@
 > **Project:** SREC Connect v3.0  
 > **Institution:** Santhiram Engineering College (SREC), Nandyal — CSE (AI & ML)  
 > **Last Updated:** 2026-11-08  
-> **Current Phase:** Phase 4 — Profiles & Portfolios Complete; Ready for Phase 5 (Social Community & Feed)  
+> **Current Phase:** Phase 5 — Social Community & Feed Complete; Ready for Phase 6 (Achievements & Verification)  
 
 ---
 
 ## 1. Current Status & Phase Progress
 
-- **Active Goal:** Phase 4 (Profiles & Academic Portfolios: LinkedIn-inspired Student & Faculty Pages) Completed; Cloudflare Security Audit Skill integrated and applied across auth, API routes, and security headers. Ready to start Phase 5 (Social Community & Feed).
+- **Active Goal:** Phase 5 (Social Community & Feed: Post Composer, Sharp WebP Compression, Cloudflare R2 Pipeline, Interactive Likes/Bookmarks/Comments) Completed; All pages audited and layout bugs fixed. Ready to start Phase 6 (Achievements & Multi-Tier Verification Workflow).
 - **Current State:**
-  - Resolved sign-in route mismatch: Next.js App Router route group `(auth)` maps to `/signin`, whereas NextAuth was pointing to `/auth/signin` (404). Fixed by updating `authOptions`, adding redirect handlers for `/login` and `/auth/signin`, and pointing `AppHeader.tsx` to `/signin`.
-  - Added dual-mode authentication: Google OAuth with domain/pre-provisioning enforcement + `CredentialsProvider` with production-bypass guard for instant local testing and persona switching (`SUPER_ADMIN`, `HOD`, `FACULTY`, `STUDENT`).
-  - Cloned and installed `cloudflare-security-audit-skill` from `https://github.com/cloudflare/security-audit-skill`.
-  - Audited and hardened codebase: strict CSP/security headers in `next.config.mjs`, bounded batch payloads in bulk import (max 1000 rows), URL scheme sanitizers (`https://`), and strict roll number immutability guards.
-  - Implemented Phase 3 User Management (`src/app/admin/users/page.tsx` & `/api/admin/users`) with search, role filters, status toggling, and single pre-provisioning modal (`a5370e4`).
-  - Implemented Two-Stage Bulk CSV / Excel Import Engine (`src/app/admin/bulk-upload/page.tsx` & `/api/admin/users/bulk-import`) with sample CSV download, JNTUA roll number format validation (`^\d{2}09(1A|5A)\d{2}[0-9A-Z]{2}$`), error reporting table, and transactional DB commit.
-  - Implemented Phase 4 Student Dynamic Portfolio Page (`src/app/(public)/students/[id]/page.tsx` supporting lookup by ID or permanent roll number `22091A3201`) with locked JNTUA academic banner, skills tags, and verified achievements.
-  - Implemented Phase 4 Faculty Profile Page (`src/app/(public)/faculty/[id]/page.tsx`) with academic qualifications, research publications, campus cabin location, and Google Scholar profile integration.
-  - Integration test suites passing: 25/25 tests passing across `tests/auth-rbac.test.ts`, `tests/user-admin-bulk.test.ts`, and `tests/portfolios.test.ts`.
+  - Resolved AppShell layout constraint: Directories and profiles were previously cramped into `max-w-2xl` with an invasive right rail. Updated `AppShell.tsx` to conditionally give directory & profile pages full responsive width (`max-w-5xl`/`max-w-6xl`) and reserve the 3-column layout exclusively for the Home Feed.
+  - Eliminated dead/broken navigation links: Replaced non-existent `/incidents` and `/documents` with live `/departments` and `/about`; mapped admin tools to live `/admin/users` and `/admin/bulk-upload`.
+  - Added role-based Profile Router ([`src/app/profile/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/profile/page.tsx)) and redirects for `/feed` and `/achievements/submit`.
+  - Optimized Academic Departments query ([`src/app/(public)/departments/page.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/app/(public)/departments/page.tsx)): Replaced 44 parallel DB queries with 4 grouped queries, eliminating database connection pool timeouts.
+  - Implemented Phase 5 Post Composer ([`src/components/social/PostComposer.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/components/social/PostComposer.tsx)) with image preview, character count, visibility selection, and strict client/server enforcement of max 2 images.
+  - Implemented Sharp WebP Image Pipeline ([`src/lib/image-processor.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/lib/image-processor.ts) & [`src/lib/media-constants.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/lib/media-constants.ts)) ensuring max 1200px dimensions, WebP compression, and `<= 500 KB` file size.
+  - Implemented Community Feed APIs:
+    - [`src/app/api/posts/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/posts/route.ts) (GET list with filters & POST creation with R2 uploads)
+    - [`src/app/api/posts/[id]/like/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/posts/[id]/like/route.ts) (toggle like)
+    - [`src/app/api/posts/[id]/bookmark/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/posts/[id]/bookmark/route.ts) (toggle bookmark)
+    - [`src/app/api/posts/[id]/comments/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/posts/[id]/comments/route.ts) (fetch & post comments)
+    - [`src/app/api/posts/[id]/report/route.ts`](file:///home/kmanib/Documents/srec-connect-v3/src/app/api/posts/[id]/report/route.ts) (report post for moderation)
+  - Interactive Feed Card ([`src/components/social/FeedCard.tsx`](file:///home/kmanib/Documents/srec-connect-v3/src/components/social/FeedCard.tsx)) wired to backend APIs with optimistic updates.
+  - Integration test suites passing: 29/29 tests passing across `tests/auth-rbac.test.ts`, `tests/user-admin-bulk.test.ts`, `tests/portfolios.test.ts`, and `tests/social-feed.test.ts`.
   - TypeScript typecheck passing cleanly with 0 errors (`tsc --noEmit`).
-  - Empirically verified with Playwright CLI screenshots: `verified_student_portfolio_roll.png`, `verified_faculty_profile.png`, `authenticated_home_verified.png`, `admin_dashboard_verified.png`.
-  - Commits landed: `25e4f47` (security hardening), `9312543` (Phase 4 portfolios).
+  - Empirically verified end-to-end post creation and like interaction via Playwright (`verified_live_feed_post.png`).
 
 ---
 

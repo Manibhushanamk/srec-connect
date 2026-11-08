@@ -83,11 +83,11 @@ graph TD
 ## Phase 5: Social Community & Feed
 - **Objective:** Department-wide and personalized feed, post composer, Sharp image processing, and Cloudflare R2 uploads.
 - **Tasks:**
-  - [ ] Task 5.1: Post composer supporting text + max 2 images with Sharp WebP resizing (<= 500 KB).
-  - [ ] Task 5.2: Cloudflare R2 presigned upload pipeline and media database storage.
-  - [ ] Task 5.3: Feed rendering with likes, comments, bookmarks, and content reporting.
-- **Verification:** Automated test ensuring 3rd image is rejected and image dimensions/WebP format are verified.
-- **Status:** Locked
+  - [x] Task 5.1: Post composer supporting text + max 2 images with Sharp WebP resizing (<= 500 KB) and client preview.
+  - [x] Task 5.2: Cloudflare R2 presigned upload pipeline and media database storage (`src/lib/r2.ts` and `PostMedia`).
+  - [x] Task 5.3: Feed rendering with likes, comments, bookmarks, and content reporting (`/api/posts`, `FeedCard.tsx`).
+- **Verification:** Automated test ensuring 3rd image is rejected, image dimensions/WebP format verified, and live feed post tested via Playwright (4/4 tests in `tests/social-feed.test.ts`).
+- **Status:** Complete
 
 ---
 

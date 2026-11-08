@@ -10,10 +10,10 @@ import {
   Award,
   Users,
   BookOpen,
-  AlertCircle,
-  FileText,
+  Building2,
+  Info,
   Shield,
-  Settings,
+  FileSpreadsheet,
   ChevronRight,
   Sparkles,
 } from 'lucide-react';
@@ -32,14 +32,16 @@ export const DesktopSidebar: React.FC = () => {
     { label: 'Student Directory', href: '/students', icon: Users },
   ];
 
-  const operationalLinks = [
-    { label: 'Grievance / Incident', href: '/incidents', icon: AlertCircle },
-    { label: 'Official Documents', href: '/documents', icon: FileText },
+  const exploreLinks = [
+    { label: 'Academic Departments', href: '/departments', icon: Building2 },
+    { label: 'About College', href: '/about', icon: Info },
   ];
 
   const adminLinks = [
-    { label: 'Department Admin', href: '/admin', icon: Shield },
-    { label: 'System Settings', href: '/admin/settings', icon: Settings },
+    { label: 'Admin Console', href: '/admin', icon: Shield },
+    { label: 'User Directory', href: '/admin/users', icon: Users },
+    { label: 'Bulk Ingestion', href: '/admin/bulk-upload', icon: FileSpreadsheet },
+    { label: 'Verify Achievements', href: '/admin/achievements', icon: Award },
   ];
 
   return (
@@ -99,13 +101,13 @@ export const DesktopSidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* 3. Department Operations & Support */}
+      {/* 3. Academic Departments & College Info */}
       <div className="bg-card rounded-2xl border border-border p-3 mb-4 shadow-subtle">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground px-3 py-1.5">
-          Department Operations
+          Campus Information
         </div>
         <nav className="space-y-1">
-          {operationalLinks.map((link) => {
+          {exploreLinks.map((link) => {
             const isActive = pathname === link.href;
             const Icon = link.icon;
             return (

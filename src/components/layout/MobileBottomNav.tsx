@@ -11,7 +11,7 @@ export const MobileBottomNav: React.FC = () => {
   const navItems = [
     { label: 'Feed', href: '/', icon: Home },
     { label: 'Events', href: '/events', icon: Calendar },
-    { label: 'Create', href: '/feed?create=true', icon: PlusCircle, isAccent: true },
+    { label: 'Create', href: '/?create=true', icon: PlusCircle, isAccent: true },
     { label: 'Awards', href: '/achievements', icon: Award },
     { label: 'Profile', href: '/profile', icon: User },
   ];

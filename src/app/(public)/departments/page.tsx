@@ -60,29 +60,48 @@ const DEPARTMENT_GRADIENTS: Record<string, string> = {
   MCA: 'from-indigo-500 via-violet-500 to-indigo-600',
 };
 
-async function getDepartmentStats(departmentId: string) {
-  try {
-    const [students, faculty, achievements, events] = await Promise.all([
-      prisma.student.count({ where: { departmentId, isActive: true } }),
-      prisma.faculty.count({ where: { departmentId, isActive: true } }),
-      prisma.achievement.count({ where: { departmentId, status: 'PUBLISHED' } }),
-      prisma.event.count({ where: { departmentId } }),
-    ]);
-    return { students, faculty, achievements, events };
-  } catch (error) {
-    console.error(`[Departments] Error fetching stats for ${departmentId}:`, error);
-    return { students: 0, faculty: 0, achievements: 0, events: 0 };
-  }
-}
-
 export default async function DepartmentsPage() {
   const departments = await getAllDepartments();
-  const statsMap = await Promise.all(
-    departments.map(async (dept) => {
-      const stats = await getDepartmentStats(dept.id);
-      return { dept, stats };
-    })
-  );
+
+  // Optimized single-roundtrip aggregation queries
+  const [studentsByDept, facultyByDept, achievementsByDept, eventsByDept] = await Promise.all([
+    prisma.student.groupBy({
+      by: ['departmentId'],
+      where: { isActive: true },
+      _count: { id: true },
+    }),
+    prisma.faculty.groupBy({
+      by: ['departmentId'],
+      where: { isActive: true },
+      _count: { id: true },
+    }),
+    prisma.achievement.groupBy({
+      by: ['departmentId'],
+      where: { status: { in: ['APPROVED', 'PUBLISHED'] } },
+      _count: { id: true },
+    }),
+    prisma.event.groupBy({
+      by: ['departmentId'],
+      _count: { id: true },
+    }),
+  ]);
+
+  const studentCountMap = new Map(studentsByDept.map((s) => [s.departmentId, s._count.id]));
+  const facultyCountMap = new Map(facultyByDept.map((f) => [f.departmentId, f._count.id]));
+  const achCountMap = new Map(achievementsByDept.map((a) => [a.departmentId, a._count.id]));
+  const eventCountMap = new Map(eventsByDept.map((e) => [e.departmentId, e._count.id]));
+
+  const statsMap = departments.map((dept) => {
+    return {
+      dept,
+      stats: {
+        students: studentCountMap.get(dept.id) || 0,
+        faculty: facultyCountMap.get(dept.id) || 0,
+        achievements: achCountMap.get(dept.id) || 0,
+        events: eventCountMap.get(dept.id) || 0,
+      },
+    };
+  });
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-12">

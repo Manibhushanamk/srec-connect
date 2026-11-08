@@ -1,7 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, CheckCircle2, Award, Calendar, FileText, Check } from 'lucide-react';
+import {
+  Heart,
+  MessageCircle,
+  Share2,
+  Bookmark,
+  MoreHorizontal,
+  CheckCircle2,
+  Award,
+  Check,
+  Flag,
+} from 'lucide-react';
 
 export interface FeedAuthor {
   id: string;
@@ -19,9 +29,18 @@ export interface FeedAchievementAttachment {
   title: string;
   category: string;
   issuer: string;
-  date: string;
+  date?: string;
   isVerified: boolean;
   certificateUrl?: string;
+}
+
+export interface FeedComment {
+  id?: string;
+  content: string;
+  author?: {
+    name?: string | null;
+    avatarUrl?: string | null;
+  };
 }
 
 export interface FeedPostProps {
@@ -35,6 +54,7 @@ export interface FeedPostProps {
   isLiked?: boolean;
   isBookmarked?: boolean;
   achievement?: FeedAchievementAttachment;
+  initialComments?: FeedComment[];
 }
 
 export const FeedCard: React.FC<FeedPostProps> = ({
@@ -48,46 +68,95 @@ export const FeedCard: React.FC<FeedPostProps> = ({
   isLiked: initialIsLiked = false,
   isBookmarked: initialIsBookmarked = false,
   achievement,
+  initialComments = [],
 }) => {
   const [likesCount, setLikesCount] = useState(initialLikesCount);
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const [isBookmarked, setIsBookmarked] = useState(initialIsBookmarked);
   const [copied, setCopied] = useState(false);
   const [showComments, setShowComments] = useState(false);
-  const [commentsList, setCommentsList] = useState<string[]>([]);
+  const [commentsList, setCommentsList] = useState<FeedComment[]>(initialComments);
   const [newComment, setNewComment] = useState('');
+  const [showOptions, setShowOptions] = useState(false);
+  const [reportSubmitted, setReportSubmitted] = useState(false);
 
-  const toggleLike = () => {
-    if (isLiked) {
-      setLikesCount((prev) => prev - 1);
-      setIsLiked(false);
-    } else {
-      setLikesCount((prev) => prev + 1);
-      setIsLiked(true);
+  const toggleLike = async () => {
+    // Optimistic UI update
+    const nextState = !isLiked;
+    setIsLiked(nextState);
+    setLikesCount((prev) => (nextState ? prev + 1 : prev - 1));
+
+    try {
+      const res = await fetch(`/api/posts/${id}/like`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setLikesCount(data.likesCount);
+        setIsLiked(data.isLiked);
+      }
+    } catch (e) {
+      console.warn('Failed to sync like state:', e);
     }
   };
 
-  const toggleBookmark = () => {
-    setIsBookmarked(!isBookmarked);
+  const toggleBookmark = async () => {
+    const nextState = !isBookmarked;
+    setIsBookmarked(nextState);
+
+    try {
+      const res = await fetch(`/api/posts/${id}/bookmark`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setIsBookmarked(data.isBookmarked);
+      }
+    } catch (e) {
+      console.warn('Failed to sync bookmark state:', e);
+    }
   };
 
   const handleShare = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(window.location.origin + `/feed/post/${id}`);
+    if (typeof window !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.origin + `/#post-${id}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
   };
 
-  const handleAddComment = (e: React.FormEvent) => {
+  const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
-    setCommentsList([...commentsList, newComment.trim()]);
+    const trimmed = newComment.trim();
+    if (!trimmed) return;
+
     setNewComment('');
+    setCommentsList((prev) => [...prev, { content: trimmed, author: { name: 'You' } }]);
+
+    try {
+      await fetch(`/api/posts/${id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: trimmed }),
+      });
+    } catch (err) {
+      console.warn('Failed to persist comment:', err);
+    }
+  };
+
+  const handleReportPost = async () => {
+    try {
+      await fetch(`/api/posts/${id}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'Reported by user as inappropriate or inaccurate' }),
+      });
+      setReportSubmitted(true);
+      setShowOptions(false);
+      setTimeout(() => setReportSubmitted(false), 3000);
+    } catch (err) {
+      console.warn('Failed to report post:', err);
+    }
   };
 
   return (
-    <article className="social-card social-card-hover mb-5 overflow-hidden transition-all duration-200">
+    <article id={`post-${id}`} className="social-card social-card-hover mb-5 overflow-hidden transition-all duration-200">
       {/* 1. Header (LinkedIn + Instagram Profile Row) */}
       <div className="flex items-center justify-between p-4 pb-3">
         <div className="flex items-center gap-3">
@@ -130,13 +199,33 @@ export const FeedCard: React.FC<FeedPostProps> = ({
           </div>
         </div>
 
-        <button
-          className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          aria-label="Post options"
-        >
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowOptions(!showOptions)}
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            aria-label="Post options"
+          >
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+          {showOptions && (
+            <div className="absolute right-0 top-8 z-20 w-44 rounded-xl bg-card border border-border shadow-lg py-1 text-xs">
+              <button
+                onClick={handleReportPost}
+                className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-muted text-rose-500 font-medium"
+              >
+                <Flag className="w-3.5 h-3.5" />
+                Report Post
+              </button>
+            </div>
+          )}
+        </div>
       </div>
+
+      {reportSubmitted && (
+        <div className="mx-4 mb-2 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-xs text-center font-medium">
+          Report submitted for faculty moderation.
+        </div>
+      )}
 
       {/* 2. Content Body */}
       <div className="px-4 pb-3">
@@ -166,7 +255,8 @@ export const FeedCard: React.FC<FeedPostProps> = ({
               {achievement.title}
             </h4>
             <p className="text-xs text-muted-foreground">
-              Issued by <span className="font-medium text-foreground">{achievement.issuer}</span> • {achievement.date}
+              Issued by <span className="font-medium text-foreground">{achievement.issuer}</span>
+              {achievement.date ? ` • ${achievement.date}` : ''}
             </p>
           </div>
         </div>
@@ -259,8 +349,10 @@ export const FeedCard: React.FC<FeedPostProps> = ({
             <div className="space-y-2 mb-3">
               {commentsList.map((cmt, idx) => (
                 <div key={idx} className="text-xs bg-card p-2.5 rounded-xl border border-border">
-                  <span className="font-semibold text-foreground mr-1.5">You:</span>
-                  <span className="text-foreground/90">{cmt}</span>
+                  <span className="font-semibold text-foreground mr-1.5">
+                    {cmt.author?.name || 'Peer'}:
+                  </span>
+                  <span className="text-foreground/90">{cmt.content}</span>
                 </div>
               ))}
             </div>
