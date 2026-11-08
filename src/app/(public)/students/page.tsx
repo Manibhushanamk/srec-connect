@@ -172,7 +172,7 @@ export default async function StudentsPage({
                         <div className="flex items-start gap-4 mb-4">
                           <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
                             {student.avatarUrl ? (
-                              <img src={student.avatarUrl} alt="" className="w-16 h-16 rounded-xl" />
+                              <img src={student.avatarUrl} alt={student.name} className="w-16 h-16 rounded-xl object-cover" />
                             ) : (
                               <span className="text-white text-2xl font-bold">{student.name.charAt(0)}</span>
                             )}

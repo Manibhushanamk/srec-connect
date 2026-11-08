@@ -83,6 +83,20 @@ export async function GET(req: NextRequest) {
             category: { select: { name: true } },
           },
         },
+        collaborators: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                role: true,
+                avatarUrl: true,
+                student: { select: { rollNumber: true, departmentName: true } },
+                faculty: { select: { designation: true, departmentName: true } },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -115,6 +129,16 @@ export async function GET(req: NextRequest) {
         isLiked,
         isBookmarked,
         comments: post.comments.slice(-5),
+        collaborators: post.collaborators.map((c) => ({
+          id: c.id,
+          userId: c.userId,
+          name: c.user.name || 'Collaborator',
+          rollNumber: c.user.student?.rollNumber,
+          designation: c.user.faculty?.designation,
+          role: c.user.role,
+          avatarUrl: c.user.avatarUrl,
+          status: c.status,
+        })),
         achievement: post.achievement
           ? {
               id: post.achievement.id,
@@ -241,6 +265,34 @@ export async function POST(req: NextRequest) {
           comments: true,
         },
       });
+
+      // Handle Instagram-style Collaboration Invites
+      const rawCollabIds: string[] = Array.isArray(body.collaboratorIds) ? body.collaboratorIds : [];
+      for (const collabId of rawCollabIds) {
+        if (collabId && collabId !== user.id) {
+          try {
+            await tx.postCollaborator.create({
+              data: {
+                postId: post.id,
+                userId: collabId,
+                status: 'PENDING',
+              },
+            });
+
+            // Dispatch in-app notification to invited collaborator
+            await tx.notification.create({
+              data: {
+                userId: collabId,
+                title: '🤝 Post Collaboration Request',
+                message: `${user.name || 'A scholar'} invited you to co-author a post: "${content.substring(0, 60)}..."`,
+                link: `/?post=${post.id}`,
+              },
+            });
+          } catch (collabErr) {
+            console.warn('[Post Collab Warning] Could not link collaborator:', collabErr);
+          }
+        }
+      }
 
       return post;
     });

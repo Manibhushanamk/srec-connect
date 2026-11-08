@@ -60,21 +60,17 @@ const QUICK_STATS = [
 ];
 
 const MODULES = [
-  { key: 'overview', label: 'Command Center', icon: LayoutDashboard, href: '/admin', description: 'System overview & telemetry', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
   { key: 'users', label: 'User Management', icon: Users, href: '/admin/users', description: 'Manage admins, faculty & students', roles: ['ROOT'] },
-  { key: 'departments', label: 'Departments', icon: Building2, href: '/admin/departments', description: 'Manage 11 academic departments', roles: ['ROOT'] },
-  { key: 'achievements', label: 'Achievements', icon: Award, href: '/admin/achievements', description: 'Review & publish honors', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
-  { key: 'events', label: 'Events', icon: Calendar, href: '/admin/events', description: 'Manage symposiums & workshops', roles: ['ROOT', 'DEPARTMENT'] },
-  { key: 'students', label: 'Students', icon: GraduationCap, href: '/admin/students', description: 'Student directory & bulk import', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
-  { key: 'faculty', label: 'Faculty', icon: Briefcase, href: '/admin/faculty', description: 'Faculty profiles & research', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
-  { key: 'categories', label: 'Categories', icon: Award, href: '/admin/categories', description: 'Achievement & event categories', roles: ['ROOT'] },
-  { key: 'bulk-upload', label: 'Bulk Upload', icon: Upload, href: '/admin/bulk-upload', description: 'Excel/CSV bulk ingestion', roles: ['ROOT', 'DEPARTMENT'] },
-  { key: 'bulk-review', label: 'Bulk Review', icon: Search, href: '/admin/bulk-review', description: 'Review staged batches', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
-  { key: 'deduplication', label: 'Deduplication', icon: AlertTriangle, href: '/admin/deduplication', description: 'Collision detection & merge', roles: ['ROOT', 'DEPARTMENT'] },
-  { key: 'analytics', label: 'Analytics', icon: BarChart3, href: '/admin/analytics', description: 'Insights & trends', roles: ['ROOT'] },
-  { key: 'export', label: 'Export Data', icon: Download, href: '/admin/export', description: 'Multi-format data export', roles: ['ROOT', 'DEPARTMENT'] },
-  { key: 'audit-logs', label: 'Audit Logs', icon: History, href: '/admin/audit-logs', description: 'System activity logs', roles: ['ROOT'] },
-  { key: 'settings', label: 'Settings', icon: Settings, href: '/admin/settings', description: 'System configuration', roles: ['ROOT'] },
+  { key: 'bulk-upload', label: 'Bulk Ingestion', icon: Upload, href: '/admin/bulk-upload', description: 'Excel/CSV student provisioning', roles: ['ROOT', 'DEPARTMENT'] },
+  { key: 'achievements', label: 'Achievements Desk', icon: Award, href: '/admin/achievements', description: 'Multi-tier verification & moderation', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
+  { key: 'events', label: 'Events & Attendance', icon: Calendar, href: '/admin/events', description: 'Symposiums, waitlists & QR check-in', roles: ['ROOT', 'DEPARTMENT'] },
+  { key: 'discipline', label: 'Discipline & Grievances', icon: Shield, href: '/admin/discipline', description: 'Confidential HOD dossiers & timelines', roles: ['ROOT', 'DEPARTMENT'] },
+  { key: 'notices', label: 'Notices & Circulars', icon: Zap, href: '/admin/notices', description: 'Audience announcements & broadcasts', roles: ['ROOT', 'DEPARTMENT'] },
+  { key: 'analytics', label: 'Analytics Hub', icon: BarChart3, href: '/admin/analytics', description: 'Momentum, trends & department comparisons', roles: ['ROOT'] },
+  { key: 'students', label: 'Student Portfolios', icon: GraduationCap, href: '/students', description: 'Verified academic portfolios', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
+  { key: 'faculty', label: 'Faculty Directory', icon: Briefcase, href: '/faculty', description: 'Faculty profiles & research areas', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
+  { key: 'departments', label: 'Academic Departments', icon: Building2, href: '/departments', description: 'SREC engineering departments', roles: ['ROOT', 'DEPARTMENT'] },
+  { key: 'settings', label: 'Profile & Settings', icon: Crown, href: '/profile', description: 'Admin profile & institutional settings', roles: ['ROOT'] },
 ];
 
 async function getStats(userId: string, isSuperAdmin: boolean, departmentId: string | null) {

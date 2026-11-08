@@ -20,8 +20,10 @@ import {
   Send,
   Loader2,
   FileCheck,
+  FileText,
 } from 'lucide-react';
 import { formatDate, formatDateTime } from '@/lib/utils';
+import { OfficialActionLetter } from '@/components/discipline/OfficialActionLetter';
 
 export default function AdminIncidentDossierPage({
   params,
@@ -43,6 +45,7 @@ export default function AdminIncidentDossierPage({
   const [actionOutcome, setActionOutcome] = useState('VERBAL_WARNING');
   const [actionNotes, setActionNotes] = useState('');
   const [submittingAction, setSubmittingAction] = useState(false);
+  const [activeLetterAction, setActiveLetterAction] = useState<any>(null);
 
   const fetchIncident = async () => {
     try {
@@ -316,7 +319,17 @@ export default function AdminIncidentDossierPage({
                       <span className="text-[10px] text-slate-500">{formatDate(act.createdAt)}</span>
                     </div>
                     {act.notes && <p className="text-slate-400 text-[11px]">{act.notes}</p>}
-                    <p className="text-[10px] text-slate-500">By {act.actor?.name} ({act.actor?.role})</p>
+                    <div className="flex items-center justify-between pt-1">
+                      <p className="text-[10px] text-slate-500">By {act.actor?.name} ({act.actor?.role})</p>
+                      <button
+                        type="button"
+                        onClick={() => setActiveLetterAction(act)}
+                        className="text-[10px] font-semibold text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
+                      >
+                        <FileText className="w-3 h-3" />
+                        Print Official Letter
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -368,6 +381,35 @@ export default function AdminIncidentDossierPage({
           </div>
         </div>
       </div>
+
+      {/* Official Action Letter Print / Preview Modal */}
+      {activeLetterAction && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md overflow-y-auto p-4 flex justify-center items-start pt-10">
+          <div className="w-full max-w-3xl">
+            <OfficialActionLetter
+              letterRef={activeLetterAction.letterRef || `SREC/CSE-AIML/DISC/2026/${activeLetterAction.id?.substring(0, 4)}`}
+              incidentTitle={incident.title}
+              category={incident.category}
+              outcome={activeLetterAction.outcome}
+              notes={activeLetterAction.notes}
+              issuedAt={activeLetterAction.createdAt}
+              student={{
+                name: incident.student?.name || 'Student Scholar',
+                rollNumber: incident.student?.rollNumber || '22091A3201',
+                departmentName: incident.student?.departmentName || 'CSE (AI & ML)',
+                currentYear: incident.student?.currentYear,
+                section: incident.student?.section,
+                batch: incident.student?.batch,
+              }}
+              reporter={{
+                name: incident.reporter?.name || 'Department Faculty',
+                role: incident.reporter?.role || 'FACULTY',
+              }}
+              onClose={() => setActiveLetterAction(null)}
+            />
+          </div>
+        </div>
+      )}
     </AdminShell>
   );
 }

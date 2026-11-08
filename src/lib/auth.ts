@@ -203,9 +203,10 @@ export const authOptions: NextAuthOptions = {
 
     async redirect({ url, baseUrl }) {
       if (url.startsWith('/access-denied')) return url;
-      if (url.startsWith('/signin')) return url;
-      if (url.startsWith('/auth/')) return url.replace('/auth/', '/');
-      return baseUrl;
+      if (url.startsWith('/signin')) return `${baseUrl}/auth/landing`;
+      if (url === baseUrl || url === '/' || url === '') return `${baseUrl}/auth/landing`;
+      if (url.startsWith('/')) return `${baseUrl}${url}`;
+      return url;
     },
   },
 

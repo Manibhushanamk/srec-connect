@@ -82,7 +82,7 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories =
   };
 
   return (
-    <div className="w-full bg-card rounded-2xl border border-border p-3.5 shadow-subtle mb-5">
+    <div className="w-full max-w-full overflow-hidden bg-card rounded-2xl border border-border p-3.5 shadow-subtle mb-5">
       <div className="flex items-center justify-between mb-2.5 px-1">
         <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           <Sparkles className="w-3.5 h-3.5 text-amber-500" />

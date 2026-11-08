@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   Heart,
   MessageCircle,
@@ -11,6 +12,7 @@ import {
   Award,
   Check,
   Flag,
+  Users,
 } from 'lucide-react';
 
 export interface FeedAuthor {
@@ -54,6 +56,16 @@ export interface FeedPostProps {
   isLiked?: boolean;
   isBookmarked?: boolean;
   achievement?: FeedAchievementAttachment;
+  collaborators?: {
+    id: string;
+    userId: string;
+    name: string;
+    rollNumber?: string;
+    designation?: string;
+    role: string;
+    avatarUrl?: string;
+    status: string;
+  }[];
   initialComments?: FeedComment[];
 }
 
@@ -68,11 +80,15 @@ export const FeedCard: React.FC<FeedPostProps> = ({
   isLiked: initialIsLiked = false,
   isBookmarked: initialIsBookmarked = false,
   achievement,
+  collaborators = [],
   initialComments = [],
 }) => {
+  const { data: session } = useSession();
+  const currentUserId = (session?.user as any)?.id;
   const [likesCount, setLikesCount] = useState(initialLikesCount);
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const [isBookmarked, setIsBookmarked] = useState(initialIsBookmarked);
+  const [postCollabs, setPostCollabs] = useState(collaborators);
   const [copied, setCopied] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentsList, setCommentsList] = useState<FeedComment[]>(initialComments);
@@ -155,6 +171,32 @@ export const FeedCard: React.FC<FeedPostProps> = ({
     }
   };
 
+  const acceptedCollabs = postCollabs.filter((c) => c.status === 'ACCEPTED');
+  const myPendingCollab = currentUserId
+    ? postCollabs.find((c) => c.userId === currentUserId && c.status === 'PENDING')
+    : null;
+
+  const handleCollabAction = async (action: 'ACCEPT' | 'DECLINE') => {
+    try {
+      const res = await fetch(`/api/posts/${id}/collaborate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      if (res.ok) {
+        setPostCollabs((prev) =>
+          prev.map((c) =>
+            c.userId === currentUserId
+              ? { ...c, status: action === 'ACCEPT' ? 'ACCEPTED' : 'DECLINED' }
+              : c
+          )
+        );
+      }
+    } catch (e) {
+      console.error('Failed to submit collab action:', e);
+    }
+  };
+
   return (
     <article id={`post-${id}`} className="social-card social-card-hover mb-5 overflow-hidden transition-all duration-200">
       {/* 1. Header (LinkedIn + Instagram Profile Row) */}
@@ -181,6 +223,17 @@ export const FeedCard: React.FC<FeedPostProps> = ({
               <span className="font-semibold text-sm text-foreground hover:underline cursor-pointer">
                 {author.name}
               </span>
+              {acceptedCollabs.map((c) => (
+                <span key={c.id} className="text-sm font-semibold text-foreground flex items-center gap-1">
+                  <span className="text-muted-foreground font-normal">&amp;</span>
+                  <span className="hover:underline cursor-pointer">{c.name}</span>
+                </span>
+              ))}
+              {acceptedCollabs.length > 0 && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-950/60 border border-cyan-200 dark:border-cyan-800/60 px-1.5 py-0.5 rounded-full">
+                  <Users className="w-2.5 h-2.5" /> Collab
+                </span>
+              )}
               {author.isVerified && (
                 <span className="verified-badge">
                   <CheckCircle2 className="w-3 h-3 text-primary fill-primary/20" />
@@ -220,6 +273,32 @@ export const FeedCard: React.FC<FeedPostProps> = ({
           )}
         </div>
       </div>
+
+      {/* Instagram-style Collaboration Invitation Banner */}
+      {myPendingCollab && (
+        <div className="mx-4 mb-3 p-3 bg-cyan-950/40 border border-cyan-800/70 rounded-xl flex items-center justify-between gap-3 text-xs shadow-sm">
+          <div className="flex items-center gap-2 text-cyan-200 min-w-0">
+            <Users className="w-4 h-4 text-cyan-400 shrink-0" />
+            <span className="truncate">
+              <strong>{author.name}</strong> invited you to co-author this post.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => handleCollabAction('ACCEPT')}
+              className="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-[11px] transition-colors"
+            >
+              Accept
+            </button>
+            <button
+              onClick={() => handleCollabAction('DECLINE')}
+              className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-[11px] transition-colors"
+            >
+              Decline
+            </button>
+          </div>
+        </div>
+      )}
 
       {reportSubmitted && (
         <div className="mx-4 mb-2 p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 text-xs text-center font-medium">

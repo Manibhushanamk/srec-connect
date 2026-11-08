@@ -163,11 +163,11 @@ export default async function EventsPage({
             <EmptyStatePreset type="events" />
           ) : (
             <>
-              <div className="space-y-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
                 {data.events.map((event) => (
                   <Link key={event.id} href={`/events/${event.id}`} className="group">
-                    <Card variant="bento" hover className="overflow-hidden">
-                      <div className="relative h-48">
+                    <Card variant="bento" hover className="overflow-hidden h-full flex flex-col">
+                      <div className="relative h-44 flex-shrink-0">
                         {event.posterUrl ? (
                           <img
                             src={event.posterUrl}
@@ -183,39 +183,31 @@ export default async function EventsPage({
                           <StatusBadge status={event.status as any} size="sm" />
                         </div>
                         <div className="absolute bottom-3 left-3 right-3">
-                          <Badge variant="brand" size="sm">{event.department?.shortName || 'N/A'}</Badge>
+                          <Badge variant="brand" size="sm">{event.department?.shortName || event.department?.name || 'CSE (AI & ML)'}</Badge>
                         </div>
                       </div>
-                      <CardContent className="p-5">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="slate" size="sm">{event.category.name}</Badge>
-                          <Badge variant="brand" size="sm">{event.academicYear}</Badge>
+                      <CardContent className="p-4 flex-1 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <Badge variant="slate" size="sm">{event.category.name}</Badge>
+                            {event.academicYear && <Badge variant="brand" size="sm">{event.academicYear}</Badge>}
+                          </div>
+                          <h3 className="font-bold text-sm text-slate-100 mb-1.5 line-clamp-1 group-hover:text-brand-400 transition-colors">
+                            {event.title}
+                          </h3>
+                          <p className="text-xs text-slate-400 mb-3 line-clamp-2">
+                            {event.description}
+                          </p>
                         </div>
-                        <h3 className="font-semibold text-slate-100 mb-2 line-clamp-1 group-hover:text-brand-400 transition-colors">
-                          {event.title}
-                        </h3>
-                        <p className="text-sm text-slate-400 mb-3 line-clamp-2">
-                          {event.description}
-                        </p>
-                        <div className="space-y-2 text-sm text-slate-500">
+                        <div className="space-y-1.5 text-xs text-slate-400 pt-2 border-t border-slate-800/80">
                           <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 flex-shrink-0" />
-                            <span>{formatDate(event.startDate)} - {formatDate(event.endDate)}</span>
+                            <Calendar className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                            <span>{formatDate(event.startDate)}</span>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 flex-shrink-0" />
-                            <span>{formatDateTime(event.startDate)}</span>
+                            <MapPin className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                            <span className="truncate">{event.venue}</span>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 flex-shrink-0" />
-                            <span>{event.venue}</span>
-                          </div>
-                          {event.speaker && (
-                            <div className="flex items-center gap-2">
-                              <Users className="w-4 h-4 flex-shrink-0" />
-                              <span>{event.speaker}</span>
-                            </div>
-                          )}
                         </div>
                       </CardContent>
                     </Card>

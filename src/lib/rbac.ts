@@ -148,47 +148,58 @@ export function canAccessAdmin(user: AuthUserContext | null | undefined): boolea
   return user.role === 'SUPER_ADMIN' || user.role === 'HOD' || user.role === 'WEB_MANAGER' || user.role === 'ADMIN';
 }
 
+export function getRoleLandingUrl(role?: string, email?: string): string {
+  switch (role) {
+    case 'SUPER_ADMIN':
+    case 'ADMIN':
+      return '/admin';
+    case 'HOD':
+      return '/admin';
+    case 'WEB_MANAGER':
+      return '/admin';
+    case 'FACULTY':
+      return '/admin/achievements';
+    case 'STUDENT':
+    default:
+      return '/';
+  }
+}
+
 export function getVisibleMenuGroups(context: PermissionContext): string[] {
   if (context.isRoot || context.role === 'SUPER_ADMIN' || context.role === 'ADMIN') {
     return [
       'overview',
       'users',
-      'departments',
       'achievements',
       'events',
       'discipline',
       'notices',
-      'students',
-      'faculty',
-      'bulk-upload',
-      'analytics',
-      'audit-logs',
-      'settings',
+      'portals',
+      'profile',
     ];
   }
   if (context.role === 'HOD') {
     return [
       'overview',
       'users',
-      'departments',
       'achievements',
       'events',
       'discipline',
       'notices',
-      'students',
-      'faculty',
-      'analytics',
+      'portals',
+      'profile',
     ];
   }
   if (context.role === 'WEB_MANAGER') {
     return [
       'overview',
       'users',
-      'departments',
+      'achievements',
       'events',
-      'bulk-upload',
-      'analytics',
+      'notices',
+      'portals',
+      'profile',
     ];
   }
-  return ['overview'];
+  return ['overview', 'portals', 'profile'];
 }

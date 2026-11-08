@@ -30,7 +30,7 @@ const FALLBACK_POSTS: FeedPostProps[] = [
     id: 'post-1',
     author: {
       id: 'u1',
-      name: 'Mani Bhushanam K',
+      name: 'K. V. Naveen Kumar',
       role: 'STUDENT',
       rollNumber: '22091A3201',
       department: 'CSE (AI & ML)',
@@ -172,7 +172,7 @@ export default function HomePage() {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-full overflow-x-hidden">
       {/* 1. Instagram Stories Bar (Department Highlights) */}
       <StoryHighlights />
 
@@ -261,16 +261,26 @@ export default function HomePage() {
       {/* 5. Tab 2: Verified Academic Portfolios Preview */}
       {activeTab === 'PORTFOLIOS' && (
         <div className="space-y-4">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/20 text-xs">
+            <span className="text-muted-foreground">
+              Featured Verified Scholar Portfolio from CSE (AI & ML) Department
+            </span>
+            <Link href="/students" className="font-semibold text-primary hover:underline flex items-center gap-1">
+              <span>View All Portfolios</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
           <ProfileHeader
-            name="Mani Bhushanam K"
-            rollNumber="22091A3201"
+            name="P. Sai Kumar"
+            rollNumber="22091A3202"
             role="STUDENT"
             department="Computer Science & Engineering (AI & ML)"
             batch="2022-2026"
             section="A"
-            headline="Undergraduate Researcher & Machine Learning Engineer | SREC Nandyal"
+            headline="Undergraduate AI Researcher & Machine Learning Engineer | SREC Nandyal"
             bio="Building intelligent systems, deep learning computer vision architectures, and real-time inference pipelines. Passionate about AI research and distributed full-stack platforms."
-            email="22091a3201@srecnandyal.edu.in"
+            email="22091a3202@srecnandyal.edu.in"
             isVerified={true}
             stats={{
               postsCount: 14,
@@ -279,7 +289,7 @@ export default function HomePage() {
               skillsCount: 6,
             }}
             skills={['PyTorch', 'TensorFlow', 'Computer Vision', 'Next.js', 'PostgreSQL', 'Docker']}
-            isOwner={true}
+            isOwner={false}
           />
         </div>
       )}

@@ -40,7 +40,7 @@ const MENU_GROUPS = {
     icon: LayoutDashboard,
     items: [
       { href: '/admin', label: 'Command Center', icon: LayoutDashboard },
-      { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+      { href: '/admin/analytics', label: 'Analytics Hub', icon: BarChart3 },
     ],
   },
   users: {
@@ -48,130 +48,54 @@ const MENU_GROUPS = {
     icon: Users,
     items: [
       { href: '/admin/users', label: 'All Users', icon: Users },
-      { href: '/admin/users/department-admins', label: 'Department Admins', icon: Briefcase },
-      { href: '/admin/users/sub-admins', label: 'Sub-Admins', icon: UserCheck },
-      { href: '/admin/whitelist', label: 'Whitelist Management', icon: Shield },
-    ],
-  },
-  departments: {
-    label: 'Departments',
-    icon: Building2,
-    items: [
-      { href: '/admin/departments', label: 'All Departments', icon: Building2 },
-      { href: '/admin/departments/categories', label: 'Categories', icon: Tag },
+      { href: '/admin/bulk-upload', label: 'Bulk Ingestion', icon: Upload },
     ],
   },
   achievements: {
     label: 'Achievements',
     icon: Award,
     items: [
-      { href: '/admin/achievements', label: 'All Achievements', icon: Award },
-      { href: '/admin/achievements/pending', label: 'Pending Review', icon: AlertTriangle },
-      { href: '/admin/achievements/published', label: 'Published', icon: Zap },
+      { href: '/admin/achievements', label: 'Verification Desk', icon: Award },
+      { href: '/achievements', label: 'Honors Wall', icon: Zap },
     ],
   },
   events: {
-    label: 'Events',
+    label: 'Events & Check-in',
     icon: Calendar,
     items: [
-      { href: '/admin/events', label: 'All Events', icon: Calendar },
-      { href: '/admin/events/upcoming', label: 'Upcoming', icon: Zap },
-      { href: '/admin/events/completed', label: 'Completed', icon: Award },
+      { href: '/admin/events', label: 'Manage Events', icon: Calendar },
+      { href: '/events', label: 'Public Events', icon: Zap },
     ],
   },
   discipline: {
-    label: 'Discipline & Cases',
+    label: 'Discipline & Grievances',
     icon: ShieldAlert,
     items: [
-      { href: '/admin/discipline', label: 'All Cases', icon: ShieldAlert },
+      { href: '/admin/discipline', label: 'Incident Cases', icon: ShieldAlert },
     ],
   },
   notices: {
     label: 'Notices & Circulars',
     icon: Bell,
     items: [
-      { href: '/admin/notices', label: 'All Notices', icon: Bell },
+      { href: '/admin/notices', label: 'Announcements', icon: Bell },
     ],
   },
-  students: {
-    label: 'Students',
-    icon: GraduationCap,
+  portals: {
+    label: 'Campus Portals',
+    icon: Building2,
     items: [
-      { href: '/admin/students', label: 'Student Directory', icon: GraduationCap },
-      { href: '/admin/students/bulk', label: 'Bulk Import', icon: Upload },
+      { href: '/', label: 'Campus Feed', icon: LayoutDashboard },
+      { href: '/students', label: 'Student Directory', icon: GraduationCap },
+      { href: '/faculty', label: 'Faculty Directory', icon: Briefcase },
+      { href: '/departments', label: 'Departments', icon: Building2 },
     ],
   },
-  faculty: {
-    label: 'Faculty',
-    icon: Briefcase,
+  profile: {
+    label: 'My Account',
+    icon: Crown,
     items: [
-      { href: '/admin/faculty', label: 'Faculty Directory', icon: Briefcase },
-      { href: '/admin/faculty/bulk', label: 'Bulk Import', icon: Upload },
-    ],
-  },
-  categories: {
-    label: 'Categories',
-    icon: Tag,
-    items: [
-      { href: '/admin/categories', label: 'Manage Categories', icon: Tag },
-    ],
-  },
-  'bulk-upload': {
-    label: 'Bulk Upload',
-    icon: Upload,
-    items: [
-      { href: '/admin/bulk-upload', label: 'Upload Center', icon: Upload },
-      { href: '/admin/bulk-upload/templates', label: 'Download Templates', icon: FileText },
-    ],
-  },
-  'bulk-review': {
-    label: 'Bulk Review',
-    icon: Search,
-    items: [
-      { href: '/admin/bulk-review', label: 'Pending Batches', icon: Search },
-      { href: '/admin/bulk-review/history', label: 'Review History', icon: History },
-    ],
-  },
-  deduplication: {
-    label: 'Deduplication',
-    icon: AlertTriangle,
-    items: [
-      { href: '/admin/deduplication', label: 'Collision Radar', icon: AlertTriangle },
-      { href: '/admin/deduplication/rules', label: 'Match Rules', icon: Settings },
-    ],
-  },
-  analytics: {
-    label: 'Analytics',
-    icon: BarChart3,
-    items: [
-      { href: '/admin/analytics', label: 'Dashboard', icon: BarChart3 },
-      { href: '/admin/analytics/departments', label: 'Department Comparison', icon: Building2 },
-      { href: '/admin/analytics/trends', label: 'Trends', icon: Zap },
-    ],
-  },
-  export: {
-    label: 'Export Data',
-    icon: Download,
-    items: [
-      { href: '/admin/export', label: 'Export Center', icon: Download },
-      { href: '/admin/export/snapshots', label: 'Snapshots', icon: Database },
-    ],
-  },
-  'audit-logs': {
-    label: 'Audit Logs',
-    icon: History,
-    items: [
-      { href: '/admin/audit-logs', label: 'All Logs', icon: History },
-      { href: '/admin/audit-logs/export', label: 'Export Logs', icon: Download },
-    ],
-  },
-  settings: {
-    label: 'Settings',
-    icon: Settings,
-    items: [
-      { href: '/admin/settings', label: 'System Settings', icon: Settings },
-      { href: '/admin/settings/root-transfer', label: 'Root Transfer', icon: Crown },
-      { href: '/admin/settings/backup', label: 'Backup & Restore', icon: Database },
+      { href: '/profile', label: 'Profile & Customization', icon: Crown },
     ],
   },
 } as const;

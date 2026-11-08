@@ -19,6 +19,9 @@ import {
   ArrowRight,
   Globe,
   Building2,
+  User,
+  MapPin,
+  GraduationCap,
 } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -136,8 +139,6 @@ function ParticipationBadge({ type }: { type: string }) {
     </Badge>
   );
 }
-
-import { User, MapPin, GraduationCap } from 'lucide-react';
 
 export default async function AchievementsPage({
   searchParams,

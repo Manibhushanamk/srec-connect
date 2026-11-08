@@ -49,15 +49,35 @@ export async function PATCH(req: NextRequest) {
     return s.startsWith('https://') ? s : undefined;
   };
 
-  // Update user avatar
-  if (body.avatarUrl) {
-    const safeAvatar = sanitizeHttpsUrl(body.avatarUrl);
-    if (safeAvatar) {
-      await prisma.user.update({
-        where: { id: dbUser.id },
-        data: { avatarUrl: safeAvatar },
-      });
-    }
+  // Update user core profile
+  const userDataToUpdate: any = {};
+  if (typeof body.name === 'string' && body.name.trim()) {
+    userDataToUpdate.name = body.name.trim().substring(0, 100);
+  }
+  if (typeof body.headline === 'string') {
+    userDataToUpdate.headline = body.headline.trim().substring(0, 200);
+  }
+  if (typeof body.bio === 'string') {
+    userDataToUpdate.bio = body.bio.trim().substring(0, 1000);
+  }
+  if (typeof body.phone === 'string') {
+    userDataToUpdate.phone = body.phone.trim().substring(0, 20);
+  }
+  if (body.linkedinUrl !== undefined) {
+    userDataToUpdate.linkedinUrl = sanitizeHttpsUrl(body.linkedinUrl);
+  }
+  if (body.githubUrl !== undefined) {
+    userDataToUpdate.githubUrl = sanitizeHttpsUrl(body.githubUrl);
+  }
+  if (body.avatarUrl !== undefined) {
+    userDataToUpdate.avatarUrl = sanitizeHttpsUrl(body.avatarUrl);
+  }
+
+  if (Object.keys(userDataToUpdate).length > 0) {
+    await prisma.user.update({
+      where: { id: dbUser.id },
+      data: userDataToUpdate,
+    });
   }
 
   // Update student profile (strictly immutable fields: rollNumber, departmentId, batch)
@@ -65,6 +85,7 @@ export async function PATCH(req: NextRequest) {
     await prisma.student.update({
       where: { id: dbUser.studentId },
       data: {
+        headline: typeof body.headline === 'string' ? body.headline.substring(0, 200) : undefined,
         bio: typeof body.bio === 'string' ? body.bio.substring(0, 1000) : undefined,
         phone: typeof body.phone === 'string' ? body.phone.substring(0, 20) : undefined,
         githubUrl: sanitizeHttpsUrl(body.githubUrl),

@@ -67,6 +67,11 @@ model User {
   isRoot         Boolean     @default(false) // legacy support
   status         UserStatus  @default(ACTIVE)
   avatarUrl      String?
+  headline       String?
+  bio            String?
+  phone          String?
+  linkedinUrl    String?
+  githubUrl      String?
   departmentId   String?
   department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   departmentName String?
@@ -86,6 +91,7 @@ model User {
   likes          PostLike[]        @relation("UserLikes")
   bookmarks      PostBookmark[]    @relation("UserBookmarks")
   reports        ContentReport[]   @relation("UserReports")
+  postCollaborations PostCollaborator[] @relation("UserCollaborations")
 
   // Academic Relations
   achievementsCreated Achievement[]      @relation("CreatedBy")
@@ -251,6 +257,7 @@ model Post {
   likes        PostLike[]
   bookmarks    PostBookmark[]
   reports      ContentReport[]
+  collaborators PostCollaborator[]
 
   achievementId String?
   achievement   Achievement?   @relation(fields: [achievementId], references: [id], onDelete: SetNull)
@@ -322,6 +329,23 @@ model ContentReport {
   status      String   @default("PENDING") // PENDING, REVIEWED, DISMISSED
   createdAt   DateTime @default(now())
 
+  @@index([postId])
+  @@index([status])
+}
+
+model PostCollaborator {
+  id         String   @id @default(cuid())
+  postId     String
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation("UserCollaborations", fields: [userId], references: [id], onDelete: Cascade)
+  rollNumber String?
+  status     String   @default("PENDING") // PENDING, ACCEPTED, DECLINED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([postId, userId])
+  @@index([userId])
   @@index([postId])
   @@index([status])
 }
@@ -612,14 +636,16 @@ model IncidentResponse {
 }
 
 model IncidentAction {
-  id         String          @id @default(cuid())
-  incidentId String
-  incident   Incident        @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  actorId    String
-  actor      User            @relation("IncidentActions", fields: [actorId], references: [id], onDelete: Cascade)
-  outcome    IncidentOutcome
-  notes      String?
-  createdAt  DateTime        @default(now())
+  id            String          @id @default(cuid())
+  incidentId    String
+  incident      Incident        @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  actorId       String
+  actor         User            @relation("IncidentActions", fields: [actorId], references: [id], onDelete: Cascade)
+  outcome       IncidentOutcome
+  notes         String?
+  letterRef     String?         // Official Order / Warning Letter Reference Number
+  letterContent String?         // Official Formal Letter Body / Sanctions
+  createdAt     DateTime        @default(now())
 
   @@index([incidentId])
   @@index([actorId])

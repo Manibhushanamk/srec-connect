@@ -77,7 +77,14 @@ async function runTests() {
   });
   assert(!!dbSuperAdmin, 'Super Admin user exists in Neon DB');
   assert(dbSuperAdmin?.role === Role.SUPER_ADMIN, 'Super Admin has exact Role.SUPER_ADMIN in Neon DB');
-  assert(dbSuperAdmin?.student?.rollNumber === '22091A3201', 'Permanent University Roll Number (22091A3201) correctly linked');
+  assert(dbSuperAdmin?.studentId === null, 'Super Admin is distinct administrative role with no student anchor');
+
+  // Verify Student User is correctly linked to Permanent University Roll Number (22091A3201)
+  const studentUser = await prisma.user.findUnique({
+    where: { email: '22091a3201@srecnandyal.edu.in' },
+    include: { student: true },
+  });
+  assert(studentUser?.student?.rollNumber === '22091A3201', 'Permanent University Roll Number (22091A3201) correctly linked to Student user');
 
   console.log(`\n🎉 Test Results: ${passed}/${total} tests passed successfully!`);
 }

@@ -23,6 +23,7 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { MemberSelector, SelectedMember } from '@/components/shared/MemberSelector';
 
 export default function AdminDisciplinePage() {
   const [incidents, setIncidents] = useState<any[]>([]);
@@ -34,6 +35,7 @@ export default function AdminDisciplinePage() {
   // Modal State
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<SelectedMember[]>([]);
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -308,15 +310,18 @@ export default function AdminDisciplinePage() {
           </div>
 
           <div>
-            <label className="block text-slate-300 font-medium mb-1">
-              Student Roll Number (if disciplinary report against student)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. 22091A3201"
-              value={form.studentRollNumber}
-              onChange={(e) => setForm({ ...form, studentRollNumber: e.target.value.toUpperCase() })}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono placeholder-slate-500 focus:outline-none focus:border-rose-500"
+            <MemberSelector
+              label="Select Student Subject"
+              placeholder="Search by student roll number (e.g. 22091A3201) or name..."
+              max={1}
+              selected={selectedStudent}
+              onChange={(members) => {
+                setSelectedStudent(members);
+                setForm({
+                  ...form,
+                  studentRollNumber: members[0]?.rollNumber || members[0]?.name || '',
+                });
+              }}
             />
           </div>
 

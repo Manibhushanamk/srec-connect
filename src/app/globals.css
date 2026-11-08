@@ -71,8 +71,10 @@
     @apply border-border;
   }
 
-  body {
+  html, body {
     @apply bg-background text-foreground antialiased min-h-screen;
+    overflow-x: hidden;
+    max-width: 100vw;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 }

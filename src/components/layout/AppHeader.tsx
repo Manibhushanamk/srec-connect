@@ -66,7 +66,12 @@ export const AppHeader: React.FC = () => {
             >
               <div className="w-8 h-8 rounded-full bg-primary/15 text-primary border border-primary/30 flex items-center justify-center font-bold text-xs overflow-hidden">
                 {session.user.image ? (
-                  <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
+                  <img
+                    src={session.user.image}
+                    alt="User"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  />
                 ) : (
                   (session.user.name || 'U').substring(0, 2).toUpperCase()
                 )}

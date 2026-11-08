@@ -1,363 +1,261 @@
 'use client';
 
-import React, { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import React, { useState, useEffect } from 'react';
+import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Shield,
-  Mail,
-  Lock,
   AlertCircle,
-  CheckCircle,
   Sparkles,
   ArrowRight,
   GraduationCap,
-  Briefcase,
   Building2,
   Users,
   Compass,
+  Lock,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { getRoleLandingUrl } from '@/lib/rbac';
 
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') || '/';
+  const callbackUrl = searchParams.get('callbackUrl') || '';
   const errorParam = searchParams.get('error');
+  const isDevMode = searchParams.get('dev') === 'true' || searchParams.get('dev') === '1';
 
-  const [identifier, setIdentifier] = useState('');
-  const [password, setPassword] = useState('');
+  const { data: session, status } = useSession();
+
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(
-    errorParam ? 'Authentication failed. Please verify your institutional account.' : null
+    errorParam ? 'Authentication rejected. Please sign in with your approved institutional Google account.' : null
   );
 
-  // Roll Number live lookup state
-  const [lookupRoll, setLookupRoll] = useState('');
-  const [lookupResult, setLookupResult] = useState<{
-    valid: boolean;
-    deptName?: string;
-    deptCode?: string;
-    batch?: string;
-    type?: string;
-  } | null>(null);
+  // Hidden Dev/Test Fallback state (Only shown if ?dev=true)
+  const [devIdentifier, setDevIdentifier] = useState('');
+  const [showDevFallback, setShowDevFallback] = useState(isDevMode);
 
-  // 1. Google OAuth Flow
+  // Auto-redirect if already authenticated
+  useEffect(() => {
+    if (session?.user) {
+      const role = (session.user as any).role;
+      const email = session.user.email || '';
+      const target = callbackUrl && callbackUrl !== '/' && callbackUrl !== '/signin'
+        ? callbackUrl
+        : getRoleLandingUrl(role, email);
+      router.replace(target);
+    }
+  }, [session, callbackUrl, router]);
+
+  // Google OAuth Primary Authentication
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      await signIn('google', { callbackUrl });
+      await signIn('google', { callbackUrl: callbackUrl || '/auth/landing' });
     } catch (err: any) {
-      console.error('[SignIn] Google error:', err);
-      setErrorMessage('Could not connect to Google OAuth service. Please retry.');
+      console.error('[SignIn] Google OAuth Error:', err);
+      setErrorMessage('Could not initiate Google OAuth flow. Please check network connection.');
       setIsLoading(false);
     }
   };
 
-  // 2. Direct Campus Email / Roll Number Flow
-  const handleCredentialsSignIn = async (emailOrRoll?: string) => {
-    const target = emailOrRoll || identifier;
-    if (!target.trim()) {
-      setErrorMessage('Please enter your campus email or roll number.');
-      return;
-    }
-
+  // Dev / Automation Credentials Handler (only available via ?dev=true)
+  const handleDevSignIn = async (emailOrRoll: string) => {
     setIsLoading(true);
     setErrorMessage(null);
-
     try {
       const res = await signIn('credentials', {
-        email: target.trim(),
-        password: password || 'default',
+        email: emailOrRoll.trim(),
+        password: 'admin',
         redirect: false,
-        callbackUrl,
+        callbackUrl: callbackUrl || '/auth/landing',
       });
 
       if (res?.error) {
-        setErrorMessage('Account not found or access denied. Please verify credentials.');
+        setErrorMessage('Account not found or access denied in credentials store.');
         setIsLoading(false);
       } else if (res?.ok) {
-        window.location.href = callbackUrl || '/';
+        window.location.href = callbackUrl || '/auth/landing';
       }
     } catch (err) {
-      setErrorMessage('An unexpected error occurred during sign in.');
+      setErrorMessage('Error during dev authentication.');
       setIsLoading(false);
     }
-  };
-
-  // 3. JNTUA Roll Number Parser
-  const handleRollLookup = (val: string) => {
-    const cleaned = val.trim().toUpperCase();
-    setLookupRoll(cleaned);
-
-    if (!cleaned) {
-      setLookupResult(null);
-      return;
-    }
-
-    // Pattern: 22091A3201 (10 chars: 2 digits year, 091 college code, 1A b.tech, 2 digits dept, 2 digits seq)
-    const match = cleaned.match(/^(\d{2})09(1A|5A)(\d{2})([0-9A-Z]{2})$/);
-    if (!match) {
-      setLookupResult({ valid: false });
-      return;
-    }
-
-    const yearPrefix = parseInt(match[1], 10);
-    const fullYear = 2000 + yearPrefix;
-    const isLateral = match[2] === '5A';
-    const deptCodeNum = match[3];
-
-    const DEPT_MAP: Record<string, string> = {
-      '32': 'CSE (AI & ML)',
-      '05': 'Computer Science & Engineering',
-      '33': 'CSE (Data Science)',
-      '34': 'CSE (Cyber Security)',
-      '06': 'Information Technology',
-      '04': 'Electronics & Communication',
-      '02': 'Electrical & Electronics',
-      '03': 'Mechanical Engineering',
-      '01': 'Civil Engineering',
-    };
-
-    const deptName = DEPT_MAP[deptCodeNum] || 'Engineering Department';
-    const endYear = isLateral ? fullYear + 3 : fullYear + 4;
-
-    setLookupResult({
-      valid: true,
-      deptName,
-      deptCode: deptCodeNum,
-      batch: `${fullYear}-${endYear}`,
-      type: isLateral ? 'Lateral Entry' : 'Regular B.Tech',
-    });
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden bg-background">
-      {/* Background glow effects */}
+      {/* Background ambient lighting */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/10 via-background to-background pointer-events-none" />
 
-      <div className="relative w-full max-w-lg space-y-6">
+      <div className="relative w-full max-w-md space-y-6">
         {/* Header Branding */}
         <div className="text-center space-y-2">
           <Link href="/" className="inline-flex items-center gap-2.5 group">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-brand-500/25 group-hover:scale-105 transition-transform duration-300">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-brand-500/25 group-hover:scale-105 transition-transform duration-300">
               <Shield className="w-6 h-6 text-white" />
             </div>
             <div className="text-left">
               <span className="text-2xl font-black tracking-tight text-foreground flex items-center gap-1.5">
                 SREC <span className="text-primary font-bold">Connect</span>
               </span>
-              <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+              <p className="text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
                 Santhiram Engineering College
               </p>
             </div>
           </Link>
-          <h1 className="text-2xl font-extrabold text-foreground pt-3">Campus Authentication</h1>
-          <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-            Sign in with your verified institutional Google identity or permanent roll number.
+
+          <h1 className="text-xl font-extrabold text-foreground pt-2">
+            Campus Single Sign-On
+          </h1>
+          <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+            Authorized institutional gateway for CSE (AI & ML) students, faculty, and administrative staff.
           </p>
         </div>
 
         {/* Error notification */}
         {errorMessage && (
-          <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 animate-slide-up text-destructive">
-            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <p className="font-semibold">Authentication Notice</p>
-              <p className="text-xs opacity-90 mt-0.5">{errorMessage}</p>
+          <div className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 text-destructive animate-slide-up">
+            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <p className="font-bold">Authentication Notice</p>
+              <p className="opacity-90 mt-0.5">{errorMessage}</p>
             </div>
           </div>
         )}
 
-        {/* Main Card */}
-        <Card variant="glass" className="border-border/60 shadow-xl backdrop-blur-xl">
+        {/* Main Clean Sign-In Card */}
+        <Card variant="glass" className="border-border/70 shadow-2xl backdrop-blur-xl">
           <CardContent className="p-6 sm:p-8 space-y-6">
-            {/* Primary Action: Google OAuth Button */}
-            <Button
-              variant="secondary"
-              fullWidth
-              size="lg"
-              onClick={handleGoogleSignIn}
-              disabled={isLoading}
-              className="relative py-3.5 px-4 text-sm font-semibold rounded-xl border-border hover:bg-muted transition-all duration-200 flex items-center justify-center gap-3 shadow-sm"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              <span>Continue with Google</span>
-              {isLoading && <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin ml-2" />}
-            </Button>
-
-            {/* Divider */}
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-border/80" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase tracking-wider">
-                <span className="px-3 bg-card text-muted-foreground font-semibold">
-                  Or sign in with roll number / email
-                </span>
-              </div>
-            </div>
-
-            {/* Direct Credentials Form */}
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleCredentialsSignIn();
-              }}
-              className="space-y-4"
-            >
-              <div>
-                <label htmlFor="identifier" className="block text-xs font-semibold text-foreground mb-1.5">
-                  Campus Email or Permanent Roll Number
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    id="identifier"
-                    type="text"
-                    required
-                    placeholder="e.g. 22091A3201 or manibhushanam4k@gmail.com"
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-input bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
-                  />
-                </div>
-              </div>
-
+            {/* Primary Action: Single Google Sign-In Button */}
+            <div className="space-y-3">
               <Button
-                type="submit"
-                variant="primary"
+                variant="secondary"
                 fullWidth
                 size="lg"
+                onClick={handleGoogleSignIn}
                 disabled={isLoading}
-                className="py-3 font-semibold rounded-xl shadow-md shadow-primary/20 flex items-center justify-center gap-2"
+                className="relative py-4 px-4 text-xs sm:text-sm font-bold rounded-xl border border-border/80 hover:bg-secondary transition-all duration-200 flex items-center justify-center gap-3 shadow-md bg-card"
               >
-                <span>Sign In to Dashboard</span>
-                <ArrowRight className="w-4 h-4" />
+                <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
+                </svg>
+                <span>Continue with Google Workspace</span>
+                {isLoading && (
+                  <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin ml-2" />
+                )}
               </Button>
-            </form>
 
-            {/* Quick Test Switcher (Development & Verification) */}
-            <div className="pt-2 border-t border-border/60">
-              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2.5">
-                ⚡ Quick Test Persona (Instant Local Sign-In)
+              <p className="text-[11px] text-center text-muted-foreground">
+                College email domain: <code className="font-mono text-foreground font-semibold">@srecnandyal.edu.in</code>
               </p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <button
-                  type="button"
-                  onClick={() => handleCredentialsSignIn('manibhushanam4k@gmail.com')}
-                  className="p-2 rounded-lg border border-border/70 hover:border-primary hover:bg-primary/5 transition-all text-left flex items-center gap-2"
-                >
-                  <Shield className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-foreground truncate">Super Admin</p>
-                    <p className="text-[10px] text-muted-foreground truncate">Mani Bhushanam</p>
-                  </div>
-                </button>
+            </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleCredentialsSignIn('hod.aiml@srecnandyal.edu.in')}
-                  className="p-2 rounded-lg border border-border/70 hover:border-primary hover:bg-primary/5 transition-all text-left flex items-center gap-2"
-                >
-                  <Building2 className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-foreground truncate">HOD AIML</p>
-                    <p className="text-[10px] text-muted-foreground truncate">Dr. K. Srinivas</p>
-                  </div>
-                </button>
+            {/* Role & Automatic Dashboard Routing Explainer */}
+            <div className="pt-4 border-t border-border/60 space-y-2.5">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Automatic Role Landing Routing
+              </p>
 
-                <button
-                  type="button"
-                  onClick={() => handleCredentialsSignIn('faculty.aiml@srecnandyal.edu.in')}
-                  className="p-2 rounded-lg border border-border/70 hover:border-primary hover:bg-primary/5 transition-all text-left flex items-center gap-2"
-                >
-                  <Briefcase className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-foreground truncate">Faculty</p>
-                    <p className="text-[10px] text-muted-foreground truncate">A. Ramesh</p>
-                  </div>
-                </button>
+              <div className="space-y-1.5 text-[11px]">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/40 border border-border/50">
+                  <span className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <GraduationCap className="w-3.5 h-3.5 text-cyan-500" />
+                    Student Scholars
+                  </span>
+                  <span className="text-muted-foreground text-[10px]">Community Feed & Portfolios</span>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleCredentialsSignIn('22091A3202')}
-                  className="p-2 rounded-lg border border-border/70 hover:border-primary hover:bg-primary/5 transition-all text-left flex items-center gap-2"
-                >
-                  <GraduationCap className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-foreground truncate">Student</p>
-                    <p className="text-[10px] text-muted-foreground truncate">P. Sai Kumar</p>
-                  </div>
-                </button>
+                <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/40 border border-border/50">
+                  <span className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <Users className="w-3.5 h-3.5 text-blue-500" />
+                    Faculty Mentors
+                  </span>
+                  <span className="text-muted-foreground text-[10px]">Verification Desk & Reports</span>
+                </div>
+
+                <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/40 border border-border/50">
+                  <span className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <Building2 className="w-3.5 h-3.5 text-indigo-500" />
+                    HOD & Web Managers
+                  </span>
+                  <span className="text-muted-foreground text-[10px]">Department Ops & Ingestion</span>
+                </div>
+
+                <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/40 border border-border/50">
+                  <span className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <Shield className="w-3.5 h-3.5 text-amber-500" />
+                    Super Administrator
+                  </span>
+                  <span className="text-muted-foreground text-[10px]">Sovereign Command Center</span>
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Live Roll Number Inspector */}
-        <Card variant="glass" className="border-border/60">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
-              JNTUA Roll Number Validator & Decoder
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-0">
-            <input
-              type="text"
-              placeholder="Test any roll number (e.g., 22091A3201)"
-              value={lookupRoll}
-              onChange={(e) => handleRollLookup(e.target.value)}
-              maxLength={10}
-              className="w-full px-3 py-2 rounded-lg border border-input bg-background text-xs font-mono uppercase tracking-wider focus:outline-none focus:ring-1 focus:ring-primary"
-            />
+            {/* Developer Testing Fallback (Only available if explicitly queried via ?dev=true) */}
+            {isDevMode && (
+              <div className="pt-3 border-t border-dashed border-border/80">
+                <button
+                  type="button"
+                  onClick={() => setShowDevFallback(!showDevFallback)}
+                  className="w-full flex items-center justify-between text-[11px] font-bold text-amber-500 py-1"
+                >
+                  <span>🛠️ Local Testing Personas (?dev=true)</span>
+                  {showDevFallback ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
 
-            {lookupResult && (
-              lookupResult.valid ? (
-                <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs space-y-1 animate-fade-in">
-                  <div className="flex items-center gap-1.5 text-emerald-500 font-semibold">
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Valid JNTUA Roll Number Format</span>
+                {showDevFallback && (
+                  <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => handleDevSignIn('manibhushanam4k@gmail.com')}
+                      className="p-2 rounded-lg border border-border hover:border-primary text-left bg-secondary/40"
+                    >
+                      <p className="font-bold text-[11px] text-foreground">Super Admin</p>
+                      <p className="text-[10px] text-muted-foreground truncate">Mani Bhushanam</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDevSignIn('22091a3201@srecnandyal.edu.in')}
+                      className="p-2 rounded-lg border border-border hover:border-primary text-left bg-secondary/40"
+                    >
+                      <p className="font-bold text-[11px] text-foreground">Student (22091A3201)</p>
+                      <p className="text-[10px] text-muted-foreground truncate">K. V. Naveen Kumar</p>
+                    </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-1 text-[11px] text-muted-foreground pt-1">
-                    <div>Department: <span className="font-semibold text-foreground">{lookupResult.deptName}</span></div>
-                    <div>Batch: <span className="font-semibold text-foreground">{lookupResult.batch}</span></div>
-                    <div>Admission: <span className="font-semibold text-foreground">{lookupResult.type}</span></div>
-                    <div>College: <span className="font-semibold text-foreground">SREC (09)</span></div>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-500 flex items-center gap-1.5">
-                  <AlertCircle className="w-3.5 h-3.5" />
-                  <span>Invalid format. JNTUA format example: <code className="font-mono">22091A3201</code></span>
-                </div>
-              )
+                )}
+              </div>
             )}
           </CardContent>
         </Card>
+
+        {/* Institutional Footer */}
+        <div className="text-center text-[10px] text-muted-foreground space-y-1">
+          <p>Santhiram Engineering College (Autonomous), Nandyal</p>
+          <p>Department of CSE (AI & ML) • Academic Year 2026–2027</p>
+        </div>
       </div>
     </div>
   );

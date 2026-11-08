@@ -25,6 +25,18 @@ export const DesktopSidebar: React.FC = () => {
   const { data: session } = useSession();
 
   const userRole = (session?.user as any)?.role;
+  const roleBadgeText =
+    userRole === 'SUPER_ADMIN' ? '👑 Super Admin' :
+    userRole === 'HOD' ? '🏛️ HOD (AIML)' :
+    userRole === 'FACULTY' ? '🎓 Faculty' :
+    userRole === 'WEB_MANAGER' ? '🌐 Web Ops' :
+    userRole === 'STUDENT' ? '🎒 Student' : null;
+
+  const defaultDisplayName =
+    userRole === 'SUPER_ADMIN' ? 'Super Administrator' :
+    userRole === 'HOD' ? 'Head of Department' :
+    userRole === 'FACULTY' ? 'Faculty Member' :
+    userRole === 'STUDENT' ? 'Student Scholar' : 'Campus Member';
 
   const mainLinks = [
     { label: 'Community Feed', href: '/', icon: Home },
@@ -32,6 +44,7 @@ export const DesktopSidebar: React.FC = () => {
     { label: 'Achievements', href: '/achievements', icon: Award },
     { label: 'Faculty Directory', href: '/faculty', icon: BookOpen },
     { label: 'Student Directory', href: '/students', icon: Users },
+    { label: 'Grievances & Conduct', href: '/grievances', icon: ShieldAlert },
   ];
 
   const exploreLinks = [
@@ -56,15 +69,27 @@ export const DesktopSidebar: React.FC = () => {
         <div className="flex items-center gap-3 mb-3">
           <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold text-base overflow-hidden">
             {session?.user?.image ? (
-              <img src={session.user.image} alt="User" className="w-full h-full object-cover" />
+              <img
+                src={session.user.image}
+                alt="User"
+                className="w-full h-full object-cover"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
             ) : (
               (session?.user?.name || 'SREC').substring(0, 2).toUpperCase()
             )}
           </div>
           <div className="min-w-0 flex-1">
-            <h4 className="text-sm font-bold text-foreground truncate">
-              {session?.user?.name || 'Guest Student'}
-            </h4>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h4 className="text-sm font-bold text-foreground truncate">
+                {session?.user?.name || defaultDisplayName}
+              </h4>
+              {roleBadgeText && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-primary/10 text-primary border border-primary/20">
+                  {roleBadgeText}
+                </span>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground truncate">
               {session?.user?.email || 'CSE (AI & ML)'}
             </p>

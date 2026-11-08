@@ -26,13 +26,13 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showRightRail }) =
       <AppHeader />
 
       {/* 2. Main Responsive Content Grid */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6">
-        <div className="flex gap-6 justify-center">
+      <div className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 overflow-x-hidden">
+        <div className="flex gap-6 justify-center w-full max-w-full">
           {/* Left Sidebar (Desktop only) */}
           <DesktopSidebar />
 
           {/* Central Main Content Viewport */}
-          <main className={`flex-1 ${mainMaxWidthClass} w-full min-w-0 pb-20 md:pb-8`}>
+          <main className={`flex-1 ${mainMaxWidthClass} w-full min-w-0 max-w-full overflow-x-hidden pb-20 md:pb-8`}>
             {children}
           </main>
 

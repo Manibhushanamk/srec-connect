@@ -184,7 +184,7 @@ export default async function FacultyPage({
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
                             {member.avatarUrl ? (
-                              <img src={member.avatarUrl} alt="" className="w-10 h-10 rounded-xl" />
+                              <img src={member.avatarUrl} alt={member.name} className="w-10 h-10 rounded-xl object-cover" />
                             ) : (
                               <span className="text-white font-bold">{member.name.charAt(0)}</span>
                             )}
@@ -221,7 +221,7 @@ export default async function FacultyPage({
                       <div className="flex items-start gap-4 mb-4">
                         <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
                           {member.avatarUrl ? (
-                            <img src={member.avatarUrl} alt="" className="w-16 h-16 rounded-xl" />
+                            <img src={member.avatarUrl} alt={member.name} className="w-16 h-16 rounded-xl object-cover" />
                           ) : (
                             <span className="text-white text-2xl font-bold">{member.name.charAt(0)}</span>
                           )}
