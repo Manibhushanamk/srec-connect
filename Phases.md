@@ -65,18 +65,18 @@ graph TD
   - [ ] Task 3.2: Department, Batch, and Section management with roll number uniqueness enforcement.
   - [ ] Task 3.3: Staff administrative edit workflow with audit history.
 - **Verification:** Integration test uploading valid and malformed CSVs; audit logs verified in Neon.
-- **Status:** Locked
+- **Status:** Complete (commit `a5370e4`)
 
 ---
 
 ## Phase 4: Profiles & Portfolios
 - **Objective:** LinkedIn-inspired academic portfolios and Instagram-style profile headers.
 - **Tasks:**
-  - [ ] Task 4.1: Student profile view with editable portfolio fields and locked official academic fields.
-  - [ ] Task 4.2: Faculty and HOD professional profile view (publications, patents, FDPs, mentoring).
-  - [ ] Task 4.3: Granular privacy toggles (Public vs College-Only vs Private) per portfolio section.
-- **Verification:** Visual verification of student vs faculty view; permission check ensuring students cannot modify roll numbers.
-- **Status:** Locked
+  - [x] Task 4.1: Student profile view with editable portfolio fields and locked official academic fields (`/students/[id]` & `/students/[rollNumber]`).
+  - [x] Task 4.2: Faculty and HOD professional profile view (publications, patents, FDPs, mentoring) (`/faculty/[id]`).
+  - [x] Task 4.3: Granular privacy toggles (Public vs College-Only vs Private) per portfolio section and profile customization settings.
+- **Verification:** Visual verification of student vs faculty view; permission check ensuring students cannot modify roll numbers (5/5 tests passing in `tests/portfolios.test.ts`).
+- **Status:** Complete (commit `9312543`)
 
 ---
 

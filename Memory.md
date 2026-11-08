@@ -3,23 +3,26 @@
 > **Project:** SREC Connect v3.0  
 > **Institution:** Santhiram Engineering College (SREC), Nandyal — CSE (AI & ML)  
 > **Last Updated:** 2026-11-08  
-> **Current Phase:** Phase 0 — Discovery & Project Control  
+> **Current Phase:** Phase 4 — Profiles & Portfolios Complete; Ready for Phase 5 (Social Community & Feed)  
 
 ---
 
 ## 1. Current Status & Phase Progress
 
-- **Active Goal:** Phase 3 (User & Academic Administration: Bulk CSV/Excel Import & Roll Numbers) Completed; Ready to start Phase 4 (Profiles & Academic Portfolios: LinkedIn-inspired Student & Faculty Pages).
+- **Active Goal:** Phase 4 (Profiles & Academic Portfolios: LinkedIn-inspired Student & Faculty Pages) Completed; Cloudflare Security Audit Skill integrated and applied across auth, API routes, and security headers. Ready to start Phase 5 (Social Community & Feed).
 - **Current State:**
   - Resolved sign-in route mismatch: Next.js App Router route group `(auth)` maps to `/signin`, whereas NextAuth was pointing to `/auth/signin` (404). Fixed by updating `authOptions`, adding redirect handlers for `/login` and `/auth/signin`, and pointing `AppHeader.tsx` to `/signin`.
-  - Added dual-mode authentication: Google OAuth with domain/pre-provisioning enforcement + `CredentialsProvider` for instant local testing and persona switching (`SUPER_ADMIN`, `HOD`, `FACULTY`, `STUDENT`).
-  - Bootstrapped and seeded all 5 institutional roles with realistic departments and roll numbers (`scripts/seed-roles.ts`).
-  - Implemented Phase 3 User Management (`src/app/admin/users/page.tsx` & `/api/admin/users`) with search, role filters, status toggling, and single pre-provisioning modal.
+  - Added dual-mode authentication: Google OAuth with domain/pre-provisioning enforcement + `CredentialsProvider` with production-bypass guard for instant local testing and persona switching (`SUPER_ADMIN`, `HOD`, `FACULTY`, `STUDENT`).
+  - Cloned and installed `cloudflare-security-audit-skill` from `https://github.com/cloudflare/security-audit-skill`.
+  - Audited and hardened codebase: strict CSP/security headers in `next.config.mjs`, bounded batch payloads in bulk import (max 1000 rows), URL scheme sanitizers (`https://`), and strict roll number immutability guards.
+  - Implemented Phase 3 User Management (`src/app/admin/users/page.tsx` & `/api/admin/users`) with search, role filters, status toggling, and single pre-provisioning modal (`a5370e4`).
   - Implemented Two-Stage Bulk CSV / Excel Import Engine (`src/app/admin/bulk-upload/page.tsx` & `/api/admin/users/bulk-import`) with sample CSV download, JNTUA roll number format validation (`^\d{2}09(1A|5A)\d{2}[0-9A-Z]{2}$`), error reporting table, and transactional DB commit.
-  - Integration test suite passing (5/5 tests in `tests/user-admin-bulk.test.ts`).
+  - Implemented Phase 4 Student Dynamic Portfolio Page (`src/app/(public)/students/[id]/page.tsx` supporting lookup by ID or permanent roll number `22091A3201`) with locked JNTUA academic banner, skills tags, and verified achievements.
+  - Implemented Phase 4 Faculty Profile Page (`src/app/(public)/faculty/[id]/page.tsx`) with academic qualifications, research publications, campus cabin location, and Google Scholar profile integration.
+  - Integration test suites passing: 25/25 tests passing across `tests/auth-rbac.test.ts`, `tests/user-admin-bulk.test.ts`, and `tests/portfolios.test.ts`.
   - TypeScript typecheck passing cleanly with 0 errors (`tsc --noEmit`).
-  - Empirically verified with Playwright CLI screenshots: `authenticated_home_verified.png`, `admin_dashboard_verified.png`, `verified_admin_users.png`, `verified_admin_bulk_upload.png`.
-  - Commits landed: `a5370e4`.
+  - Empirically verified with Playwright CLI screenshots: `verified_student_portfolio_roll.png`, `verified_faculty_profile.png`, `authenticated_home_verified.png`, `admin_dashboard_verified.png`.
+  - Commits landed: `25e4f47` (security hardening), `9312543` (Phase 4 portfolios).
 
 ---
 
