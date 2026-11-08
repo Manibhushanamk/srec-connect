@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Badge, StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyStatePreset } from '@/components/ui/EmptyState';
+import { EventsFilterBar } from '@/components/events/EventsFilterBar';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import {
   Calendar,
@@ -13,8 +14,6 @@ import {
   Users,
   ChevronDown,
   ArrowRight,
-  Search,
-  Filter,
   Building2,
 } from 'lucide-react';
 
@@ -60,37 +59,50 @@ async function getEvents(searchParams: {
     ];
   }
 
-  const [events, total, categories, departments, academicYears] = await Promise.all([
-    prisma.event.findMany({
-      where,
-      include: {
-        category: true,
-        department: true,
-        createdBy: { select: { name: true } },
-      },
-      orderBy: { startDate: 'asc' },
-      skip,
-      take: limit,
-    }),
-    prisma.event.count({ where }),
-    prisma.category.findMany({ where: { type: { in: ['EVENT', 'BOTH'] }, isActive: true }, orderBy: { displayOrder: 'asc' } }),
-    prisma.department.findMany({ where: { isActive: true }, orderBy: { displayOrder: 'asc' } }),
-    prisma.event.findMany({
-      select: { academicYear: true },
-      distinct: ['academicYear'],
-      orderBy: { academicYear: 'desc' },
-    }),
-  ]);
+  try {
+    const [events, total, categories, departments, academicYears] = await Promise.all([
+      prisma.event.findMany({
+        where,
+        include: {
+          category: true,
+          department: true,
+          createdBy: { select: { name: true } },
+        },
+        orderBy: { startDate: 'asc' },
+        skip,
+        take: limit,
+      }),
+      prisma.event.count({ where }),
+      prisma.category.findMany({ where: { type: { in: ['EVENT', 'BOTH'] }, isActive: true }, orderBy: { displayOrder: 'asc' } }),
+      prisma.department.findMany({ where: { isActive: true }, orderBy: { displayOrder: 'asc' } }),
+      prisma.event.findMany({
+        select: { academicYear: true },
+        distinct: ['academicYear'],
+        orderBy: { academicYear: 'desc' },
+      }),
+    ]);
 
-  return {
-    events,
-    total,
-    totalPages: Math.ceil(total / limit),
-    currentPage: page,
-    categories,
-    departments,
-    academicYears: academicYears.map((a) => a.academicYear),
-  };
+    return {
+      events,
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      categories,
+      departments,
+      academicYears: academicYears.map((a) => a.academicYear).filter((y): y is string => Boolean(y)),
+    };
+  } catch (error) {
+    console.error('[Events] Failed to fetch events from database:', error);
+    return {
+      events: [],
+      total: 0,
+      totalPages: 1,
+      currentPage: 1,
+      categories: [],
+      departments: [],
+      academicYears: [],
+    };
+  }
 }
 
 export default async function EventsPage({
@@ -139,99 +151,11 @@ export default async function EventsPage({
 
       <div className="flex flex-col lg:flex-row gap-6">
         <aside className="lg:w-64 flex-shrink-0 space-y-6">
-          <Card variant="glass">
-            <CardContent className="p-5 space-y-6">
-              <h3 className="font-semibold text-slate-100 flex items-center gap-2">
-                <Filter className="w-5 h-5" />
-                Filters
-              </h3>
-
-              <div>
-                <label htmlFor="search" className="label-text">Search</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input
-                    type="search"
-                    id="search"
-                    placeholder="Search events..."
-                    defaultValue={params.search || ''}
-                    className="input-field pl-10"
-                    onChange={(e) => window.location.href = buildUrl({ search: e.target.value, page: '1' })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="label-text">Status</label>
-                <div className="flex gap-2 flex-wrap" role="tablist">
-                  {statusTabs.map((status) => (
-                    <button
-                      key={status}
-                      role="tab"
-                      aria-selected={currentStatus === status}
-                      onClick={() => window.location.href = buildUrl({ status: status === 'all' ? '' : status, page: '1' })}
-                      className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                        currentStatus === status
-                          ? 'bg-brand-500 text-white'
-                          : 'text-slate-400 hover:text-white hover:bg-space-700/50'
-                      }`}
-                    >
-                      {status === 'all' ? 'All' : status.charAt(0) + status.slice(1).toLowerCase()}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="category" className="label-text">Category</label>
-                <select
-                  id="category"
-                  defaultValue={params.category || 'all'}
-                  className="input-field appearance-none bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%2394a3b8%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3E%3C/svg%3E')] bg-[right_0.75rem_center] bg-no-repeat pr-10"
-                  onChange={(e) => window.location.href = buildUrl({ category: e.target.value, page: '1' })}
-                >
-                  <option value="all">All Categories</option>
-                  {data.categories.map((cat) => (
-                    <option key={cat.name} value={cat.name}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="department" className="label-text">Department</label>
-                <select
-                  id="department"
-                  defaultValue={params.department || 'all'}
-                  className="input-field appearance-none bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%2394a3b8%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3E%3C/svg%3E')] bg-[right_0.75rem_center] bg-no-repeat pr-10"
-                  onChange={(e) => window.location.href = buildUrl({ department: e.target.value, page: '1' })}
-                >
-                  <option value="all">All Departments</option>
-                  {data.departments.map((dept) => (
-                    <option key={dept.code} value={dept.code}>{dept.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="academicYear" className="label-text">Academic Year</label>
-                <select
-                  id="academicYear"
-                  defaultValue={params.academicYear || 'all'}
-                  className="input-field appearance-none bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%2394a3b8%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3E%3C/svg%3E')] bg-[right_0.75rem_center] bg-no-repeat pr-10"
-                  onChange={(e) => window.location.href = buildUrl({ academicYear: e.target.value, page: '1' })}
-                >
-                  <option value="all">All Years</option>
-                  {data.academicYears.map((year) => (
-                    <option key={year || ''} value={year || ''}>{year}</option>
-                  ))}
-                </select>
-              </div>
-
-              <Button variant="secondary" fullWidth onClick={() => window.location.href = '/events'}>
-                Clear All Filters
-              </Button>
-            </CardContent>
-          </Card>
+          <EventsFilterBar
+            categories={data.categories}
+            departments={data.departments}
+            academicYears={data.academicYears}
+          />
         </aside>
 
         <main className="flex-1 min-w-0">

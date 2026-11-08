@@ -61,13 +61,18 @@ const DEPARTMENT_GRADIENTS: Record<string, string> = {
 };
 
 async function getDepartmentStats(departmentId: string) {
-  const [students, faculty, achievements, events] = await Promise.all([
-    prisma.student.count({ where: { departmentId, isActive: true } }),
-    prisma.faculty.count({ where: { departmentId, isActive: true } }),
-    prisma.achievement.count({ where: { departmentId, status: 'PUBLISHED' } }),
-    prisma.event.count({ where: { departmentId } }),
-  ]);
-  return { students, faculty, achievements, events };
+  try {
+    const [students, faculty, achievements, events] = await Promise.all([
+      prisma.student.count({ where: { departmentId, isActive: true } }),
+      prisma.faculty.count({ where: { departmentId, isActive: true } }),
+      prisma.achievement.count({ where: { departmentId, status: 'PUBLISHED' } }),
+      prisma.event.count({ where: { departmentId } }),
+    ]);
+    return { students, faculty, achievements, events };
+  } catch (error) {
+    console.error(`[Departments] Error fetching stats for ${departmentId}:`, error);
+    return { students: 0, faculty: 0, achievements: 0, events: 0 };
+  }
 }
 
 export default async function DepartmentsPage() {

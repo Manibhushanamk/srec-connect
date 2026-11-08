@@ -5,13 +5,12 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyStatePreset } from '@/components/ui/EmptyState';
+import { FacultyFilterBar } from '@/components/faculty/FacultyFilterBar';
 import { formatDate } from '@/lib/utils';
 import {
   Users,
   BookOpen,
   Award,
-  Search,
-  Filter,
   Building2,
   GraduationCap,
   Briefcase,
@@ -20,6 +19,7 @@ import {
   ExternalLink,
   Mail,
   MapPin,
+  List,
 } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -56,29 +56,40 @@ async function getFaculty(searchParams: {
     ];
   }
 
-  const [faculty, total, departments] = await Promise.all([
-    prisma.faculty.findMany({
-      where,
-      include: {
-        department: true,
-        achievements: { where: { status: 'PUBLISHED' }, take: 5, orderBy: { achievementDate: 'desc' } },
-        user: { select: { email: true } },
-      },
-      orderBy: [{ roleCategory: 'asc' }, { displayOrder: 'asc' }, { name: 'asc' }],
-      skip,
-      take: limit,
-    }),
-    prisma.faculty.count({ where }),
-    prisma.department.findMany({ where: { isActive: true }, orderBy: { displayOrder: 'asc' } }),
-  ]);
+  try {
+    const [faculty, total, departments] = await Promise.all([
+      prisma.faculty.findMany({
+        where,
+        include: {
+          department: true,
+          achievements: { where: { status: 'PUBLISHED' }, take: 5, orderBy: { achievementDate: 'desc' } },
+          user: { select: { email: true } },
+        },
+        orderBy: [{ roleCategory: 'asc' }, { displayOrder: 'asc' }, { name: 'asc' }],
+        skip,
+        take: limit,
+      }),
+      prisma.faculty.count({ where }),
+      prisma.department.findMany({ where: { isActive: true }, orderBy: { displayOrder: 'asc' } }),
+    ]);
 
-  return {
-    faculty,
-    total,
-    totalPages: Math.ceil(total / limit),
-    currentPage: page,
-    departments,
-  };
+    return {
+      faculty,
+      total,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      departments,
+    };
+  } catch (error) {
+    console.error('[Faculty] Failed to fetch faculty from database:', error);
+    return {
+      faculty: [],
+      total: 0,
+      totalPages: 1,
+      currentPage: 1,
+      departments: [],
+    };
+  }
 }
 
 export default async function FacultyPage({
@@ -128,76 +139,27 @@ export default async function FacultyPage({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" size="sm" onClick={() => window.location.href = buildUrl({ view: 'cards' })}>
-            <Users className="w-4 h-4" />
-            Cards
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => window.location.href = buildUrl({ view: 'list' })}>
-            <List className="w-4 h-4" />
-            List
-          </Button>
+          <Link href={buildUrl({ view: 'cards' })}>
+            <Button variant="secondary" size="sm">
+              <Users className="w-4 h-4" />
+              Cards
+            </Button>
+          </Link>
+          <Link href={buildUrl({ view: 'list' })}>
+            <Button variant="secondary" size="sm">
+              <List className="w-4 h-4" />
+              List
+            </Button>
+          </Link>
         </div>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
         <aside className="lg:w-64 flex-shrink-0 space-y-6">
-          <Card variant="glass">
-            <CardContent className="p-5 space-y-6">
-              <h3 className="font-semibold text-slate-100 flex items-center gap-2">
-                <Filter className="w-5 h-5" />
-                Filters
-              </h3>
-
-              <div>
-                <label htmlFor="search" className="label-text">Search</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input
-                    type="search"
-                    id="search"
-                    placeholder="Search faculty..."
-                    defaultValue={params.search || ''}
-                    className="input-field pl-10"
-                    onChange={(e) => window.location.href = buildUrl({ search: e.target.value, page: '1' })}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="department" className="label-text">Department</label>
-                <select
-                  id="department"
-                  defaultValue={params.department || 'all'}
-                  className="input-field appearance-none bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%2394a3b8%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3E%3C/svg%3E')] bg-[right_0.75rem_center] bg-no-repeat pr-10"
-                  onChange={(e) => window.location.href = buildUrl({ department: e.target.value, page: '1' })}
-                >
-                  <option value="all">All Departments</option>
-                  {data.departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>{dept.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="roleCategory" className="label-text">Designation</label>
-                <select
-                  id="roleCategory"
-                  defaultValue={params.roleCategory || 'all'}
-                  className="input-field appearance-none bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3E%3Cpath stroke=%27%2394a3b8%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3E%3C/svg%3E')] bg-[right_0.75rem_center] bg-no-repeat pr-10"
-                  onChange={(e) => window.location.href = buildUrl({ roleCategory: e.target.value, page: '1' })}
-                >
-                  <option value="all">All Designations</option>
-                  {ROLE_CATEGORIES.map((role) => (
-                    <option key={role} value={role}>{roleLabels[role]}</option>
-                  ))}
-                </select>
-              </div>
-
-              <Button variant="secondary" fullWidth onClick={() => window.location.href = '/faculty'}>
-                Clear All Filters
-              </Button>
-            </CardContent>
-          </Card>
+          <FacultyFilterBar
+            departments={data.departments}
+            roleCategories={ROLE_CATEGORIES}
+          />
         </aside>
 
         <main className="flex-1 min-w-0">
@@ -331,5 +293,3 @@ export default async function FacultyPage({
     </div>
   );
 }
-
-import { List } from 'lucide-react';

@@ -462,6 +462,7 @@ model Event {
   registrationInfo      String?
   registrationUrl       String?
   googleDriveUrl        String?
+  eventReport           String?
   participantCount      Int                 @default(0)
   capacity              Int                 @default(100)
   registrationDeadline  DateTime?
