@@ -74,10 +74,28 @@
 - **Super Admin Role (`manibhushanam4k@gmail.com`)**:
   - Verified system-wide Trash & Soft-Delete Recovery (`/admin/trash`), Role Management (`/admin/users`), Universal Export, and Database Deduplication.
 
+### F. Layout Modernization, Disciplinary Confidentiality & Official Notices
+- **Horizontal Filter Bar Architecture**: Replaced legacy vertical sidebars in `/students`, `/faculty`, `/achievements`, and `/events` with sleek, full-width top horizontal bars. Eliminated input overflow, text truncation, and cramped card columns on laptop screens (1440px / 1280px).
+- **Theme-Adaptive Input Primitives**: Upgraded `.input-field`, `select.input-field`, and `.label-text` in `globals.css` to use semantic CSS design variables (`bg-background`, `border-border`, `text-foreground`, `text-muted-foreground`), ensuring flawless contrast in both dark and light themes without white box glitches.
+- **Strict Disciplinary Confidentiality (HOD-Only Visibility)**:
+  - Restricted regular faculty queries in `/api/incidents` to strictly `where.reporterId = currentUser.id`. Faculty can no longer see disciplinary warnings given to students by other instructors.
+  - Granted full department incident access to `HOD` and `SUPER_ADMIN`.
+  - Added dedicated section/batch tags (`Sec A`, `Batch 2022-2026`) and category tabs (`All Dossiers`, `Student Grievances`, `Faculty Conduct Notices`) in `/admin/discipline`.
+- **Dynamic Official Notices Rail**:
+  - Connected `RightContextRail.tsx` to `/api/announcements` with live department fetching.
+  - Added role-gated `+ Post` quick action for `HOD`, `FACULTY`, and `SUPER_ADMIN`.
+  - Added interactive modal dialog displaying complete notice text, issuing authority, and target section/batch.
+
 ---
 
 ## 3. Empirical Verification Evidence
 - **Automated Tests:** 39/39 passing across all 8 suites (`npm test`).
+- **TypeScript:** 0 errors (`npx tsc --noEmit`).
+- **Visual Evidence:**
+  - `verify_admin_dark_students.png`: Verified full-width horizontal bar and spacious 3-column student cards in dark mode.
+  - `verify_admin_dark_faculty.png`: Verified horizontal filter and spacious cards in dark mode.
+  - `verify_admin_dark_achievements.png`: Verified 4-column filter bar and centered empty state.
+  - `verified_laptop_students.png`, `verified_laptop_faculty.png`, `verified_laptop_achievements.png`, `verified_laptop_events.png`: Verified light mode responsiveness on 1440x900 laptop resolution.
 - **Production Build:** 51/51 routes compiled cleanly with 0 TypeScript/ESLint errors (`npm run build`).
 - **Playwright Visual Verification:**
   - `verified_students_light.png` & `check_students_dark.png`
