@@ -39,11 +39,11 @@ graph TD
 ## Phase 1: Foundation & Design System
 - **Objective:** Modern mobile-first app shell, theme provider (Light/Dark/System), Instagram/LinkedIn design primitives.
 - **Tasks:**
-  - [ ] Task 1.1: Verify Next.js 15, Tailwind CSS, shadcn/ui setup, theme provider, and Lucide icons.
-  - [ ] Task 1.2: Build responsive navigation shell (Mobile Bottom Navigation + Desktop Sidebar).
-  - [ ] Task 1.3: Build public department landing page shell with authentic college placeholders.
-- **Verification:** Playwright screenshot capture of mobile and desktop layouts in light and dark modes.
-- **Status:** Locked (Pending Phase 0 approval)
+  - [x] Task 1.1: Verify Next.js 15, Tailwind CSS, shadcn/ui setup, theme provider, and Lucide icons.
+  - [x] Task 1.2: Build responsive navigation shell (Mobile Bottom Navigation + Desktop Sidebar).
+  - [x] Task 1.3: Build public department landing page shell with authentic college placeholders.
+- **Verification:** Captured Playwright screenshots of mobile (`mobile_feed.png`) and desktop (`desktop_feed.png`, `portfolios_tab.png`) in light/dark modes with clean typecheck.
+- **Status:** Completed & Empirically Verified
 
 ---
 
