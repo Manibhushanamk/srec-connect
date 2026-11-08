@@ -9,14 +9,17 @@
 
 ## 1. Current Status & Phase Progress
 
-- **Active Goal:** Phase 2 and Hotfix Completed; Starting Phase 3 (User & Academic Administration: Bulk CSV/Excel Import & Roll Numbers).
+- **Active Goal:** Phase 3 (User & Academic Administration: Bulk CSV/Excel Import & Roll Numbers) Completed; Ready to start Phase 4 (Profiles & Academic Portfolios: LinkedIn-inspired Student & Faculty Pages).
 - **Current State:**
-  - Synchronized and applied updated 5-role Prisma schema (`SUPER_ADMIN`, `HOD`, `WEB_MANAGER`, `FACULTY`, `STUDENT`) to Neon PostgreSQL (`v3_production` schema).
-  - Resolved Next.js 15 App Router serialization boundary error by extracting dedicated client filter components (`EventsFilterBar.tsx`, `AchievementsFilterBar.tsx`, `StudentsFilterBar.tsx`, `FacultyFilterBar.tsx`) and removing `'use client'` from `src/app/(public)/layout.tsx`.
-  - All public routes (`/`, `/events`, `/achievements`, `/students`, `/faculty`) verified with HTTP 200 OK and captured via Playwright CLI.
-  - Integration test suite passing (14/14 tests in `tests/auth-rbac.test.ts`).
-  - TypeScript typecheck passing cleanly (`tsc --noEmit`).
-  - Commit landed: `ad4cb61`.
+  - Resolved sign-in route mismatch: Next.js App Router route group `(auth)` maps to `/signin`, whereas NextAuth was pointing to `/auth/signin` (404). Fixed by updating `authOptions`, adding redirect handlers for `/login` and `/auth/signin`, and pointing `AppHeader.tsx` to `/signin`.
+  - Added dual-mode authentication: Google OAuth with domain/pre-provisioning enforcement + `CredentialsProvider` for instant local testing and persona switching (`SUPER_ADMIN`, `HOD`, `FACULTY`, `STUDENT`).
+  - Bootstrapped and seeded all 5 institutional roles with realistic departments and roll numbers (`scripts/seed-roles.ts`).
+  - Implemented Phase 3 User Management (`src/app/admin/users/page.tsx` & `/api/admin/users`) with search, role filters, status toggling, and single pre-provisioning modal.
+  - Implemented Two-Stage Bulk CSV / Excel Import Engine (`src/app/admin/bulk-upload/page.tsx` & `/api/admin/users/bulk-import`) with sample CSV download, JNTUA roll number format validation (`^\d{2}09(1A|5A)\d{2}[0-9A-Z]{2}$`), error reporting table, and transactional DB commit.
+  - Integration test suite passing (5/5 tests in `tests/user-admin-bulk.test.ts`).
+  - TypeScript typecheck passing cleanly with 0 errors (`tsc --noEmit`).
+  - Empirically verified with Playwright CLI screenshots: `authenticated_home_verified.png`, `admin_dashboard_verified.png`, `verified_admin_users.png`, `verified_admin_bulk_upload.png`.
+  - Commits landed: `a5370e4`.
 
 ---
 
