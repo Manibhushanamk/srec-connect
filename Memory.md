@@ -9,16 +9,14 @@
 
 ## 1. Current Status & Phase Progress
 
-- **Active Goal:** Phase 1 (Foundation & Design System) Verified; Preparing Phase 2 (Database & Authentication Engine).
+- **Active Goal:** Phase 2 (Database & Authentication Engine) Completed; Ready to start Phase 3 (User & Academic Administration: Bulk CSV/Excel Import & Roll Numbers).
 - **Current State:**
-  - Designed & implemented Instagram + LinkedIn design primitives:
-    * Instagram Story Highlights with dynamic gradient rings and lightbox modal.
-    * Instagram Feed Cards with image grid, like counters, comments drawer, bookmarks, and copy-link share.
-    * LinkedIn-style Verified Profile Header with official roll number anchor (`22091A3201`), verified badge, and skills chips.
-    * Responsive App Shell with sticky top header, left sidebar, right announcements rail, and fixed mobile bottom nav.
-    * Light, Dark, and System theme provider with automatic system media query listener and persistent storage.
-  - Empirically verified rendering via Playwright screenshots across both mobile (390x844) and desktop (1280x900) viewports.
-  - Typecheck passed with exit code 0 (`tsc --noEmit`).
+  - Synchronized and applied updated 5-role Prisma schema (`SUPER_ADMIN`, `HOD`, `WEB_MANAGER`, `FACULTY`, `STUDENT`) to Neon PostgreSQL (`v3_production` schema).
+  - Synchronized `ApprovedEmailDomain` and granular permission mappings (`DEFAULT_ROLE_PERMISSIONS`).
+  - Executed `scripts/bootstrap-super-admin.ts`, bootstrapping initial Super Admin (`manibhushanam4k@gmail.com`) linked with permanent student roll number `22091A3201`.
+  - Implemented and verified Google OAuth pre-provisioned matching, domain check, and session enrichment in `src/lib/auth.ts` and `src/lib/rbac.ts`.
+  - Empirically verified with `tests/auth-rbac.test.ts` (14/14 tests passing).
+  - Typecheck passed cleanly (`tsc --noEmit`).
 
 ---
 

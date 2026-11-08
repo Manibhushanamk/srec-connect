@@ -50,11 +50,11 @@ graph TD
 ## Phase 2: Database & Authentication
 - **Objective:** Neon PostgreSQL integration, Prisma schema with granular RBAC, and Google OAuth flow.
 - **Tasks:**
-  - [ ] Task 2.1: Implement updated Prisma schema with 5 roles (`SUPER_ADMIN`, `HOD`, `WEB_MANAGER`, `FACULTY`, `STUDENT`) and granular permission models.
-  - [ ] Task 2.2: Configure Google OAuth with pre-provisioned email matching and institutional domain check.
-  - [ ] Task 2.3: Implement secure Super Admin initial bootstrapping CLI/script.
-- **Verification:** Unit and integration tests demonstrating rejection of unprovisioned emails and correct role assignment.
-- **Status:** Locked
+  - [x] Task 2.1: Implement updated Prisma schema with 5 roles (`SUPER_ADMIN`, `HOD`, `WEB_MANAGER`, `FACULTY`, `STUDENT`) and granular permission models.
+  - [x] Task 2.2: Configure Google OAuth with pre-provisioned email matching and institutional domain check.
+  - [x] Task 2.3: Implement secure Super Admin initial bootstrapping CLI/script.
+- **Verification:** Unit and integration tests demonstrating rejection of unprovisioned emails, correct role assignment, and Neon PostgreSQL schema synchronization (14/14 tests passed in `tests/auth-rbac.test.ts`).
+- **Status:** Completed & Empirically Verified
 
 ---
 

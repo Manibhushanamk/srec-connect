@@ -222,7 +222,7 @@ export default async function EventsPage({
                 >
                   <option value="all">All Years</option>
                   {data.academicYears.map((year) => (
-                    <option key={year} value={year}>{year}</option>
+                    <option key={year || ''} value={year || ''}>{year}</option>
                   ))}
                 </select>
               </div>

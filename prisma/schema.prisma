@@ -1,0 +1,728 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ── ROLES & PERMISSIONS (Phase 2) ──
+
+enum Role {
+  SUPER_ADMIN
+  HOD
+  WEB_MANAGER
+  FACULTY
+  STUDENT
+  ADMIN // legacy alias for backward compatibility
+}
+
+enum AdminType {
+  ROOT
+  DEPARTMENT
+  MANAGER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+model ApprovedEmailDomain {
+  id        String   @id @default(cuid())
+  domain    String   @unique // e.g. "srecnandyal.edu.in"
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  key         String           @unique // e.g. "users.student.create", "achievements.review"
+  description String?
+  roles       RolePermission[]
+  createdAt   DateTime         @default(now())
+}
+
+model RolePermission {
+  id           String     @id @default(cuid())
+  role         Role
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([role, permissionId])
+  @@index([role])
+}
+
+// ── CORE IDENTITY & ACADEMIC STRUCTURE ──
+
+model User {
+  id             String      @id @default(cuid())
+  email          String      @unique // normalized lowercase
+  name           String?
+  role           Role        @default(STUDENT)
+  adminType      AdminType?  // legacy support
+  isRoot         Boolean     @default(false) // legacy support
+  status         UserStatus  @default(ACTIVE)
+  avatarUrl      String?
+  departmentId   String?
+  department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentName String?
+  
+  studentId      String?     @unique
+  student        Student?    @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  facultyId      String?     @unique
+  faculty        Faculty?    @relation(fields: [facultyId], references: [id], onDelete: SetNull)
+
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
+
+  // Social Relations
+  posts          Post[]            @relation("UserPosts")
+  comments       PostComment[]     @relation("UserComments")
+  likes          PostLike[]        @relation("UserLikes")
+  bookmarks      PostBookmark[]    @relation("UserBookmarks")
+  reports        ContentReport[]   @relation("UserReports")
+
+  // Academic Relations
+  achievementsCreated Achievement[]      @relation("CreatedBy")
+  eventsCreated       Event[]            @relation("CreatedBy")
+  eventRegistrations  EventRegistration[]
+  eventAttendances    EventAttendance[]
+  uploadedBatches     PendingBulkBatch[] @relation("BatchUploader")
+  
+  // Incident Relations
+  reportedIncidents   Incident[]         @relation("ReportedIncidents")
+  incidentResponses   IncidentResponse[] @relation("IncidentResponses")
+  incidentActions     IncidentAction[]   @relation("IncidentActions")
+  
+  auditLogs           AuditLog[]
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+}
+
+model Department {
+  id           String    @id @default(cuid())
+  code         String    @unique // AIML, CSE, ECE, etc.
+  name         String
+  fullName     String
+  shortName    String?
+  description  String?
+  icon         String    @default("BookOpen")
+  hodName      String?
+  hodEmail     String?
+  hodPhone     String?
+  vision       String?
+  mission      String?
+  intake       Int?      @default(60)
+  established  Int?      @default(2022)
+  bannerUrl    String?
+  displayOrder Int       @default(0)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  users        User[]
+  faculty      Faculty[]
+  students     Student[]
+  achievements Achievement[]
+  events       Event[]
+  bulkBatches  PendingBulkBatch[]
+
+  @@index([code])
+}
+
+model Batch {
+  id        String    @id @default(cuid())
+  name      String    @unique // e.g. "2022-2026"
+  startYear Int
+  endYear   Int
+  isActive  Boolean   @default(true)
+  students  Student[]
+  createdAt DateTime  @default(now())
+}
+
+model Section {
+  id        String    @id @default(cuid())
+  name      String    // e.g. "A", "B"
+  batchName String?
+  students  Student[]
+  createdAt DateTime  @default(now())
+
+  @@unique([name, batchName])
+}
+
+model Student {
+  id             String      @id @default(cuid())
+  rollNumber     String      @unique // e.g. "22091A3201" (Permanent immutable anchor)
+  name           String
+  departmentId   String?
+  department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentName String?
+  batchId        String?
+  batchRel       Batch?      @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  batch          String?     // "2022-2026"
+  sectionId      String?
+  sectionRel     Section?    @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  section        String?     @default("A")
+  email          String?
+  phone          String?
+  bio            String?
+  headline       String?
+  avatarUrl      String?
+  linkedinUrl    String?
+  githubUrl      String?
+  portfolioUrl   String?
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
+
+  user           User?
+  primaryAchievements Achievement[]           @relation("PrimaryStudent")
+  teamAchievements    AchievementTeamMember[]
+  incidents           Incident[]
+
+  @@index([rollNumber])
+  @@index([departmentId])
+  @@index([batch])
+}
+
+model Faculty {
+  id             String      @id @default(cuid())
+  name           String
+  designation    String      // "Associate Professor & HOD"
+  roleCategory   String?     // "HOD", "PROFESSOR", "ASSOCIATE_PROFESSOR", "ASSISTANT_PROFESSOR"
+  departmentId   String?
+  department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentName String?
+  degrees        String?     // "M.Tech, Ph.D."
+  experience     String?     // "12+ Years"
+  email          String?
+  cabin          String?
+  specialization String?
+  bio            String?
+  avatarUrl      String?
+  googleScholar  String?
+  displayOrder   Int         @default(0)
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
+
+  user           User?
+  achievements   Achievement[]
+
+  @@index([departmentId])
+  @@index([roleCategory])
+}
+
+// ── SOCIAL COMMUNITY & FEED (Instagram-inspired) ──
+
+enum PostVisibility {
+  PUBLIC
+  COLLEGE_ONLY
+  PRIVATE
+}
+
+model Post {
+  id           String         @id @default(cuid())
+  authorId     String
+  author       User           @relation("UserPosts", fields: [authorId], references: [id], onDelete: Cascade)
+  content      String
+  visibility   PostVisibility @default(PUBLIC)
+  isPinned     Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  
+  media        PostMedia[]
+  comments     PostComment[]
+  likes        PostLike[]
+  bookmarks    PostBookmark[]
+  reports      ContentReport[]
+
+  achievementId String?
+  achievement   Achievement?   @relation(fields: [achievementId], references: [id], onDelete: SetNull)
+
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([visibility])
+}
+
+model PostMedia {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  url       String
+  thumbnailUrl String?
+  width     Int?
+  height    Int?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("UserLikes", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model PostComment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation("UserComments", fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+  @@index([authorId])
+}
+
+model PostBookmark {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation("UserBookmarks", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([userId])
+}
+
+model ContentReport {
+  id          String   @id @default(cuid())
+  postId      String
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reporterId  String
+  reporter    User     @relation("UserReports", fields: [reporterId], references: [id], onDelete: Cascade)
+  reason      String
+  status      String   @default("PENDING") // PENDING, REVIEWED, DISMISSED
+  createdAt   DateTime @default(now())
+
+  @@index([postId])
+  @@index([status])
+}
+
+// ── ACADEMIC ACHIEVEMENTS & VERIFICATION (LinkedIn-inspired) ──
+
+enum PersonType {
+  STUDENT
+  FACULTY
+}
+
+enum SubmissionStatus {
+  DRAFT
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  PUBLISHED
+  REJECTED
+  RESUBMISSION_REQUIRED
+  WITHDRAWN
+}
+
+model Category {
+  id           String    @id @default(cuid())
+  name         String    @unique
+  description  String?
+  type         String    @default("BOTH") // "ACHIEVEMENT" | "EVENT" | "BOTH"
+  displayOrder Int       @default(0)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  achievements Achievement[]
+  events       Event[]
+
+  @@index([name])
+}
+
+model Achievement {
+  id                    String           @id @default(cuid())
+  title                 String
+  description           String?
+  personName            String
+  personType            PersonType       @default(STUDENT)
+  participationType     String           @default("SOLO") // "SOLO" | "TEAM"
+  teamName              String?
+  level                 String           @default("COLLEGE")
+  positionRank          String?
+  organizationEventName String
+  academicYear          String
+  achievementDate       DateTime
+  
+  departmentId          String?
+  department            Department?      @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentName        String?
+  categoryId            String
+  category              Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  primaryStudentId      String?
+  primaryStudent        Student?         @relation("PrimaryStudent", fields: [primaryStudentId], references: [id], onDelete: SetNull)
+  primaryStudentRoll    String?
+
+  facultyId             String?
+  faculty               Faculty?         @relation(fields: [facultyId], references: [id], onDelete: SetNull)
+  facultyDesignation    String?
+
+  teamMembers           AchievementTeamMember[]
+  media                 AchievementMedia[]
+  posts                 Post[]
+
+  tags                  String?
+  certificateUrl        String?
+  googleDriveUrl        String?
+  externalLinks         String?
+
+  status                SubmissionStatus @default(PENDING)
+  rejectionReason       String?
+  publishedAt           DateTime?
+
+  createdById           String?
+  createdBy             User?            @relation("CreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  deletedAt             DateTime?
+
+  @@index([departmentId])
+  @@index([categoryId])
+  @@index([status])
+  @@index([academicYear])
+  @@index([primaryStudentRoll])
+}
+
+model AchievementTeamMember {
+  id            String      @id @default(cuid())
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  studentId     String?
+  student       Student?    @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  rollNumber    String
+  studentName   String
+  isLeader      Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  @@unique([achievementId, rollNumber])
+  @@index([achievementId])
+}
+
+model AchievementMedia {
+  id            String      @id @default(cuid())
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  url           String
+  fileName      String
+  fileType      String
+  fileSize      Int
+  isCover       Boolean     @default(false)
+  isPublic      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+
+  @@index([achievementId])
+}
+
+// ── EVENTS & ATTENDANCE ──
+
+model Event {
+  id                    String              @id @default(cuid())
+  title                 String
+  description           String?
+  departmentId          String?
+  department            Department?         @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentName        String?
+  categoryId            String
+  category              Category            @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  startDate             DateTime
+  endDate               DateTime
+  venue                 String
+  organizer             String
+  speaker               String?
+  speakerResourcePerson String?
+  academicYear          String?             @default("2025-2026")
+  posterUrl             String?
+  registrationInfo      String?
+  registrationUrl       String?
+  googleDriveUrl        String?
+  participantCount      Int                 @default(0)
+  capacity              Int                 @default(100)
+  registrationDeadline  DateTime?
+  whatsappGroupUrl      String?
+  status                String              @default("UPCOMING")
+  publishedAt           DateTime?
+  
+  createdById           String?
+  createdBy             User?               @relation("CreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  deletedAt             DateTime?
+
+  media                 EventMedia[]
+  registrations         EventRegistration[]
+  attendances           EventAttendance[]
+
+  @@index([departmentId])
+  @@index([categoryId])
+  @@index([status])
+}
+
+model EventMedia {
+  id          String   @id @default(cuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  url         String
+  fileName    String
+  fileType    String
+  fileSize    Int
+  isPublic    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([eventId])
+}
+
+model EventRegistration {
+  id           String   @id @default(cuid())
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status       String   @default("REGISTERED") // REGISTERED, WAITLISTED, CANCELLED
+  registeredAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+}
+
+model EventAttendance {
+  id            String   @id @default(cuid())
+  eventId       String
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  checkInMethod String   @default("MANUAL") // MANUAL, QR_SCAN
+  checkedInAt   DateTime @default(now())
+
+  @@unique([eventId, userId])
+  @@index([eventId])
+  @@index([userId])
+}
+
+// ── COMPLAINTS & DISCIPLINE (Phase 8 models ready) ──
+
+enum IncidentCategory {
+  MOBILE_PHONE_USAGE
+  ATTENDANCE_LATE_ARRIVAL
+  CLASSROOM_DISCIPLINE
+  INCOMPLETE_ASSIGNMENTS
+  EXAMINATION_ISSUES
+  STUDENT_TO_STUDENT
+  FACULTY_GRIEVANCE
+  INFRASTRUCTURE
+  MISCONDUCT
+  OTHER
+}
+
+enum IncidentPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  REPORTED
+  UNDER_REVIEW
+  AWAITING_STUDENT_RESPONSE
+  ACTION_REQUIRED
+  ESCALATED_TO_HOD
+  RESOLVED
+  DISMISSED
+}
+
+enum IncidentOutcome {
+  VERBAL_WARNING
+  WRITTEN_WARNING
+  COUNSELLING
+  CORRECTIVE_TASK
+  HOD_REVIEW
+  FORMAL_ACTION
+  NO_ACTION
+}
+
+model Incident {
+  id                String             @id @default(cuid())
+  reporterId        String
+  reporter          User               @relation("ReportedIncidents", fields: [reporterId], references: [id], onDelete: Cascade)
+  studentId         String?
+  student           Student?           @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  title             String
+  description       String
+  category          IncidentCategory   @default(CLASSROOM_DISCIPLINE)
+  priority          IncidentPriority   @default(MEDIUM)
+  isConfidentialHOD Boolean            @default(false)
+  status            IncidentStatus     @default(REPORTED)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  responses         IncidentResponse[]
+  actions           IncidentAction[]
+
+  @@index([reporterId])
+  @@index([studentId])
+  @@index([status])
+  @@index([isConfidentialHOD])
+}
+
+model IncidentResponse {
+  id         String   @id @default(cuid())
+  incidentId String
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation("IncidentResponses", fields: [authorId], references: [id], onDelete: Cascade)
+  message    String
+  createdAt  DateTime @default(now()) // Immutable
+
+  @@index([incidentId])
+  @@index([authorId])
+}
+
+model IncidentAction {
+  id         String          @id @default(cuid())
+  incidentId String
+  incident   Incident        @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  actorId    String
+  actor      User            @relation("IncidentActions", fields: [actorId], references: [id], onDelete: Cascade)
+  outcome    IncidentOutcome
+  notes      String?
+  createdAt  DateTime        @default(now())
+
+  @@index([incidentId])
+  @@index([actorId])
+}
+
+// ── TWO-STAGE BULK UPLOAD STAGING MODELS ──
+
+enum BatchStatus {
+  PENDING_REVIEW
+  PARTIALLY_ACCEPTED
+  ACCEPTED
+  REJECTED
+}
+
+model PendingBulkBatch {
+  id             String            @id @default(cuid())
+  fileName       String
+  fileType       String            // "XLSX" | "CSV" | "JSON" | "FORM_BULK"
+  batchType      String            @default("ACHIEVEMENT") // "ACHIEVEMENT" | "WHITELIST_STUDENT" | "WHITELIST_FACULTY" | "EVENT"
+  totalRows      Int
+  acceptedRows   Int               @default(0)
+  rejectedRows   Int               @default(0)
+  status         BatchStatus       @default(PENDING_REVIEW)
+  departmentId   String?
+  department     Department?       @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  uploaderId     String
+  uploader       User              @relation("BatchUploader", fields: [uploaderId], references: [id], onDelete: Cascade)
+  items          PendingBulkItem[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([status])
+  @@index([departmentId])
+  @@index([uploaderId])
+  @@index([batchType])
+}
+
+model PendingBulkItem {
+  id             String           @id @default(cuid())
+  batchId        String
+  batch          PendingBulkBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  rowIndex       Int
+  entityType     String           // "ACHIEVEMENT" | "STUDENT" | "FACULTY" | "EVENT"
+  
+  title          String?
+  personName     String?
+  rollNumber     String?
+  departmentCode String?
+  categoryName   String?
+  academicYear   String?
+  date           String?
+  level          String?
+  positionRank   String?
+  organization   String?
+  teamMembersRaw String?
+
+  email          String?
+  batchYear      String?
+  section        String?
+  designation    String?
+  roleCategory   String?
+  
+  extraData      String?
+
+  isStudentLinked Boolean         @default(false)
+  linkedStudentId String?
+  
+  collidingPublishedId String?
+  collidingSimilarity  Float?
+  collisionAction      String?
+  
+  validationError String?
+  isAccepted      Boolean?
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([batchId])
+  @@index([isStudentLinked])
+  @@index([collidingPublishedId])
+  @@index([email])
+  @@index([rollNumber])
+}
+
+// ── AUDIT LOGS & SETTINGS ──
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Cascade)
+  actorEmail String
+  actorRole  String
+  action     String
+  entityType String
+  entityId   String?
+  metadata   String?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}

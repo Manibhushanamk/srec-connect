@@ -47,21 +47,25 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
 Badge.displayName = 'Badge';
 
 interface StatusBadgeProps {
-  status: 'DRAFT' | 'PENDING' | 'PUBLISHED' | 'REJECTED' | 'UPCOMING' | 'COMPLETED' | 'CANCELLED';
+  status: string;
   size?: 'sm' | 'md' | 'lg';
 }
 
-const statusConfig = {
-  DRAFT: { variant: 'slate' as const, label: 'Draft' },
-  PENDING: { variant: 'amber' as const, label: 'Pending Review' },
-  PUBLISHED: { variant: 'emerald' as const, label: 'Published' },
-  REJECTED: { variant: 'rose' as const, label: 'Rejected' },
-  UPCOMING: { variant: 'cyan' as const, label: 'Upcoming' },
-  COMPLETED: { variant: 'emerald' as const, label: 'Completed' },
-  CANCELLED: { variant: 'rose' as const, label: 'Cancelled' },
+const statusConfig: Record<string, { variant: 'slate' | 'amber' | 'emerald' | 'rose' | 'cyan' | 'brand'; label: string }> = {
+  DRAFT: { variant: 'slate', label: 'Draft' },
+  PENDING: { variant: 'amber', label: 'Pending Review' },
+  UNDER_REVIEW: { variant: 'amber', label: 'Under Review' },
+  APPROVED: { variant: 'emerald', label: 'Approved' },
+  PUBLISHED: { variant: 'emerald', label: 'Published' },
+  REJECTED: { variant: 'rose', label: 'Rejected' },
+  RESUBMISSION_REQUIRED: { variant: 'amber', label: 'Resubmission Required' },
+  WITHDRAWN: { variant: 'slate', label: 'Withdrawn' },
+  UPCOMING: { variant: 'cyan', label: 'Upcoming' },
+  COMPLETED: { variant: 'emerald', label: 'Completed' },
+  CANCELLED: { variant: 'rose', label: 'Cancelled' },
 };
 
 export function StatusBadge({ status, size = 'md' }: StatusBadgeProps) {
-  const config = statusConfig[status];
+  const config = statusConfig[status] || { variant: 'slate', label: status };
   return <Badge variant={config.variant} size={size} glow>{config.label}</Badge>;
 }

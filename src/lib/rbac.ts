@@ -1,252 +1,159 @@
-import { Role, AdminType, SubmissionStatus, BatchStatus } from '@prisma/client';
+import { Role, UserStatus } from '@prisma/client';
 
 export type UserRole = Role;
-export type UserAdminType = AdminType;
 
+export interface AuthUserContext {
+  id: string;
+  email: string;
+  role: Role;
+  status: UserStatus;
+  departmentId?: string | null;
+  studentId?: string | null;
+  facultyId?: string | null;
+}
+
+export const PERMISSIONS = {
+  // User Management
+  USERS_STUDENT_CREATE: 'users.student.create',
+  USERS_STUDENT_IMPORT: 'users.student.import',
+  USERS_FACULTY_CREATE: 'users.faculty.create',
+  USERS_MANAGE_ROLES: 'users.manage_roles',
+  USERS_SUSPEND: 'users.suspend',
+
+  // Achievements
+  ACHIEVEMENTS_SUBMIT: 'achievements.submit',
+  ACHIEVEMENTS_REVIEW: 'achievements.review',
+  ACHIEVEMENTS_ESCALATE: 'achievements.escalate',
+  ACHIEVEMENTS_DELETE: 'achievements.delete',
+
+  // Incidents & Discipline
+  INCIDENTS_REPORT: 'incidents.report',
+  INCIDENTS_RESPOND: 'incidents.respond',
+  INCIDENTS_ASSIGN: 'incidents.assign',
+  INCIDENTS_RESOLVE: 'incidents.resolve',
+  INCIDENTS_CONFIDENTIAL_VIEW: 'incidents.confidential_view',
+
+  // Events & QR Attendance
+  EVENTS_CREATE: 'events.create',
+  EVENTS_PUBLISH: 'events.publish',
+  EVENTS_REGISTER: 'events.register',
+  EVENTS_CHECKIN: 'events.checkin',
+
+  // Documents & Storage
+  DOCUMENTS_MANAGE: 'documents.manage',
+  DOCUMENTS_UPLOAD_CERTIFICATE: 'documents.upload_certificate',
+
+  // Social & Moderation
+  POSTS_CREATE: 'posts.create',
+  POSTS_MODERATE: 'posts.moderate',
+
+  // Analytics & System
+  ANALYTICS_VIEW: 'analytics.view',
+  SYSTEM_SETTINGS_MANAGE: 'system.settings.manage',
+} as const;
+
+export type PermissionKey = typeof PERMISSIONS[keyof typeof PERMISSIONS];
+
+/**
+ * Default role-to-permission mapping per Blueprint specifications
+ */
+export const DEFAULT_ROLE_PERMISSIONS: Record<Role, PermissionKey[]> = {
+  SUPER_ADMIN: Object.values(PERMISSIONS),
+  ADMIN: Object.values(PERMISSIONS), // legacy alias
+  HOD: [
+    PERMISSIONS.ACHIEVEMENTS_SUBMIT,
+    PERMISSIONS.ACHIEVEMENTS_REVIEW,
+    PERMISSIONS.ACHIEVEMENTS_ESCALATE,
+    PERMISSIONS.INCIDENTS_REPORT,
+    PERMISSIONS.INCIDENTS_RESPOND,
+    PERMISSIONS.INCIDENTS_ASSIGN,
+    PERMISSIONS.INCIDENTS_RESOLVE,
+    PERMISSIONS.INCIDENTS_CONFIDENTIAL_VIEW,
+    PERMISSIONS.EVENTS_CREATE,
+    PERMISSIONS.EVENTS_PUBLISH,
+    PERMISSIONS.EVENTS_CHECKIN,
+    PERMISSIONS.DOCUMENTS_MANAGE,
+    PERMISSIONS.DOCUMENTS_UPLOAD_CERTIFICATE,
+    PERMISSIONS.POSTS_CREATE,
+    PERMISSIONS.POSTS_MODERATE,
+    PERMISSIONS.ANALYTICS_VIEW,
+  ],
+  WEB_MANAGER: [
+    PERMISSIONS.USERS_STUDENT_CREATE,
+    PERMISSIONS.USERS_STUDENT_IMPORT,
+    PERMISSIONS.USERS_FACULTY_CREATE,
+    PERMISSIONS.EVENTS_CREATE,
+    PERMISSIONS.EVENTS_PUBLISH,
+    PERMISSIONS.EVENTS_CHECKIN,
+    PERMISSIONS.DOCUMENTS_MANAGE,
+    PERMISSIONS.DOCUMENTS_UPLOAD_CERTIFICATE,
+    PERMISSIONS.POSTS_CREATE,
+    PERMISSIONS.POSTS_MODERATE,
+    PERMISSIONS.ANALYTICS_VIEW,
+  ],
+  FACULTY: [
+    PERMISSIONS.ACHIEVEMENTS_SUBMIT,
+    PERMISSIONS.ACHIEVEMENTS_REVIEW,
+    PERMISSIONS.INCIDENTS_REPORT,
+    PERMISSIONS.INCIDENTS_RESPOND,
+    PERMISSIONS.EVENTS_CREATE,
+    PERMISSIONS.EVENTS_REGISTER,
+    PERMISSIONS.EVENTS_CHECKIN,
+    PERMISSIONS.DOCUMENTS_UPLOAD_CERTIFICATE,
+    PERMISSIONS.POSTS_CREATE,
+  ],
+  STUDENT: [
+    PERMISSIONS.ACHIEVEMENTS_SUBMIT,
+    PERMISSIONS.INCIDENTS_REPORT,
+    PERMISSIONS.INCIDENTS_RESPOND,
+    PERMISSIONS.EVENTS_REGISTER,
+    PERMISSIONS.POSTS_CREATE,
+    PERMISSIONS.DOCUMENTS_UPLOAD_CERTIFICATE,
+  ],
+};
+
+/**
+ * Checks if a given user has a specific granular permission
+ */
+export function hasPermission(user: AuthUserContext | null | undefined, permission: PermissionKey): boolean {
+  if (!user || user.status !== 'ACTIVE') return false;
+  if (user.role === 'SUPER_ADMIN') return true;
+
+  const allowedPermissions = DEFAULT_ROLE_PERMISSIONS[user.role] || [];
+  return allowedPermissions.includes(permission);
+}
+
+/**
+ * Asserts that a user has a specific permission, throws 403 error otherwise
+ */
+export function requirePermission(user: AuthUserContext | null | undefined, permission: PermissionKey): void {
+  if (!hasPermission(user, permission)) {
+    throw new Error(`Forbidden: Missing required permission [${permission}] for role [${user?.role || 'ANONYMOUS'}]`);
+  }
+}
+
+/**
+ * Access check for administrative console
+ */
 export interface PermissionContext {
   userId: string;
-  role: UserRole;
-  adminType: UserAdminType | null;
-  isRoot: boolean;
-  departmentId: string | null;
+  role: Role;
+  adminType?: any;
+  isRoot?: boolean;
+  departmentId?: string | null;
 }
 
-export interface AccessControlResult {
-  allowed: boolean;
-  reason?: string;
-}
-
-export const ROLE_HIERARCHY = {
-  [Role.ADMIN]: 3,
-  [Role.FACULTY]: 2,
-  [Role.STUDENT]: 1,
-};
-
-export const ADMIN_TYPE_HIERARCHY = {
-  [AdminType.ROOT]: 3,
-  [AdminType.DEPARTMENT]: 2,
-  [AdminType.MANAGER]: 1,
-};
-
-export function getRoleLevel(role: UserRole): number {
-  return ROLE_HIERARCHY[role] || 0;
-}
-
-export function getAdminTypeLevel(adminType: UserAdminType | null): number {
-  if (!adminType) return 0;
-  return ADMIN_TYPE_HIERARCHY[adminType] || 0;
-}
-
-export function canAccessAdminPanel(context: PermissionContext): AccessControlResult {
-  if (context.role !== Role.ADMIN) {
-    return { allowed: false, reason: 'Only administrators can access the admin panel' };
-  }
-  return { allowed: true };
-}
-
-export function canManageUsers(context: PermissionContext, targetAdminType?: UserAdminType): AccessControlResult {
-  if (context.isRoot) return { allowed: true };
-  if (context.role !== Role.ADMIN) {
-    return { allowed: false, reason: 'Only administrators can manage users' };
-  }
-  
-  if (context.adminType === AdminType.ROOT) return { allowed: true };
-  
-  if (context.adminType === AdminType.DEPARTMENT) {
-    if (targetAdminType === AdminType.ROOT) {
-      return { allowed: false, reason: 'Department admins cannot manage root admins' };
-    }
-    if (targetAdminType === AdminType.DEPARTMENT) {
-      return { allowed: false, reason: 'Department admins cannot manage other department admins' };
-    }
-    return { allowed: true };
-  }
-  
-  if (context.adminType === AdminType.MANAGER) {
-    return { allowed: false, reason: 'Sub-admins cannot manage users' };
-  }
-  
-  return { allowed: false, reason: 'Insufficient permissions' };
-}
-
-export function canManageDepartment(context: PermissionContext, targetDepartmentId: string): AccessControlResult {
-  if (context.isRoot) return { allowed: true };
-  if (context.role !== Role.ADMIN) {
-    return { allowed: false, reason: 'Only administrators can manage departments' };
-  }
-  
-  if (context.adminType === AdminType.DEPARTMENT && context.departmentId === targetDepartmentId) {
-    return { allowed: true };
-  }
-  
-  return { allowed: false, reason: 'You can only manage your own department' };
-}
-
-export function canManageAchievements(context: PermissionContext, achievementDepartmentId: string): AccessControlResult {
-  if (context.isRoot) return { allowed: true };
-  if (context.role === Role.ADMIN) {
-    if (context.adminType === AdminType.DEPARTMENT && context.departmentId === achievementDepartmentId) {
-      return { allowed: true };
-    }
-    if (context.adminType === AdminType.MANAGER && context.departmentId === achievementDepartmentId) {
-      return { allowed: true };
-    }
-    if (context.adminType === AdminType.ROOT) {
-      return { allowed: true };
-    }
-  }
-  return { allowed: false, reason: 'You can only manage achievements in your department' };
-}
-
-export function canManageEvents(context: PermissionContext, eventDepartmentId: string): AccessControlResult {
-  if (context.isRoot) return { allowed: true };
-  if (context.role === Role.ADMIN) {
-    if (context.adminType === AdminType.DEPARTMENT && context.departmentId === eventDepartmentId) {
-      return { allowed: true };
-    }
-    if (context.adminType === AdminType.ROOT) {
-      return { allowed: true };
-    }
-  }
-  return { allowed: false, reason: 'You can only manage events in your department' };
-}
-
-export function canManageBulkUpload(context: PermissionContext, batchDepartmentId: string | null): AccessControlResult {
-  if (context.isRoot) return { allowed: true };
-  if (context.role === Role.ADMIN) {
-    if (context.adminType === AdminType.DEPARTMENT && context.departmentId === batchDepartmentId) {
-      return { allowed: true };
-    }
-    if (context.adminType === AdminType.ROOT) {
-      return { allowed: true };
-    }
-  }
-  return { allowed: false, reason: 'You can only manage bulk uploads for your department' };
-}
-
-export function canRollbackSnapshots(context: PermissionContext): AccessControlResult {
-  if (context.isRoot) return { allowed: true };
-  return { allowed: false, reason: 'Only root admin can perform snapshot rollbacks' };
-}
-
-export function canTransferRootOwnership(context: PermissionContext): AccessControlResult {
-  if (context.isRoot) return { allowed: true };
-  return { allowed: false, reason: 'Only current root admin can transfer ownership' };
-}
-
-export function canViewAllDepartments(context: PermissionContext): AccessControlResult {
-  if (context.isRoot) return { allowed: true };
-  if (context.role === Role.ADMIN && context.adminType === AdminType.ROOT) return { allowed: true };
-  return { allowed: false, reason: 'Only root admin can view all departments' };
-}
-
-export function canAccessDeduplication(context: PermissionContext): AccessControlResult {
-  if (context.isRoot) return { allowed: true };
-  if (context.role === Role.ADMIN && (context.adminType === AdminType.ROOT || context.adminType === AdminType.DEPARTMENT)) {
-    return { allowed: true };
-  }
-  return { allowed: false, reason: 'Insufficient permissions for deduplication' };
-}
-
-export function canExportData(context: PermissionContext, targetDepartmentId?: string): AccessControlResult {
-  if (context.isRoot) return { allowed: true };
-  if (context.role === Role.ADMIN) {
-    if (context.adminType === AdminType.ROOT) return { allowed: true };
-    if (context.adminType === AdminType.DEPARTMENT && context.departmentId === targetDepartmentId) {
-      return { allowed: true };
-    }
-  }
-  return { allowed: false, reason: 'Insufficient permissions for data export' };
+export function canAccessAdmin(user: AuthUserContext | null | undefined): boolean {
+  if (!user || user.status !== 'ACTIVE') return false;
+  return user.role === 'SUPER_ADMIN' || user.role === 'HOD' || user.role === 'WEB_MANAGER' || user.role === 'ADMIN';
 }
 
 export function getVisibleMenuGroups(context: PermissionContext): string[] {
-  const baseGroups = ['overview', 'achievements', 'events', 'students', 'faculty'];
-  
-  if (context.isRoot || context.adminType === AdminType.ROOT) {
-    return [
-      'overview',
-      'users',
-      'departments',
-      'achievements',
-      'events',
-      'students',
-      'faculty',
-      'categories',
-      'bulk-upload',
-      'bulk-review',
-      'deduplication',
-      'analytics',
-      'export',
-      'audit-logs',
-      'settings',
-    ];
+  if (context.isRoot || context.role === 'SUPER_ADMIN' || context.role === 'ADMIN') {
+    return ['overview', 'users', 'departments', 'academic', 'system'];
   }
-  
-  if (context.adminType === AdminType.DEPARTMENT) {
-    return [
-      'overview',
-      'achievements',
-      'events',
-      'students',
-      'faculty',
-      'users',
-      'bulk-upload',
-      'bulk-review',
-      'export',
-      'settings',
-    ];
+  if (context.role === 'HOD' || context.role === 'WEB_MANAGER') {
+    return ['overview', 'users', 'departments', 'academic'];
   }
-  
-  if (context.adminType === AdminType.MANAGER) {
-    return [
-      'overview',
-      'achievements',
-      'students',
-      'faculty',
-      'export',
-    ];
-  }
-  
-  return [];
+  return ['overview'];
 }
-
-export function getDashboardRoute(role: UserRole, adminType: UserAdminType | null, isRoot: boolean): string {
-  if (isRoot || role === Role.ADMIN) {
-    return '/admin';
-  }
-  if (role === Role.FACULTY) {
-    return '/dashboard/faculty';
-  }
-  if (role === Role.STUDENT) {
-    return '/dashboard/student';
-  }
-  return '/';
-}
-
-export const SUBMISSION_STATUS_LABELS: Record<SubmissionStatus, string> = {
-  DRAFT: 'Draft',
-  PENDING: 'Pending Review',
-  PUBLISHED: 'Published',
-  REJECTED: 'Rejected',
-};
-
-export const SUBMISSION_STATUS_COLORS: Record<SubmissionStatus, string> = {
-  DRAFT: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
-  PENDING: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-  PUBLISHED: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-  REJECTED: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
-};
-
-export const BATCH_STATUS_LABELS: Record<BatchStatus, string> = {
-  PENDING_REVIEW: 'Pending Review',
-  PARTIALLY_ACCEPTED: 'Partially Accepted',
-  ACCEPTED: 'Accepted',
-  REJECTED: 'Rejected',
-};
-
-export const BATCH_STATUS_COLORS: Record<BatchStatus, string> = {
-  PENDING_REVIEW: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-  PARTIALLY_ACCEPTED: 'bg-sky-500/20 text-sky-400 border-sky-500/30',
-  ACCEPTED: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-  REJECTED: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
-};
