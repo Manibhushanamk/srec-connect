@@ -1,5 +1,7 @@
+'use client';
+
 import { cn } from '@/lib/utils';
-import { ReactNode, Fragment } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 
@@ -26,7 +28,13 @@ export function Modal({
   closeOnOverlayClick = true,
   className,
 }: ModalProps) {
-  if (!isOpen) return null;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted || !isOpen) return null;
 
   const sizes = {
     sm: 'max-w-md',

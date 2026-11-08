@@ -119,8 +119,7 @@ function MenuGroup({
   visibleGroups,
   menuKey,
 }: MenuGroupProps) {
-  if (!visibleGroups.has(menuKey)) return null;
-
+  const isVisible = visibleGroups.has(menuKey);
   const isActive = group.items.some(
     (item) => pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href + '/'))
   );
@@ -131,6 +130,8 @@ function MenuGroup({
       setIsOpen(true);
     }
   }, [isActive]);
+
+  if (!isVisible) return null;
 
   return (
     <div className="space-y-1">

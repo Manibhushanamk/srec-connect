@@ -67,11 +67,13 @@ export default function AdminEventsPage() {
 
   useEffect(() => {
     fetch('/api/categories')
-      .then((r) => r.json())
-      .then((d) => setCategories(d.categories || []));
+      .then((r) => (r.ok ? r.json() : { categories: [] }))
+      .then((d) => setCategories(d.categories || []))
+      .catch(() => setCategories([]));
     fetch('/api/departments')
-      .then((r) => r.json())
-      .then((d) => setDepartments(d.departments || []));
+      .then((r) => (r.ok ? r.json() : { departments: [] }))
+      .then((d) => setDepartments(d.departments || []))
+      .catch(() => setDepartments([]));
   }, []);
 
   const handleCreate = async (e: React.FormEvent) => {
