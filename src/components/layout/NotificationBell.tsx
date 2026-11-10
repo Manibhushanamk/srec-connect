@@ -94,31 +94,44 @@ export function NotificationBell() {
 
       {/* Popover Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl z-50 overflow-hidden backdrop-blur-xl">
-          <div className="p-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <div className="fixed sm:absolute left-3 right-3 sm:left-auto sm:right-0 top-16 sm:top-full mt-2 sm:w-96 max-w-sm sm:max-w-none ml-auto rounded-2xl bg-card border border-border shadow-2xl z-50 overflow-hidden backdrop-blur-xl animate-fade-in">
+          <div className="p-3.5 border-b border-border flex items-center justify-between bg-secondary/40">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-white">Notifications</span>
+              <span className="text-xs font-bold text-foreground">Notifications</span>
               {unreadCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-rose-500/20 text-rose-500 border border-rose-500/30">
                   {unreadCount} new
                 </span>
               )}
             </div>
 
-            {unreadCount > 0 && (
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleMarkAllRead}
+                  className="text-[11px] text-primary hover:underline font-medium transition-colors"
+                >
+                  Mark all read
+                </button>
+              )}
               <button
-                onClick={handleMarkAllRead}
-                className="text-[11px] text-cyan-400 hover:text-cyan-300 font-medium transition-colors"
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+                aria-label="Close notifications"
               >
-                Mark all read
+                <X className="w-3.5 h-3.5" />
               </button>
-            )}
+            </div>
           </div>
 
-          <div className="max-h-[340px] overflow-y-auto divide-y divide-slate-800/60">
+          <div className="max-h-[340px] overflow-y-auto divide-y divide-border/60 no-scrollbar">
             {notifications.length === 0 ? (
-              <div className="p-8 text-center text-xs text-slate-500">
-                No notifications right now.
+              <div className="p-8 text-center text-xs text-muted-foreground space-y-1.5">
+                <Bell className="w-7 h-7 text-muted-foreground/30 mx-auto" />
+                <p className="font-semibold text-foreground/80">All Caught Up</p>
+                <p className="text-[11px] text-muted-foreground">No notifications right now.</p>
               </div>
             ) : (
               notifications.map((n) => (
@@ -126,22 +139,22 @@ export function NotificationBell() {
                   key={n.id}
                   href={n.link || '/'}
                   onClick={() => handleItemClick(n.id, n.isRead)}
-                  className={`block p-3.5 hover:bg-slate-800/40 transition-colors text-xs ${
-                    n.isRead ? 'opacity-70' : 'bg-cyan-950/15'
+                  className={`block p-3.5 hover:bg-secondary/60 transition-colors text-xs ${
+                    n.isRead ? 'opacity-70' : 'bg-primary/5'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <p className={`font-semibold ${n.isRead ? 'text-slate-300' : 'text-white'}`}>
+                    <p className={`font-semibold ${n.isRead ? 'text-muted-foreground' : 'text-foreground'}`}>
                       {n.title}
                     </p>
                     {!n.isRead && (
-                      <span className="w-2 h-2 rounded-full bg-cyan-400 flex-shrink-0 mt-1" />
+                      <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1" />
                     )}
                   </div>
-                  <p className="text-slate-400 text-[11px] mt-1 line-clamp-2">
+                  <p className="text-muted-foreground text-[11px] mt-1 line-clamp-2">
                     {n.message}
                   </p>
-                  <span className="text-[10px] text-slate-500 mt-1.5 block">
+                  <span className="text-[10px] text-muted-foreground/80 mt-1.5 block">
                     {formatDateTime(n.createdAt)}
                   </span>
                 </Link>

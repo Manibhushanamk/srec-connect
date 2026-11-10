@@ -653,6 +653,25 @@
     - `verify_mobile_profile_responsive.png` (Mobile profile layout with full responsiveness)
     - `verify_mobile_home_feed.png` (Mobile home feed and bottom navigation)
 
+## Session: Notification Bell Alignment & Responsive Viewport Guard
+
+- **Responsive Viewport Guard for Notification Popover (`src/components/layout/NotificationBell.tsx`)**:
+  - Replaced rigid `absolute right-0 w-80 sm:w-96` with dynamic viewport guard: `fixed sm:absolute left-3 right-3 sm:left-auto sm:right-0 top-16 sm:top-full mt-2 sm:w-96 max-w-sm sm:max-w-none ml-auto`.
+  - On mobile displays (< 640px, e.g. 360px, 375px, 390px), the popover is bounded with 12px margin on both sides (`left-3 right-3`), completely eliminating left-edge clipping (was -60px to -26px off screen).
+  - Added dedicated close (`X`) button in the popover header for immediate touch-dismissal.
+  - Replaced hardcoded dark slate colors (`bg-slate-900 border-slate-800 text-white`) with theme tokens (`bg-card border-border text-foreground bg-secondary/40 text-muted-foreground`), supporting both Dark and Light themes.
+- **Empirical Validation**:
+  - TypeScript: 0 errors (`npx tsc --noEmit`).
+  - Playwright visual proof (`scripts/verify_notification_alignment.js`):
+    - `360px Android`: `x=13, width=334` (clipped left: `false`, clipped right: `false`, close button: `true`).
+    - `390px iPhone`: `x=13, width=364` (clipped left: `false`, clipped right: `false`).
+    - `1280px Desktop`: `x=645, width=382` (right-aligned under bell).
+  - Visual Proofs:
+    - `verify_notification_mobile_360.png`
+    - `verify_notification_mobile_390.png`
+    - `verify_notification_desktop.png`
+
+
 
 
 
