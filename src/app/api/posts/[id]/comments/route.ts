@@ -42,6 +42,17 @@ export async function POST(
     }
 
     const { id: postId } = await params;
+
+    // Verify target post exists and is active (not soft-deleted)
+    const targetPost = await prisma.post.findFirst({
+      where: { id: postId, deletedAt: null },
+      select: { id: true, authorId: true },
+    });
+
+    if (!targetPost) {
+      return NextResponse.json({ error: 'Post not found or has been removed' }, { status: 404 });
+    }
+
     const user = await prisma.user.findUnique({
       where: { email: session.user.email.toLowerCase().trim() },
       select: { id: true, name: true, role: true, avatarUrl: true },
@@ -79,6 +90,18 @@ export async function POST(
         },
       },
     });
+
+    // Notify post author if commenter is not the author
+    if (targetPost.authorId !== user.id) {
+      await prisma.notification.create({
+        data: {
+          userId: targetPost.authorId,
+          title: '💬 New Comment on Your Post',
+          message: `${user.name || 'A campus member'} commented: "${content.slice(0, 80)}"`,
+          link: '/',
+        },
+      }).catch(() => null);
+    }
 
     return NextResponse.json({ comment }, { status: 201 });
   } catch (error: any) {

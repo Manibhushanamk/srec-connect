@@ -151,6 +151,9 @@ export async function POST(req: NextRequest) {
         );
       }
       targetStudentId = targetStudent.id;
+    } else if (currentUser.role === 'STUDENT' && currentUser.student?.id) {
+      // Auto-bond grievance to the submitting student's profile if not reporting another student
+      targetStudentId = currentUser.student.id;
     }
 
     // Student filing a faculty grievance automatically triggers confidential HOD routing

@@ -45,7 +45,8 @@ export async function POST(
     }
 
     // Resolve attendee user
-    let attendeeUser = null;
+    let attendeeUser: any = null;
+    let resolvedRollNumber: string | null = null;
     if (rollNumber) {
       const student = await prisma.student.findUnique({
         where: { rollNumber: rollNumber.toUpperCase().trim() },
@@ -53,12 +54,17 @@ export async function POST(
       });
       if (student?.user) {
         attendeeUser = student.user;
+        attendeeUser.student = student;
+        resolvedRollNumber = student.rollNumber;
       }
     } else if (userId) {
       attendeeUser = await prisma.user.findUnique({
         where: { id: userId },
         include: { student: true },
       });
+      if (attendeeUser?.student) {
+        resolvedRollNumber = attendeeUser.student.rollNumber;
+      }
     }
 
     if (!attendeeUser) {
@@ -164,7 +170,7 @@ export async function POST(
         id: attendeeUser.id,
         name: attendeeUser.name,
         email: attendeeUser.email,
-        rollNumber: (attendeeUser as any).student?.rollNumber || null,
+        rollNumber: resolvedRollNumber || (attendeeUser as any).student?.rollNumber || null,
       },
       message: `Verified and checked in: ${attendeeUser.name}`,
     });

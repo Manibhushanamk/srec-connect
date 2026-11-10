@@ -174,7 +174,7 @@ export const authOptions: NextAuthOptions = {
 
       if (user?.email) {
         const normalizedEmail = user.email.toLowerCase().trim();
-        const dbUser = await prisma.user.findUnique({
+        let dbUser = await prisma.user.findUnique({
           where: { email: normalizedEmail },
           select: {
             id: true,
@@ -185,6 +185,61 @@ export const authOptions: NextAuthOptions = {
             facultyId: true,
           },
         });
+
+        // Relational Auto-Bond: Ensure student/faculty & department relations are never severed
+        if (dbUser && (!dbUser.studentId || !dbUser.facultyId || !dbUser.departmentId)) {
+          const updateData: any = {};
+          if (!dbUser.studentId && dbUser.role === 'STUDENT') {
+            const student = await prisma.student.findFirst({
+              where: {
+                OR: [
+                  { email: normalizedEmail },
+                  { rollNumber: normalizedEmail.split('@')[0].toUpperCase() },
+                ],
+              },
+            });
+            if (student) {
+              updateData.studentId = student.id;
+              if (!dbUser.departmentId && student.departmentId) {
+                updateData.departmentId = student.departmentId;
+              }
+            }
+          }
+
+          if (!dbUser.facultyId && (dbUser.role === 'FACULTY' || dbUser.role === 'HOD')) {
+            const faculty = await prisma.faculty.findFirst({
+              where: { email: normalizedEmail },
+            });
+            if (faculty) {
+              updateData.facultyId = faculty.id;
+              if (!dbUser.departmentId && faculty.departmentId) {
+                updateData.departmentId = faculty.departmentId;
+              }
+            }
+          }
+
+          if (!dbUser.departmentId && !updateData.departmentId) {
+            const defaultDept = await prisma.department.findFirst({
+              where: { OR: [{ code: 'AIML' }, { code: 'CSE(AI&ML)' }] },
+            });
+            if (defaultDept) updateData.departmentId = defaultDept.id;
+          }
+
+          if (Object.keys(updateData).length > 0) {
+            dbUser = await prisma.user.update({
+              where: { id: dbUser.id },
+              data: updateData,
+              select: {
+                id: true,
+                role: true,
+                status: true,
+                departmentId: true,
+                studentId: true,
+                facultyId: true,
+              },
+            });
+          }
+        }
 
         if (dbUser) {
           token.id = dbUser.id;

@@ -14,6 +14,17 @@ export async function POST(
     }
 
     const { id: postId } = await params;
+
+    // Verify post exists and is active
+    const targetPost = await prisma.post.findFirst({
+      where: { id: postId, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!targetPost) {
+      return NextResponse.json({ error: 'Post not found or has been removed' }, { status: 404 });
+    }
+
     const user = await prisma.user.findUnique({
       where: { email: session.user.email.toLowerCase().trim() },
       select: { id: true },
@@ -34,18 +45,27 @@ export async function POST(
 
     let isLiked = false;
     if (existingLike) {
-      await prisma.postLike.delete({
-        where: { id: existingLike.id },
-      });
+      try {
+        await prisma.postLike.delete({
+          where: { id: existingLike.id },
+        });
+      } catch {
+        // Handled if deleted concurrently
+      }
       isLiked = false;
     } else {
-      await prisma.postLike.create({
-        data: {
-          postId,
-          userId: user.id,
-        },
-      });
-      isLiked = true;
+      try {
+        await prisma.postLike.create({
+          data: {
+            postId,
+            userId: user.id,
+          },
+        });
+        isLiked = true;
+      } catch {
+        // Handled if created concurrently
+        isLiked = true;
+      }
     }
 
     const likesCount = await prisma.postLike.count({

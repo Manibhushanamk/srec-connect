@@ -65,10 +65,14 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (id) {
-      await prisma.notification.update({
-        where: { id },
+      // Secure tenant-isolated update preventing IDOR across campus accounts
+      const res = await prisma.notification.updateMany({
+        where: { id, userId: currentUser.id },
         data: { isRead: true },
       });
+      if (res.count === 0) {
+        return NextResponse.json({ error: 'Notification not found or access denied' }, { status: 404 });
+      }
       return NextResponse.json({ success: true, message: 'Notification marked as read' });
     }
 

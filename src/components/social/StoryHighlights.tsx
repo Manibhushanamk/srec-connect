@@ -333,11 +333,13 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
         {/* Stories List */}
         {stories.map((story, idx) => (
           <div key={story.id} className="relative group flex-shrink-0">
-            {/* Quick Remove Button on avatar for authorized users in manage mode or hover */}
-            {canPostHighlight && (isManageMode || false) && (
+            {/* Quick Remove Button on avatar for authorized users on hover or manage mode */}
+            {canPostHighlight && (
               <button
                 onClick={(e) => handleRemoveStory(story.id, e)}
-                className="absolute -top-1 -right-1 z-20 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-md hover:bg-rose-700 transition-colors"
+                className={`absolute -top-1 -right-1 z-20 w-5 h-5 rounded-full bg-rose-600 text-white flex items-center justify-center shadow-md hover:bg-rose-700 transition-all ${
+                  isManageMode ? 'opacity-100 scale-100' : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'
+                }`}
                 title="Remove highlight"
                 aria-label={`Remove highlight ${story.title}`}
               >

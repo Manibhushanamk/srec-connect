@@ -124,12 +124,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid start or end date' }, { status: 400 });
     }
 
+    let targetDeptId = departmentId || currentUser.departmentId || null;
+    if (!targetDeptId) {
+      const defaultDept = await prisma.department.findFirst({
+        where: { OR: [{ code: 'AIML' }, { code: 'CSE(AI&ML)' }] },
+      });
+      targetDeptId = defaultDept?.id || null;
+    }
+
     const newEvent = await prisma.event.create({
       data: {
         title: title.trim(),
         description: description?.trim() || null,
         categoryId,
-        departmentId: departmentId || currentUser.departmentId || null,
+        departmentId: targetDeptId,
         startDate: start,
         endDate: end,
         venue: venue.trim(),

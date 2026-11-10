@@ -245,6 +245,22 @@ export async function DELETE(
             data: { status: 'REGISTERED' },
             include: { user: { select: { id: true, name: true, email: true } } },
           });
+
+          // Fetch event details to provide rich notification
+          const currentEvent = await tx.event.findUnique({
+            where: { id: eventId },
+            select: { title: true, whatsappGroupUrl: true },
+          });
+
+          // Dispatch confirmation notification to promoted student
+          await tx.notification.create({
+            data: {
+              userId: earliestWaitlisted.userId,
+              title: '🎉 Seat Confirmed!',
+              message: `A seat opened up and your registration for "${currentEvent?.title || 'the event'}" is now confirmed!`,
+              link: `/events/${eventId}`,
+            },
+          }).catch(() => null);
         } else {
           // Decrement participant count
           await tx.event.update({

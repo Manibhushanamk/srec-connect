@@ -52,9 +52,14 @@ export async function GET(req: NextRequest) {
       where: {
         deletedAt: null,
         OR: orConditions,
-        expiresAt: {
-          gt: new Date(),
-        },
+        AND: [
+          {
+            OR: [
+              { expiresAt: null },
+              { expiresAt: { gt: new Date() } },
+            ],
+          },
+        ],
       },
       include: {
         author: { select: { id: true, name: true, role: true } },

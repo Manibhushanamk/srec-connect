@@ -229,12 +229,14 @@ export default function AdminEventsPage() {
   };
 
   const filteredEvents = events.filter((ev) => {
-    if (!search) return true;
-    const term = search.toLowerCase();
+    if (!search?.trim()) return true;
+    const term = search.toLowerCase().trim();
     return (
-      ev.title.toLowerCase().includes(term) ||
-      ev.venue.toLowerCase().includes(term) ||
-      ev.organizer.toLowerCase().includes(term)
+      (ev.title || '').toLowerCase().includes(term) ||
+      (ev.venue || '').toLowerCase().includes(term) ||
+      (ev.organizer || '').toLowerCase().includes(term) ||
+      (ev.speaker || '').toLowerCase().includes(term) ||
+      (ev.department?.name || '').toLowerCase().includes(term)
     );
   });
 

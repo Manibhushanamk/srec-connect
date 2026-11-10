@@ -41,12 +41,16 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
-  // URL safety validator (must be https:// or empty)
-  const sanitizeHttpsUrl = (url: any): string | undefined => {
-    if (!url) return undefined;
+  // URL safety validator (supports https, http, and local uploaded paths e.g. /uploads/...)
+  const sanitizeUrl = (url: any): string | null | undefined => {
+    if (url === undefined) return undefined;
+    if (url === null || url === '') return null;
     const s = String(url).trim();
-    if (!s) return undefined;
-    return s.startsWith('https://') ? s : undefined;
+    if (!s) return null;
+    if (s.startsWith('https://') || s.startsWith('http://') || s.startsWith('/') || s.startsWith('blob:')) {
+      return s;
+    }
+    return null;
   };
 
   // Update user core profile
@@ -64,13 +68,13 @@ export async function PATCH(req: NextRequest) {
     userDataToUpdate.phone = body.phone.trim().substring(0, 20);
   }
   if (body.linkedinUrl !== undefined) {
-    userDataToUpdate.linkedinUrl = sanitizeHttpsUrl(body.linkedinUrl);
+    userDataToUpdate.linkedinUrl = sanitizeUrl(body.linkedinUrl);
   }
   if (body.githubUrl !== undefined) {
-    userDataToUpdate.githubUrl = sanitizeHttpsUrl(body.githubUrl);
+    userDataToUpdate.githubUrl = sanitizeUrl(body.githubUrl);
   }
   if (body.avatarUrl !== undefined) {
-    userDataToUpdate.avatarUrl = sanitizeHttpsUrl(body.avatarUrl);
+    userDataToUpdate.avatarUrl = sanitizeUrl(body.avatarUrl);
   }
 
   if (Object.keys(userDataToUpdate).length > 0) {
@@ -88,10 +92,10 @@ export async function PATCH(req: NextRequest) {
         headline: typeof body.headline === 'string' ? body.headline.substring(0, 200) : undefined,
         bio: typeof body.bio === 'string' ? body.bio.substring(0, 1000) : undefined,
         phone: typeof body.phone === 'string' ? body.phone.substring(0, 20) : undefined,
-        githubUrl: sanitizeHttpsUrl(body.githubUrl),
-        linkedinUrl: sanitizeHttpsUrl(body.linkedinUrl),
-        portfolioUrl: sanitizeHttpsUrl(body.portfolioUrl),
-        avatarUrl: sanitizeHttpsUrl(body.avatarUrl),
+        githubUrl: sanitizeUrl(body.githubUrl),
+        linkedinUrl: sanitizeUrl(body.linkedinUrl),
+        portfolioUrl: sanitizeUrl(body.portfolioUrl),
+        avatarUrl: sanitizeUrl(body.avatarUrl),
       },
     });
   }
@@ -104,8 +108,8 @@ export async function PATCH(req: NextRequest) {
         bio: typeof body.bio === 'string' ? body.bio.substring(0, 1000) : undefined,
         cabin: typeof body.cabin === 'string' ? body.cabin.substring(0, 50) : undefined,
         specialization: typeof body.specialization === 'string' ? body.specialization.substring(0, 200) : undefined,
-        googleScholar: sanitizeHttpsUrl(body.googleScholar),
-        avatarUrl: sanitizeHttpsUrl(body.avatarUrl),
+        googleScholar: sanitizeUrl(body.googleScholar),
+        avatarUrl: sanitizeUrl(body.avatarUrl),
       },
     });
   }

@@ -85,10 +85,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'A user with this email already exists' }, { status: 409 });
     }
 
+    // Ensure default department if missing
+    let targetDeptId = departmentId;
+    if (!targetDeptId) {
+      const aimlDept = await prisma.department.findFirst({
+        where: { OR: [{ code: 'AIML' }, { code: 'CSE(AI&ML)' }] },
+      });
+      if (aimlDept) targetDeptId = aimlDept.id;
+    }
+
     // Roll number uniqueness check for student
     let studentRecord = null;
-    if (role === 'STUDENT' && rollNumber) {
-      const cleanedRoll = rollNumber.trim().toUpperCase();
+    if (role === 'STUDENT') {
+      const emailRollCandidate = normalizedEmail.includes('@') ? normalizedEmail.split('@')[0].toUpperCase() : '';
+      const cleanedRoll = (rollNumber || emailRollCandidate).trim().toUpperCase();
+
+      if (!cleanedRoll) {
+        return NextResponse.json({ error: 'Roll number is required for student accounts' }, { status: 400 });
+      }
+
       const existingRoll = await prisma.student.findUnique({
         where: { rollNumber: cleanedRoll },
       });
@@ -101,7 +116,7 @@ export async function POST(req: NextRequest) {
           rollNumber: cleanedRoll,
           name,
           email: normalizedEmail,
-          departmentId: departmentId || null,
+          departmentId: targetDeptId || null,
           batch: batch || '2022-2026',
           section: section || 'A',
         },
@@ -117,7 +132,7 @@ export async function POST(req: NextRequest) {
           email: normalizedEmail,
           designation: designation || (role === 'HOD' ? 'Professor & HOD' : 'Assistant Professor'),
           roleCategory: role === 'HOD' ? 'HOD' : 'ASSISTANT_PROFESSOR',
-          departmentId: departmentId || null,
+          departmentId: targetDeptId || null,
         },
       });
     }
@@ -129,7 +144,7 @@ export async function POST(req: NextRequest) {
         name,
         role: role as Role,
         status: 'ACTIVE',
-        departmentId: departmentId || null,
+        departmentId: targetDeptId || null,
         studentId: studentRecord?.id || null,
         facultyId: facultyRecord?.id || null,
       },

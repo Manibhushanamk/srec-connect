@@ -138,6 +138,28 @@ export async function PATCH(req: NextRequest) {
         },
       });
 
+      // Dispatch in-app notification to the submitter on verification state change
+      if (existing.createdById && status && ['APPROVED', 'PUBLISHED', 'REJECTED', 'RESUBMISSION_REQUIRED'].includes(status)) {
+        const notifTitle = status === 'REJECTED' || status === 'RESUBMISSION_REQUIRED'
+          ? '⚠️ Achievement Status Update'
+          : '🏆 Honor Verified & Published!';
+
+        const notifMsg = status === 'REJECTED'
+          ? `Your submission "${existing.title}" was rejected: ${rejectionReason || 'Requirements not met.'}`
+          : status === 'RESUBMISSION_REQUIRED'
+          ? `Your submission "${existing.title}" requires revisions: ${rejectionReason || 'Please review and resubmit.'}`
+          : `Congratulations! Your achievement "${existing.title}" has been verified and published!`;
+
+        await tx.notification.create({
+          data: {
+            userId: existing.createdById,
+            title: notifTitle,
+            message: notifMsg,
+            link: '/profile',
+          },
+        }).catch(() => null);
+      }
+
       return ach;
     });
 

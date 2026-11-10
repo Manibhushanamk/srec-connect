@@ -62,6 +62,14 @@ export async function POST(req: NextRequest) {
   const personType = isFacultyOrHOD ? PersonType.FACULTY : PersonType.STUDENT;
   const facultyId = dbUser.facultyId || dbUser.faculty?.id || null;
 
+  let targetDepartmentId = dbUser.departmentId || dbUser.faculty?.departmentId || dbUser.student?.departmentId || null;
+  if (!targetDepartmentId) {
+    const defaultDept = await prisma.department.findFirst({
+      where: { OR: [{ code: 'AIML' }, { code: 'CSE(AI&ML)' }] },
+    });
+    targetDepartmentId = defaultDept?.id || null;
+  }
+
   const achievement = await prisma.achievement.create({
     data: {
       title,
@@ -74,7 +82,7 @@ export async function POST(req: NextRequest) {
       organizationEventName,
       academicYear: academicYear || '2025-2026',
       achievementDate: new Date(achievementDate || Date.now()),
-      departmentId: dbUser.departmentId || dbUser.faculty?.departmentId || null,
+      departmentId: targetDepartmentId,
       categoryId,
       primaryStudentId: isFacultyOrHOD ? null : dbUser.studentId,
       primaryStudentRoll: isFacultyOrHOD ? null : dbUser.student?.rollNumber,
