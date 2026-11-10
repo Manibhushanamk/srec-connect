@@ -112,7 +112,7 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
-  // Update student profile (strictly immutable fields: rollNumber, departmentId, batch)
+  // Update student profile
   if (dbUser.studentId) {
     await prisma.student.update({
       where: { id: dbUser.studentId },
@@ -120,6 +120,8 @@ export async function PATCH(req: NextRequest) {
         headline: typeof body.headline === 'string' ? body.headline.substring(0, 200) : undefined,
         bio: typeof body.bio === 'string' ? body.bio.substring(0, 1000) : undefined,
         phone: typeof body.phone === 'string' ? body.phone.substring(0, 20) : undefined,
+        batch: typeof body.batch === 'string' && body.batch.trim() ? body.batch.trim() : undefined,
+        section: typeof body.section === 'string' && body.section.trim() ? body.section.trim() : undefined,
         githubUrl: sanitizeUrl(body.githubUrl),
         linkedinUrl: sanitizeUrl(body.linkedinUrl),
         portfolioUrl: sanitizeUrl(body.portfolioUrl),
@@ -128,14 +130,17 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
-  // Update faculty profile (strictly immutable fields: designation, departmentId)
+  // Update faculty academic profile and credentials
   if (dbUser.facultyId) {
     await prisma.faculty.update({
       where: { id: dbUser.facultyId },
       data: {
+        designation: typeof body.designation === 'string' && body.designation.trim() ? body.designation.trim() : undefined,
+        degrees: typeof body.degrees === 'string' && body.degrees.trim() ? body.degrees.trim() : undefined,
+        experience: typeof body.experience === 'string' && body.experience.trim() ? body.experience.trim() : undefined,
+        cabin: typeof body.cabin === 'string' && body.cabin.trim() ? body.cabin.trim() : undefined,
+        specialization: typeof body.specialization === 'string' && body.specialization.trim() ? body.specialization.trim() : undefined,
         bio: typeof body.bio === 'string' ? body.bio.substring(0, 1000) : undefined,
-        cabin: typeof body.cabin === 'string' ? body.cabin.substring(0, 50) : undefined,
-        specialization: typeof body.specialization === 'string' ? body.specialization.substring(0, 200) : undefined,
         googleScholar: sanitizeUrl(body.googleScholar),
         avatarUrl: sanitizeUrl(body.avatarUrl),
       },

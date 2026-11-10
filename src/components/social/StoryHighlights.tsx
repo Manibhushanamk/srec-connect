@@ -56,7 +56,7 @@ const DEFAULT_STORIES: StoryItem[] = [
     id: 's1',
     title: 'HOD Desk',
     category: 'Official Notice',
-    authorName: 'Dr. K. Srinivas Rao',
+    authorName: 'Mani Bhushanam K',
     authorRole: 'Head of Department (HOD)',
     iconType: 'GraduationCap',
     date: 'Today',

@@ -29,8 +29,10 @@ interface FacultyProfilePageProps {
 
 export async function generateMetadata({ params }: FacultyProfilePageProps): Promise<Metadata> {
   const { id } = await params;
-  const faculty = await prisma.faculty.findUnique({
-    where: { id },
+  const faculty = await prisma.faculty.findFirst({
+    where: {
+      OR: [{ id }, { user: { id } }],
+    },
     include: { department: true },
   });
 
@@ -48,8 +50,10 @@ export default async function FacultyProfilePage({ params }: FacultyProfilePageP
   const { id } = await params;
   const session = await getServerSession(authOptions);
 
-  const faculty = await prisma.faculty.findUnique({
-    where: { id },
+  const faculty = await prisma.faculty.findFirst({
+    where: {
+      OR: [{ id }, { user: { id } }],
+    },
     include: {
       department: true,
       user: true,

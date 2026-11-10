@@ -119,6 +119,8 @@ export async function GET(req: NextRequest) {
           role: post.author.role,
           avatarUrl: post.author.avatarUrl,
           rollNumber: post.author.student?.rollNumber,
+          studentId: post.author.student?.id,
+          facultyId: post.author.faculty?.id,
           designation: post.author.faculty?.designation,
           department: post.author.department?.name || post.author.student?.departmentName || post.author.faculty?.departmentName || 'CSE (AI & ML)',
           isVerified: post.author.student?.isActive || post.author.faculty?.isActive || true,

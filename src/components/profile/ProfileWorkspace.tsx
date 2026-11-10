@@ -30,8 +30,11 @@ import {
   Sliders,
   LogOut,
   Award,
+  MessageCircle,
+  PlusCircle,
 } from 'lucide-react';
 import { AchievementCard } from '@/components/cards/AchievementCard';
+import { FeedCard } from '@/components/social/FeedCard';
 
 interface ProfileWorkspaceProps {
   initialUser: {
@@ -81,11 +84,7 @@ interface ProfileWorkspaceProps {
       avatarUrl?: string | null;
       achievements?: any[];
     } | null;
-    posts?: Array<{
-      id: string;
-      content: string;
-      createdAt: string;
-    }>;
+    posts?: any[];
     createdAt: string;
   };
 }
@@ -138,19 +137,40 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
   );
   const [imgError, setImgError] = useState(false);
 
-  // Status
-  const [isSaving, setIsSaving] = useState(false);
-  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
   const isSuperAdmin = initialUser.role === 'SUPER_ADMIN' || initialUser.role === 'ADMIN';
   const isHOD = initialUser.role === 'HOD';
   const isFaculty = initialUser.role === 'FACULTY' || isHOD || Boolean(initialUser.faculty);
   const isStudent = (initialUser.role === 'STUDENT' || !isFaculty) && Boolean(initialUser.student);
 
+  // Faculty Academic Credentials state
+  const [designation, setDesignation] = useState(
+    initialUser.faculty?.designation || (isHOD ? 'Professor & Head of Department' : 'Faculty Member')
+  );
+  const [degrees, setDegrees] = useState(
+    initialUser.faculty?.degrees || 'Ph.D., M.Tech'
+  );
+  const [experience, setExperience] = useState(
+    initialUser.faculty?.experience || '15+ Years'
+  );
+  const [cabin, setCabin] = useState(
+    initialUser.faculty?.cabin || 'Room 204, Department HOD & Faculty Wing'
+  );
+  const [specialization, setSpecialization] = useState(
+    initialUser.faculty?.specialization || 'Edge AI, Distributed Computing, Deep Learning'
+  );
+
+  // Student Academic Credentials state
+  const [batch, setBatch] = useState(initialUser.student?.batch || '2022-2026');
+  const [section, setSection] = useState(initialUser.student?.section || 'A');
+
+  // Status
+  const [isSaving, setIsSaving] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   const defaultHeadline = isFaculty
-    ? `${initialUser.faculty?.designation || (isHOD ? 'Professor & Head of Department' : 'Faculty Member')}${initialUser.faculty?.degrees ? ` • ${initialUser.faculty.degrees}` : ''}`
+    ? `${designation}${degrees ? ` • ${degrees}` : ''}`
     : isStudent
-    ? `Student Scholar • CSE (AI & ML)${initialUser.student?.batch ? ` • Batch ${initialUser.student.batch}` : ''}`
+    ? `Student Scholar • CSE (AI & ML)${batch ? ` • Batch ${batch}` : ''}`
     : isSuperAdmin
     ? 'Systems Administrator & Academic Governance'
     : 'Department Member • CSE (AI & ML)';
@@ -173,6 +193,14 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
           linkedinUrl: linkedinUrl.trim() || undefined,
           githubUrl: githubUrl.trim() || undefined,
           portfolioUrl: portfolioUrl.trim() || undefined,
+          // Academic credentials
+          designation: designation.trim(),
+          degrees: degrees.trim(),
+          experience: experience.trim(),
+          cabin: cabin.trim(),
+          specialization: specialization.trim(),
+          batch: batch.trim(),
+          section: section.trim(),
         }),
       });
 
@@ -559,7 +587,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
           {/* 1. Four Stat Metrics Row */}
           {(() => {
             const achievements = initialUser.faculty?.achievements || initialUser.student?.achievements || [];
-            const specializationList = (initialUser.faculty?.specialization || 'Deep Learning, Machine Learning, Edge AI')
+            const specializationList = (specialization || initialUser.faculty?.specialization || 'Deep Learning, Machine Learning, Edge AI')
               .split(/[,;&•]/)
               .map((s) => s.trim())
               .filter(Boolean);
@@ -568,7 +596,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
               <div className="space-y-6">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div className="p-4 rounded-2xl bg-card border border-border text-center">
-                    <p className="text-xl font-black text-foreground">{initialUser.counts?.posts ?? 0}</p>
+                    <p className="text-xl font-black text-foreground">{(initialUser.posts || []).length}</p>
                     <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">Posts</p>
                   </div>
                   <div className="p-4 rounded-2xl bg-primary/10 border border-primary/30 text-center">
@@ -577,7 +605,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                   </div>
                   <div className="p-4 rounded-2xl bg-card border border-border text-center">
                     <p className="text-base sm:text-lg font-black text-foreground truncate">
-                      {isFaculty ? (initialUser.faculty?.experience || '10+ Yrs') : `${initialUser.counts?.eventRegistrations ?? 0}`}
+                      {isFaculty ? experience : `${initialUser.counts?.eventRegistrations ?? 0}`}
                     </p>
                     <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">
                       {isFaculty ? 'Experience' : 'Events'}
@@ -595,14 +623,24 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
 
                 {/* 2. Detailed Academic Credentials Grid */}
                 <div className="social-card p-5 border-border bg-card space-y-4">
-                  <div className="flex items-center justify-between border-b border-border/60 pb-3">
+                  <div className="flex items-center justify-between border-b border-border/60 pb-3 flex-wrap gap-2">
                     <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                       <GraduationCap className="w-4 h-4 text-primary" />
                       <span>Official Academic Profile & Credentials</span>
                     </h3>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary text-secondary-foreground border border-border">
-                      Verified SREC Record
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary text-secondary-foreground border border-border">
+                        Verified SREC Record
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('customize')}
+                        className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1"
+                      >
+                        <Sliders className="w-3 h-3" />
+                        <span>Edit Credentials</span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
@@ -611,19 +649,19 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                         <div>
                           <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Designation</span>
                           <span className="font-bold text-foreground mt-0.5 block">
-                            {initialUser.faculty?.designation || (initialUser.role === 'HOD' ? 'Professor & HOD' : 'Faculty Member')}
+                            {designation || (initialUser.role === 'HOD' ? 'Professor & HOD' : 'Faculty Member')}
                           </span>
                         </div>
                         <div>
                           <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Qualifications</span>
                           <span className="font-medium text-foreground mt-0.5 block">
-                            {initialUser.faculty?.degrees || 'Ph.D., M.Tech'}
+                            {degrees || 'Ph.D., M.Tech'}
                           </span>
                         </div>
                         <div>
                           <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Total Experience</span>
                           <span className="font-medium text-foreground mt-0.5 block">
-                            {initialUser.faculty?.experience || '12+ Years Teaching & Research'}
+                            {experience || '15+ Years Teaching & Research'}
                           </span>
                         </div>
                         <div>
@@ -635,7 +673,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                         <div>
                           <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Office / Cabin</span>
                           <span className="font-medium text-foreground mt-0.5 block">
-                            {initialUser.faculty?.cabin || 'Room 204, Department HOD & Faculty Wing'}
+                            {cabin || 'Room 204, Department HOD & Faculty Wing'}
                           </span>
                         </div>
                         <div>
@@ -658,13 +696,13 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                         <div>
                           <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Academic Batch</span>
                           <span className="font-medium text-foreground mt-0.5 block">
-                            {initialUser.student?.batch || '2022-2026'}
+                            {batch || '2022-2026'}
                           </span>
                         </div>
                         <div>
                           <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Class Section</span>
                           <span className="font-medium text-foreground mt-0.5 block">
-                            Section {initialUser.student?.section || 'A'}
+                            Section {section || 'A'}
                           </span>
                         </div>
                         <div>
@@ -696,7 +734,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                             className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-secondary text-secondary-foreground border border-border"
                           >
                             <Sparkles className="w-3 h-3 text-primary" />
-                            {spec}
+                            <span>{spec}</span>
                           </span>
                         ))}
                       </div>
@@ -796,6 +834,46 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                 Member since {new Date(initialUser.createdAt).toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}
               </p>
             </div>
+          </div>
+
+          {/* 4. Community Feed Posts Section */}
+          <div className="social-card p-5 border-border bg-card space-y-4">
+            <div className="flex items-center justify-between border-b border-border/60 pb-3 flex-wrap gap-2">
+              <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <MessageCircle className="w-4 h-4 text-primary" />
+                <span>Published Community Posts &amp; Broadcasts ({(initialUser.posts || []).length})</span>
+              </h3>
+              <Link
+                href="/?create=true"
+                className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5 shadow-xs"
+              >
+                <PlusCircle className="w-3.5 h-3.5" />
+                <span>Create New Post</span>
+              </Link>
+            </div>
+
+            {(initialUser.posts || []).length === 0 ? (
+              <div className="text-center py-10 px-4 border border-dashed border-border rounded-2xl bg-secondary/20">
+                <MessageCircle className="w-8 h-8 text-muted-foreground/60 mx-auto mb-2" />
+                <h4 className="text-xs font-bold text-foreground">No Community Posts Yet</h4>
+                <p className="text-[11px] text-muted-foreground mt-1 max-w-sm mx-auto">
+                  Share academic updates, research publications, or campus announcements directly to the feed.
+                </p>
+                <Link
+                  href="/?create=true"
+                  className="btn-primary text-xs py-1.5 px-3.5 mt-3 inline-flex items-center gap-1.5"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>Share a Post</span>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {initialUser.posts!.map((post: any) => (
+                  <FeedCard key={post.id} {...post} />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -942,6 +1020,126 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                   placeholder="https://myportfolio.com"
                 />
               </div>
+
+              {/* Academic Credentials Section */}
+              {(isFaculty || isStudent) && (
+                <div className="pt-5 border-t border-border/80 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="w-4 h-4 text-primary" />
+                    <div>
+                      <h4 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                        Official Academic Credentials &amp; Institutional Record
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground">
+                        Edit your official designation, degrees, research specializations, and office location.
+                      </p>
+                    </div>
+                  </div>
+
+                  {isFaculty && (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-foreground mb-1">
+                            Academic Designation / Role
+                          </label>
+                          <input
+                            type="text"
+                            value={designation}
+                            onChange={(e) => setDesignation(e.target.value)}
+                            className="w-full text-xs bg-secondary/50 border border-border rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background transition-all"
+                            placeholder="e.g. Professor & Head of Department"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-foreground mb-1">
+                            Qualifications &amp; Degrees
+                          </label>
+                          <input
+                            type="text"
+                            value={degrees}
+                            onChange={(e) => setDegrees(e.target.value)}
+                            className="w-full text-xs bg-secondary/50 border border-border rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background transition-all"
+                            placeholder="e.g. Ph.D., M.Tech"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-foreground mb-1">
+                            Total Academic &amp; Research Experience
+                          </label>
+                          <input
+                            type="text"
+                            value={experience}
+                            onChange={(e) => setExperience(e.target.value)}
+                            className="w-full text-xs bg-secondary/50 border border-border rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background transition-all"
+                            placeholder="e.g. 15+ Years"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-foreground mb-1">
+                            Office / Faculty Cabin Location
+                          </label>
+                          <input
+                            type="text"
+                            value={cabin}
+                            onChange={(e) => setCabin(e.target.value)}
+                            className="w-full text-xs bg-secondary/50 border border-border rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background transition-all"
+                            placeholder="e.g. Room 204, Department HOD & Faculty Wing"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-foreground mb-1">
+                          Research Specializations &amp; Subject Expertise
+                        </label>
+                        <input
+                          type="text"
+                          value={specialization}
+                          onChange={(e) => setSpecialization(e.target.value)}
+                          className="w-full text-xs bg-secondary/50 border border-border rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background transition-all"
+                          placeholder="e.g. Edge AI, Distributed Computing, Deep Learning"
+                        />
+                        <span className="text-[11px] text-muted-foreground block mt-1">
+                          Comma-separated list of research topics, specializations, or core competencies.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {isStudent && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-semibold text-foreground mb-1">
+                          Academic Batch
+                        </label>
+                        <input
+                          type="text"
+                          value={batch}
+                          onChange={(e) => setBatch(e.target.value)}
+                          className="w-full text-xs bg-secondary/50 border border-border rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background transition-all"
+                          placeholder="e.g. 2022-2026"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-foreground mb-1">
+                          Class Section
+                        </label>
+                        <input
+                          type="text"
+                          value={section}
+                          onChange={(e) => setSection(e.target.value)}
+                          className="w-full text-xs bg-secondary/50 border border-border rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background transition-all"
+                          placeholder="e.g. A"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="pt-4 border-t border-border flex justify-end">

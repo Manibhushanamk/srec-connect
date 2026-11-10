@@ -61,7 +61,7 @@ const FALLBACK_POSTS: FeedPostProps[] = [
     id: 'post-2',
     author: {
       id: 'f1',
-      name: 'Dr. K. Srinivas Rao',
+      name: 'Mani Bhushanam K',
       role: 'HOD',
       designation: 'Professor & Head of Department',
       department: 'CSE (AI & ML)',

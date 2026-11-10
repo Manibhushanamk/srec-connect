@@ -595,5 +595,35 @@
     - `verify_profile_hod_complete.png` (HOD profile with stats, credentials, admin launchpad, and achievement cards)
     - `verify_grievances_authenticated_upload.png` (Grievance submission with file/evidence attachment input)
 
+## Session: Complete Identity Harmonization, Academic Credentials Customization & Feed Interactivity
+
+- **NextAuth Real-Time Database Session Synchronization (`src/lib/auth.ts`)**:
+  - Enhanced NextAuth `session` callback to dynamically query `prisma.user` on every request. Eliminates stale Google OAuth profile names (`KENCHU GUNDU MANI BHUSHANAM`) from the UI, ensuring `AppHeader` and `DesktopSidebar` immediately display the verified official academic name (`Mani Bhushanam K`).
+  - Added support for client session update triggers (`trigger === 'update'`).
+- **Full Academic Credentials Customization (`ProfileWorkspace.tsx` & `/api/user/profile`)**:
+  - Added full editing capabilities in the "Edit & Customize" tab for official academic credentials:
+    - Faculty/HOD: Designation, Qualifications/Degrees, Total Experience, Office/Cabin, Research Specializations.
+    - Student: Academic Batch, Section, Skills/Headline.
+  - Added "Edit Credentials" direct button on the Overview tab.
+  - Backed by `PATCH /api/user/profile` with automatic cascading to `Faculty` and `Student` records.
+- **Published Community Posts Feed on Profile (`/profile` & `ProfileWorkspace.tsx`)**:
+  - Serialized all authored and co-authored posts with media, like/comment counts, and collaborator badges in `src/app/profile/page.tsx`.
+  - Rendered a dedicated "Community Posts & Broadcasts" feed on `/profile` with empty states and direct creation links.
+- **Feed Author Navigation & Link Interactivity (`FeedCard.tsx` & `/faculty/[id]`)**:
+  - Wrapped author avatar and author name in interactive `<Link href={...}>` navigating to `/profile` for the logged-in user, `/faculty/[id]` for faculty/HOD, and `/students/[rollNumber]` for students.
+  - Wrapped collaborator names in `<Link href={...}>`.
+  - Enhanced `/faculty/[id]` page and metadata lookup to support both `Faculty.id` and `User.id` via `OR: [{ id }, { user: { id } }]`.
+- **Mobile Bottom Navigation Action Button (`MobileBottomNav.tsx`)**:
+  - Linked the prominent center circle-plus button directly to `/achievements/submit` with label "Submit Achievement".
+- **Dummy Data & Name Inconsistency Cleanup (`StoryHighlights.tsx` & `(public)/page.tsx`)**:
+  - Replaced hardcoded dummy HOD names (`Dr. K. Srinivas Rao`) with the active verified HOD name (`Mani Bhushanam K`).
+- **Empirical Validation**:
+  - TypeScript: 0 errors (`npx tsc --noEmit`).
+  - Playwright visual proof:
+    - `verify_profile_overview_unified.png` (Header, sidebar, and profile banner all display unified `Mani Bhushanam K`)
+    - `verify_profile_edit_credentials.png` (Full academic credentials editing form)
+    - `verify_home_feed_author_links.png` (Clickable author and collaborator profile links, mobile submit button pointing to `/achievements/submit`)
+
+
 
 

@@ -50,8 +50,44 @@ export default async function ProfilePage() {
         },
       },
       posts: {
-        take: 5,
+        where: { deletedAt: null },
         orderBy: { createdAt: 'desc' },
+        include: {
+          media: { select: { url: true } },
+          likes: { select: { id: true, userId: true } },
+          comments: {
+            select: {
+              id: true,
+              content: true,
+              author: { select: { name: true, avatarUrl: true } },
+            },
+            take: 3,
+            orderBy: { createdAt: 'desc' },
+          },
+          achievement: {
+            select: {
+              id: true,
+              title: true,
+              organizationEventName: true,
+              category: { select: { name: true } },
+              achievementDate: true,
+            },
+          },
+          collaborators: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  role: true,
+                  avatarUrl: true,
+                  student: { select: { rollNumber: true } },
+                  faculty: { select: { designation: true } },
+                },
+              },
+            },
+          },
+        },
       },
       _count: {
         select: {
@@ -115,6 +151,7 @@ export default async function ProfilePage() {
     student: user.student
       ? {
           id: user.student.id,
+          name: user.student.name,
           rollNumber: user.student.rollNumber,
           batch: user.student.batch,
           section: user.student.section,
@@ -149,6 +186,7 @@ export default async function ProfilePage() {
     faculty: user.faculty
       ? {
           id: user.faculty.id,
+          name: user.faculty.name,
           designation: user.faculty.designation,
           degrees: user.faculty.degrees,
           experience: user.faculty.experience,
@@ -183,6 +221,40 @@ export default async function ProfilePage() {
       id: p.id,
       content: p.content,
       createdAt: p.createdAt.toISOString(),
+      images: (p.media || []).map((m: any) => m.url),
+      likesCount: p.likes?.length || 0,
+      commentsCount: p.comments?.length || 0,
+      isLiked: p.likes?.some((l: any) => l.userId === user.id) || false,
+      achievement: p.achievement
+        ? {
+            id: p.achievement.id,
+            title: p.achievement.title,
+            category: p.achievement.category?.name || 'Academic Honor',
+            issuer: p.achievement.organizationEventName,
+            date: p.achievement.achievementDate?.toISOString().slice(0, 10),
+            isVerified: true,
+          }
+        : undefined,
+      author: {
+        id: user.id,
+        name: officialAcademicName || user.name || 'Scholar',
+        role: user.role,
+        avatarUrl: user.avatarUrl || user.faculty?.avatarUrl || user.student?.avatarUrl,
+        rollNumber: user.student?.rollNumber,
+        designation: user.faculty?.designation,
+        department: user.department?.name || 'Artificial Intelligence & Machine Learning',
+        isVerified: true,
+      },
+      collaborators: (p.collaborators || []).map((c: any) => ({
+        id: c.id,
+        userId: c.userId,
+        name: c.user?.name || 'Collaborator',
+        rollNumber: c.user?.student?.rollNumber,
+        designation: c.user?.faculty?.designation,
+        role: c.user?.role || 'STUDENT',
+        avatarUrl: c.user?.avatarUrl,
+        status: c.status,
+      })),
     })),
     createdAt: user.createdAt.toISOString(),
   };

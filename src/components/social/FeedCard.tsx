@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import {
   Heart,
@@ -22,6 +23,8 @@ export interface FeedAuthor {
   name: string;
   role: 'STUDENT' | 'FACULTY' | 'HOD' | 'ADMIN' | 'SUPER_ADMIN' | 'WEB_MANAGER' | string;
   rollNumber?: string;
+  facultyId?: string;
+  studentId?: string;
   designation?: string;
   department: string;
   avatarUrl?: string;
@@ -103,6 +106,37 @@ export const FeedCard: React.FC<FeedPostProps> = ({
   const isSuperAdmin = currentUserRole === 'SUPER_ADMIN';
   const isAuthor = currentUserId === author.id;
   const canDeletePost = isAuthor || isSuperAdmin;
+
+  const getAuthorProfileUrl = (auth: FeedAuthor) => {
+    if (session?.user && ((session.user as any).id === auth.id || session.user.name === auth.name)) {
+      return '/profile';
+    }
+    if (auth.rollNumber) return `/students/${auth.rollNumber}`;
+    if (auth.studentId) return `/students/${auth.studentId}`;
+    if (auth.facultyId) return `/faculty/${auth.facultyId}`;
+    if (auth.role === 'FACULTY' || auth.role === 'HOD' || auth.designation) {
+      return `/faculty/${auth.facultyId || auth.id}`;
+    }
+    if (auth.role === 'STUDENT') {
+      return `/students/${auth.rollNumber || auth.id}`;
+    }
+    return '/profile';
+  };
+
+  const getCollabProfileUrl = (c: {
+    userId: string;
+    name: string;
+    rollNumber?: string;
+    role: string;
+  }) => {
+    if (session?.user && ((session.user as any).id === c.userId || session.user.name === c.name)) {
+      return '/profile';
+    }
+    if (c.rollNumber) return `/students/${c.rollNumber}`;
+    if (c.role === 'FACULTY' || c.role === 'HOD') return `/faculty/${c.userId}`;
+    if (c.role === 'STUDENT') return `/students/${c.rollNumber || c.userId}`;
+    return '/profile';
+  };
 
   const handleTrashPost = async () => {
     if (!confirm('Move this post to Trash? It will be immediately removed from the live feed.')) return;
@@ -230,8 +264,8 @@ export const FeedCard: React.FC<FeedPostProps> = ({
       <div className="flex items-center justify-between p-4 pb-3">
         <div className="flex items-center gap-3">
           {/* Avatar with optional gradient ring */}
-          <div className="relative">
-            <div className="w-11 h-11 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-sm overflow-hidden">
+          <Link href={getAuthorProfileUrl(author)} className="relative group/avatar block" title={`View ${author.name}'s Profile`}>
+            <div className="w-11 h-11 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-sm overflow-hidden group-hover/avatar:ring-2 group-hover/avatar:ring-primary transition-all">
               {author.avatarUrl ? (
                 <img src={author.avatarUrl} alt={author.name} className="w-full h-full object-cover" />
               ) : (
@@ -243,17 +277,27 @@ export const FeedCard: React.FC<FeedPostProps> = ({
                 <CheckCircle2 className="w-3.5 h-3.5 fill-primary text-white" />
               </span>
             )}
-          </div>
+          </Link>
 
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-semibold text-sm text-foreground hover:underline cursor-pointer">
+              <Link
+                href={getAuthorProfileUrl(author)}
+                className="font-semibold text-sm text-foreground hover:underline hover:text-primary transition-colors cursor-pointer"
+                title={`View ${author.name}'s Profile`}
+              >
                 {author.name}
-              </span>
+              </Link>
               {acceptedCollabs.map((c) => (
                 <span key={c.id} className="text-sm font-semibold text-foreground flex items-center gap-1">
                   <span className="text-muted-foreground font-normal">&amp;</span>
-                  <span className="hover:underline cursor-pointer">{c.name}</span>
+                  <Link
+                    href={getCollabProfileUrl(c)}
+                    className="hover:underline hover:text-primary transition-colors cursor-pointer"
+                    title={`View ${c.name}'s Profile`}
+                  >
+                    {c.name}
+                  </Link>
                 </span>
               ))}
               {acceptedCollabs.length > 0 && (

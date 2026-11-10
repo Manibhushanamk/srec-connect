@@ -171,6 +171,10 @@ export const authOptions: NextAuthOptions = {
       if (account?.refresh_token) {
         token.refreshToken = account.refresh_token;
       }
+      if (trigger === 'update') {
+        if (session?.name) token.name = session.name;
+        if (session?.image) token.picture = session.image;
+      }
 
       // Always resolve and synchronize with live database user
       const lookupEmail = (user?.email || token.email)?.toLowerCase().trim();
@@ -277,6 +281,39 @@ export const authOptions: NextAuthOptions = {
 
     async session({ session, token }) {
       if (session.user) {
+        const lookupEmail = (session.user.email || token.email)?.toLowerCase().trim();
+        if (lookupEmail) {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: lookupEmail },
+            select: {
+              id: true,
+              name: true,
+              role: true,
+              status: true,
+              departmentId: true,
+              studentId: true,
+              facultyId: true,
+              avatarUrl: true,
+              faculty: { select: { name: true, designation: true } },
+              student: { select: { name: true } },
+            },
+          }).catch(() => null);
+
+          if (dbUser) {
+            const liveName = dbUser.name || dbUser.faculty?.name || dbUser.student?.name;
+            session.user.name = liveName || session.user.name;
+            (session.user as any).id = dbUser.id;
+            (session.user as any).role = dbUser.role;
+            (session.user as any).status = dbUser.status;
+            (session.user as any).departmentId = dbUser.departmentId;
+            (session.user as any).studentId = dbUser.studentId;
+            (session.user as any).facultyId = dbUser.facultyId;
+            if (dbUser.avatarUrl) session.user.image = dbUser.avatarUrl;
+            (session as any).accessToken = token.accessToken;
+            return session;
+          }
+        }
+
         (session.user as any).id = token.id;
         if (token.name) session.user.name = token.name as string;
         if (token.picture) session.user.image = token.picture as string;
