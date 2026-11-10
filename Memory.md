@@ -52,6 +52,22 @@
 
 **Total Bug Bounty Score: 100 / 100 Points (10 verified fixes)**
 
+### I. Identity & Academic Name Synchronization across Entire System
+- **Root Cause of Name Discrepancy**:
+  1. Google OAuth SSO initially set `User.name` to the user's personal Google account name (`KENCHU GUNDU MANI BHUSHANAM` / `Mani bhushanam k`).
+  2. The seeded database record for HOD was created under placeholder name `Dr. K. Srinivas Rao`, leaving a split identity between the NextAuth session name and the linked Faculty record.
+  3. `NextAuth`'s JWT callback previously only updated `token.name` on initial sign-in (`if (user?.email)`), leaving stale session cookies in the browser.
+  4. The profile hero card defaulted to `Campus Member` when headline was empty, instead of using official faculty designation `Professor & Head of Department`.
+  5. The homepage feed had hardcoded `Dr. K. Srinivas Rao` on `id="cmw7jtpt30011ikhmx621nfsr"`.
+- **Complete Relational Fix**:
+  1. Synchronized `User.name`, `Faculty.name`, and `Achievement.personName` in Neon PostgreSQL to `Mani Bhushanam K`.
+  2. Upgraded `src/lib/auth.ts` JWT callback to dynamically query `dbUser` and enforce `token.name = dbUser.name || officialAcademicName` on every token check.
+  3. Enabled `useSession().update()` in `ProfileWorkspace.tsx` so client session updates instantly upon saving profile edits.
+  4. In `src/app/api/user/profile/route.ts`, profile name updates cascade to `Faculty.name`, `Student.name`, and all authored `Achievement.personName` records.
+  5. Updated `ProfileWorkspace.tsx` headline fallback to display `${designation} • ${degrees}` (`Professor & Head of Department • Ph.D., M.Tech`) rather than generic `Campus Member`.
+  6. Verified Achievements page (`/achievements`) configured to strictly 2 columns (`grid-cols-1 md:grid-cols-2`) and removed "All Departments" filter (dedicated AIML portal).
+  7. Verified with Playwright screenshot proof: `validate_hod_profile.png` and `validate_achievements_2col.png`.
+
 ---
 
 ## 2. Completed Milestones & System Highlights
@@ -235,6 +251,22 @@
 
 **Total Bug Bounty Score: 100 / 100 Points (10 verified fixes)**
 
+### I. Identity & Academic Name Synchronization across Entire System
+- **Root Cause of Name Discrepancy**:
+  1. Google OAuth SSO initially set `User.name` to the user's personal Google account name (`KENCHU GUNDU MANI BHUSHANAM` / `Mani bhushanam k`).
+  2. The seeded database record for HOD was created under placeholder name `Dr. K. Srinivas Rao`, leaving a split identity between the NextAuth session name and the linked Faculty record.
+  3. `NextAuth`'s JWT callback previously only updated `token.name` on initial sign-in (`if (user?.email)`), leaving stale session cookies in the browser.
+  4. The profile hero card defaulted to `Campus Member` when headline was empty, instead of using official faculty designation `Professor & Head of Department`.
+  5. The homepage feed had hardcoded `Dr. K. Srinivas Rao` on `id="cmw7jtpt30011ikhmx621nfsr"`.
+- **Complete Relational Fix**:
+  1. Synchronized `User.name`, `Faculty.name`, and `Achievement.personName` in Neon PostgreSQL to `Mani Bhushanam K`.
+  2. Upgraded `src/lib/auth.ts` JWT callback to dynamically query `dbUser` and enforce `token.name = dbUser.name || officialAcademicName` on every token check.
+  3. Enabled `useSession().update()` in `ProfileWorkspace.tsx` so client session updates instantly upon saving profile edits.
+  4. In `src/app/api/user/profile/route.ts`, profile name updates cascade to `Faculty.name`, `Student.name`, and all authored `Achievement.personName` records.
+  5. Updated `ProfileWorkspace.tsx` headline fallback to display `${designation} • ${degrees}` (`Professor & Head of Department • Ph.D., M.Tech`) rather than generic `Campus Member`.
+  6. Verified Achievements page (`/achievements`) configured to strictly 2 columns (`grid-cols-1 md:grid-cols-2`) and removed "All Departments" filter (dedicated AIML portal).
+  7. Verified with Playwright screenshot proof: `validate_hod_profile.png` and `validate_achievements_2col.png`.
+
 ---
 
 ## 3. Empirical Verification Evidence
@@ -332,6 +364,22 @@
 
 **Total Bug Bounty Score: 100 / 100 Points (10 verified fixes)**
 
+### I. Identity & Academic Name Synchronization across Entire System
+- **Root Cause of Name Discrepancy**:
+  1. Google OAuth SSO initially set `User.name` to the user's personal Google account name (`KENCHU GUNDU MANI BHUSHANAM` / `Mani bhushanam k`).
+  2. The seeded database record for HOD was created under placeholder name `Dr. K. Srinivas Rao`, leaving a split identity between the NextAuth session name and the linked Faculty record.
+  3. `NextAuth`'s JWT callback previously only updated `token.name` on initial sign-in (`if (user?.email)`), leaving stale session cookies in the browser.
+  4. The profile hero card defaulted to `Campus Member` when headline was empty, instead of using official faculty designation `Professor & Head of Department`.
+  5. The homepage feed had hardcoded `Dr. K. Srinivas Rao` on `id="cmw7jtpt30011ikhmx621nfsr"`.
+- **Complete Relational Fix**:
+  1. Synchronized `User.name`, `Faculty.name`, and `Achievement.personName` in Neon PostgreSQL to `Mani Bhushanam K`.
+  2. Upgraded `src/lib/auth.ts` JWT callback to dynamically query `dbUser` and enforce `token.name = dbUser.name || officialAcademicName` on every token check.
+  3. Enabled `useSession().update()` in `ProfileWorkspace.tsx` so client session updates instantly upon saving profile edits.
+  4. In `src/app/api/user/profile/route.ts`, profile name updates cascade to `Faculty.name`, `Student.name`, and all authored `Achievement.personName` records.
+  5. Updated `ProfileWorkspace.tsx` headline fallback to display `${designation} • ${degrees}` (`Professor & Head of Department • Ph.D., M.Tech`) rather than generic `Campus Member`.
+  6. Verified Achievements page (`/achievements`) configured to strictly 2 columns (`grid-cols-1 md:grid-cols-2`) and removed "All Departments" filter (dedicated AIML portal).
+  7. Verified with Playwright screenshot proof: `validate_hod_profile.png` and `validate_achievements_2col.png`.
+
 ---
 
 ## Session Update — 2-Column Grid & Authentic Card Data Sanitization
@@ -408,6 +456,22 @@
 
 **Total Bug Bounty Score: 100 / 100 Points (10 verified fixes)**
 
+### I. Identity & Academic Name Synchronization across Entire System
+- **Root Cause of Name Discrepancy**:
+  1. Google OAuth SSO initially set `User.name` to the user's personal Google account name (`KENCHU GUNDU MANI BHUSHANAM` / `Mani bhushanam k`).
+  2. The seeded database record for HOD was created under placeholder name `Dr. K. Srinivas Rao`, leaving a split identity between the NextAuth session name and the linked Faculty record.
+  3. `NextAuth`'s JWT callback previously only updated `token.name` on initial sign-in (`if (user?.email)`), leaving stale session cookies in the browser.
+  4. The profile hero card defaulted to `Campus Member` when headline was empty, instead of using official faculty designation `Professor & Head of Department`.
+  5. The homepage feed had hardcoded `Dr. K. Srinivas Rao` on `id="cmw7jtpt30011ikhmx621nfsr"`.
+- **Complete Relational Fix**:
+  1. Synchronized `User.name`, `Faculty.name`, and `Achievement.personName` in Neon PostgreSQL to `Mani Bhushanam K`.
+  2. Upgraded `src/lib/auth.ts` JWT callback to dynamically query `dbUser` and enforce `token.name = dbUser.name || officialAcademicName` on every token check.
+  3. Enabled `useSession().update()` in `ProfileWorkspace.tsx` so client session updates instantly upon saving profile edits.
+  4. In `src/app/api/user/profile/route.ts`, profile name updates cascade to `Faculty.name`, `Student.name`, and all authored `Achievement.personName` records.
+  5. Updated `ProfileWorkspace.tsx` headline fallback to display `${designation} • ${degrees}` (`Professor & Head of Department • Ph.D., M.Tech`) rather than generic `Campus Member`.
+  6. Verified Achievements page (`/achievements`) configured to strictly 2 columns (`grid-cols-1 md:grid-cols-2`) and removed "All Departments" filter (dedicated AIML portal).
+  7. Verified with Playwright screenshot proof: `validate_hod_profile.png` and `validate_achievements_2col.png`.
+
 ---
 
 ## Session Update — Achievements Tap-to-View Modal, Highlights Management & Live Notices API
@@ -481,6 +545,22 @@
     - *Fix:* Enforced strict tenant isolation via `prisma.notification.updateMany({ where: { id, userId: currentUser.id } })`.
 
 **Total Bug Bounty Score: 100 / 100 Points (10 verified fixes)**
+
+### I. Identity & Academic Name Synchronization across Entire System
+- **Root Cause of Name Discrepancy**:
+  1. Google OAuth SSO initially set `User.name` to the user's personal Google account name (`KENCHU GUNDU MANI BHUSHANAM` / `Mani bhushanam k`).
+  2. The seeded database record for HOD was created under placeholder name `Dr. K. Srinivas Rao`, leaving a split identity between the NextAuth session name and the linked Faculty record.
+  3. `NextAuth`'s JWT callback previously only updated `token.name` on initial sign-in (`if (user?.email)`), leaving stale session cookies in the browser.
+  4. The profile hero card defaulted to `Campus Member` when headline was empty, instead of using official faculty designation `Professor & Head of Department`.
+  5. The homepage feed had hardcoded `Dr. K. Srinivas Rao` on `id="cmw7jtpt30011ikhmx621nfsr"`.
+- **Complete Relational Fix**:
+  1. Synchronized `User.name`, `Faculty.name`, and `Achievement.personName` in Neon PostgreSQL to `Mani Bhushanam K`.
+  2. Upgraded `src/lib/auth.ts` JWT callback to dynamically query `dbUser` and enforce `token.name = dbUser.name || officialAcademicName` on every token check.
+  3. Enabled `useSession().update()` in `ProfileWorkspace.tsx` so client session updates instantly upon saving profile edits.
+  4. In `src/app/api/user/profile/route.ts`, profile name updates cascade to `Faculty.name`, `Student.name`, and all authored `Achievement.personName` records.
+  5. Updated `ProfileWorkspace.tsx` headline fallback to display `${designation} • ${degrees}` (`Professor & Head of Department • Ph.D., M.Tech`) rather than generic `Campus Member`.
+  6. Verified Achievements page (`/achievements`) configured to strictly 2 columns (`grid-cols-1 md:grid-cols-2`) and removed "All Departments" filter (dedicated AIML portal).
+  7. Verified with Playwright screenshot proof: `validate_hod_profile.png` and `validate_achievements_2col.png`.
 
 ---
 

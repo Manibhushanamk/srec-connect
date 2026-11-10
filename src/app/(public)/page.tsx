@@ -328,7 +328,7 @@ export default function HomePage() {
             <ScholarDirectoryCard
               type="FACULTY"
               id="cmw7jtpt30011ikhmx621nfsr"
-              name="Dr. K. Srinivas Rao"
+              name="Mani Bhushanam K"
               role="HOD"
               departmentName="Artificial Intelligence & Machine Learning"
               headline="Professor & Head of Department | Artificial Intelligence & Machine Learning"

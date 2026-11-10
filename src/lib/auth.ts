@@ -164,7 +164,7 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
 
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger, session }) {
       if (account?.access_token) {
         token.accessToken = account.access_token;
       }
@@ -172,17 +172,22 @@ export const authOptions: NextAuthOptions = {
         token.refreshToken = account.refresh_token;
       }
 
-      if (user?.email) {
-        const normalizedEmail = user.email.toLowerCase().trim();
+      // Always resolve and synchronize with live database user
+      const lookupEmail = (user?.email || token.email)?.toLowerCase().trim();
+      if (lookupEmail) {
         let dbUser = await prisma.user.findUnique({
-          where: { email: normalizedEmail },
+          where: { email: lookupEmail },
           select: {
             id: true,
+            name: true,
             role: true,
             status: true,
             departmentId: true,
             studentId: true,
             facultyId: true,
+            avatarUrl: true,
+            faculty: { select: { name: true, designation: true } },
+            student: { select: { name: true } },
           },
         });
 
@@ -193,13 +198,14 @@ export const authOptions: NextAuthOptions = {
             const student = await prisma.student.findFirst({
               where: {
                 OR: [
-                  { email: normalizedEmail },
-                  { rollNumber: normalizedEmail.split('@')[0].toUpperCase() },
+                  { email: lookupEmail },
+                  { rollNumber: lookupEmail.split('@')[0].toUpperCase() },
                 ],
               },
             });
             if (student) {
               updateData.studentId = student.id;
+              if (!dbUser.name && student.name) updateData.name = student.name;
               if (!dbUser.departmentId && student.departmentId) {
                 updateData.departmentId = student.departmentId;
               }
@@ -208,10 +214,11 @@ export const authOptions: NextAuthOptions = {
 
           if (!dbUser.facultyId && (dbUser.role === 'FACULTY' || dbUser.role === 'HOD')) {
             const faculty = await prisma.faculty.findFirst({
-              where: { email: normalizedEmail },
+              where: { email: lookupEmail },
             });
             if (faculty) {
               updateData.facultyId = faculty.id;
+              if (!dbUser.name && faculty.name) updateData.name = faculty.name;
               if (!dbUser.departmentId && faculty.departmentId) {
                 updateData.departmentId = faculty.departmentId;
               }
@@ -231,23 +238,38 @@ export const authOptions: NextAuthOptions = {
               data: updateData,
               select: {
                 id: true,
+                name: true,
                 role: true,
                 status: true,
                 departmentId: true,
                 studentId: true,
                 facultyId: true,
+                avatarUrl: true,
+                faculty: { select: { name: true, designation: true } },
+                student: { select: { name: true } },
               },
             });
           }
         }
 
+        // Keep official verified academic name synchronized
+        const officialAcademicName = dbUser?.name || dbUser?.faculty?.name || dbUser?.student?.name;
+        if (dbUser && dbUser.facultyId && officialAcademicName && dbUser.faculty?.name !== officialAcademicName) {
+          await prisma.faculty.update({
+            where: { id: dbUser.facultyId },
+            data: { name: officialAcademicName },
+          }).catch(() => null);
+        }
+
         if (dbUser) {
           token.id = dbUser.id;
+          token.name = officialAcademicName || dbUser.name;
           token.role = dbUser.role;
           token.status = dbUser.status;
           token.departmentId = dbUser.departmentId;
           token.studentId = dbUser.studentId;
           token.facultyId = dbUser.facultyId;
+          if (dbUser.avatarUrl) token.picture = dbUser.avatarUrl;
         }
       }
       return token;
@@ -256,6 +278,8 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id;
+        if (token.name) session.user.name = token.name as string;
+        if (token.picture) session.user.image = token.picture as string;
         (session.user as any).role = token.role;
         (session.user as any).status = token.status;
         (session.user as any).departmentId = token.departmentId;

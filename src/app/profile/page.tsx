@@ -92,10 +92,12 @@ export default async function ProfilePage() {
       ].filter((a, index, arr) => arr.findIndex((x) => x.id === a.id) === index)
     : userCreatedAchievements;
 
+  const officialAcademicName = user.faculty?.name || user.student?.name || user.name;
+
   const serializedUser = {
     id: user.id,
     email: user.email,
-    name: user.name,
+    name: officialAcademicName,
     role: user.role,
     status: user.status,
     avatarUrl: user.avatarUrl,
@@ -134,7 +136,7 @@ export default async function ProfilePage() {
             participationType: a.participationType,
             academicYear: a.academicYear,
             achievementDate: a.achievementDate.toISOString(),
-            personName: a.personName || user.name,
+            personName: officialAcademicName || a.personName || user.name,
             personType: (a.personType as any) || 'STUDENT',
             rollNumber: a.primaryStudentRoll || user.student?.rollNumber,
             departmentName: user.department?.name || user.departmentName || 'Computer Science & Engineering (AI & ML)',
@@ -167,7 +169,7 @@ export default async function ProfilePage() {
             participationType: a.participationType,
             academicYear: a.academicYear,
             achievementDate: a.achievementDate.toISOString(),
-            personName: a.personName || user.name,
+            personName: officialAcademicName || a.personName || user.name,
             personType: (a.personType as any) || 'FACULTY',
             rollNumber: null,
             departmentName: user.department?.name || user.departmentName || 'Computer Science & Engineering (AI & ML)',

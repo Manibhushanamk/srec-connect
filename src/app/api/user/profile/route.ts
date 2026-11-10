@@ -82,6 +82,34 @@ export async function PATCH(req: NextRequest) {
       where: { id: dbUser.id },
       data: userDataToUpdate,
     });
+
+    // Synchronize name across linked student/faculty records and achievements
+    if (userDataToUpdate.name) {
+      const newName = userDataToUpdate.name;
+      if (dbUser.studentId) {
+        await prisma.student.update({
+          where: { id: dbUser.studentId },
+          data: { name: newName },
+        }).catch(() => null);
+
+        await prisma.achievement.updateMany({
+          where: { primaryStudentId: dbUser.studentId },
+          data: { personName: newName },
+        }).catch(() => null);
+      }
+
+      if (dbUser.facultyId) {
+        await prisma.faculty.update({
+          where: { id: dbUser.facultyId },
+          data: { name: newName },
+        }).catch(() => null);
+
+        await prisma.achievement.updateMany({
+          where: { facultyId: dbUser.facultyId },
+          data: { personName: newName },
+        }).catch(() => null);
+      }
+    }
   }
 
   // Update student profile (strictly immutable fields: rollNumber, departmentId, batch)

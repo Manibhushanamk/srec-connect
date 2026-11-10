@@ -242,7 +242,7 @@ export default function SignInPage() {
                       className="p-2 rounded-lg border border-border hover:border-primary text-left bg-secondary/40"
                     >
                       <p className="font-bold text-[11px] text-foreground">HOD (AIML)</p>
-                      <p className="text-[10px] text-muted-foreground truncate">Dr. K. Srinivas Rao</p>
+                      <p className="text-[10px] text-muted-foreground truncate">Mani Bhushanam K</p>
                     </button>
 
                     <button

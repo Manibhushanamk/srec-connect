@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import {
   Shield,
   Crown,
@@ -54,6 +54,7 @@ interface ProfileWorkspaceProps {
     };
     student?: {
       id: string;
+      name?: string | null;
       rollNumber: string;
       batch?: string | null;
       section?: string | null;
@@ -68,6 +69,7 @@ interface ProfileWorkspaceProps {
     } | null;
     faculty?: {
       id: string;
+      name?: string | null;
       designation?: string | null;
       degrees?: string | null;
       experience?: string | null;
@@ -90,10 +92,16 @@ interface ProfileWorkspaceProps {
 
 export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser }) => {
   const router = useRouter();
+  const { update: updateSession } = useSession();
   const [activeTab, setActiveTab] = useState<'overview' | 'customize' | 'security'>('overview');
 
-  // Form State
-  const [name, setName] = useState(initialUser.name || '');
+  // Form State - initialized with official academic name
+  const [name, setName] = useState(
+    initialUser.faculty?.name ||
+    initialUser.student?.name ||
+    initialUser.name ||
+    ''
+  );
   const [headline, setHeadline] = useState(
     initialUser.headline ||
     (initialUser.student?.headline ?? '') ||
@@ -139,6 +147,14 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
   const isFaculty = initialUser.role === 'FACULTY' || isHOD || Boolean(initialUser.faculty);
   const isStudent = (initialUser.role === 'STUDENT' || !isFaculty) && Boolean(initialUser.student);
 
+  const defaultHeadline = isFaculty
+    ? `${initialUser.faculty?.designation || (isHOD ? 'Professor & Head of Department' : 'Faculty Member')}${initialUser.faculty?.degrees ? ` • ${initialUser.faculty.degrees}` : ''}`
+    : isStudent
+    ? `Student Scholar • CSE (AI & ML)${initialUser.student?.batch ? ` • Batch ${initialUser.student.batch}` : ''}`
+    : isSuperAdmin
+    ? 'Systems Administrator & Academic Governance'
+    : 'Department Member • CSE (AI & ML)';
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
@@ -163,6 +179,11 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'Failed to update profile');
+      }
+
+      // Synchronize client session immediately
+      if (updateSession) {
+        await updateSession({ name: name.trim() });
       }
 
       setFeedback({ type: 'success', text: 'Profile customizations saved successfully!' });
@@ -256,7 +277,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                 </div>
 
                 <p className="text-xs sm:text-sm text-foreground/80 font-medium mt-0.5 line-clamp-1">
-                  {headline || (isSuperAdmin ? 'Systems Administrator & Academic Governance' : 'Campus Member')}
+                  {headline || defaultHeadline}
                 </p>
 
                 <p className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
