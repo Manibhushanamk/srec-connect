@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -135,14 +138,21 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
               </Button>
             </Link>
           )}
-          {isOwner && (
+          {isOwner ? (
             <Link href="/profile">
               <Button size="sm" variant="outline" className="gap-2">
                 <Edit className="w-3.5 h-3.5" />
                 Edit Portfolio
               </Button>
             </Link>
-          )}
+          ) : (viewerRole === 'SUPER_ADMIN' || viewerRole === 'ADMIN') ? (
+            <Link href={`/admin/users?search=${encodeURIComponent(student.rollNumber)}`}>
+              <Button size="sm" variant="primary" className="gap-2">
+                <Edit className="w-3.5 h-3.5" />
+                Edit as Admin
+              </Button>
+            </Link>
+          ) : null}
         </div>
       </div>
 

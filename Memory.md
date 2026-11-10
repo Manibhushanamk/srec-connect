@@ -671,6 +671,41 @@
     - `verify_notification_mobile_390.png`
     - `verify_notification_desktop.png`
 
+## Session: Super Admin Platform-Wide User Record Management & Cascading Reactivity
+
+- **Comprehensive Super Admin Management Modal (`src/app/admin/users/page.tsx`)**:
+  - Added direct `"Edit"` button on every record in `/admin/users` directory table.
+  - Implemented full-fidelity modal dialog allowing Super Admin to edit ANY field of ANY platform user:
+    - Account & System Role: Full Name, Email, Role (`STUDENT`, `FACULTY`, `HOD`, `WEB_MANAGER`, `ADMIN`, `SUPER_ADMIN`), Status (`ACTIVE`, `SUSPENDED`, `INACTIVE`), Department selector (`Department` relation + synchronized `departmentName`), and Avatar URL with live preview.
+    - Contact & Statement: Professional Headline, Phone Number, Bio Statement.
+    - Student Credentials: JNTUA Roll Number, Academic Batch (e.g. `2022-2026`), Section (`A`, `B`, `C`), GitHub URL, LinkedIn URL, Portfolio URL.
+    - Faculty Credentials: Academic Designation, Role Category (`HOD`, `PROFESSOR`, `ASSOCIATE_PROFESSOR`, `ASSISTANT_PROFESSOR`), Degrees/Qualifications, Total Experience, Cabin/Office Room, Research Specializations, Google Scholar URL.
+- **Relational Cascading & Immediate Reactivity (`src/app/api/admin/users/route.ts`)**:
+  - Overhauled `PATCH /api/admin/users`:
+    - Synchronizes changes atomically across `User`, `Student`, and `Faculty` models.
+    - Auto-cascades Full Name updates across linked `Faculty`, `Student`, and all `Achievement.personName` records authored by or featuring that user.
+    - Auto-cascades Roll Number changes to `Achievement.primaryStudentRoll`.
+    - Auto-creates `Student` or `Faculty` backing records if a user is upgraded or assigned those roles without existing rows.
+    - Immediate platform-wide cache invalidation via `revalidatePath` (`/students`, `/faculty`, `/admin/users`, `/profile`, `/`, `/students/[id]`, `/faculty/[id]`).
+- **Dynamic Public Profile Reactivity (`src/app/(public)/students/[id]/page.tsx` & `src/app/(public)/faculty/[id]/page.tsx`)**:
+  - Enabled `export const dynamic = 'force-dynamic'` and `export const revalidate = 0` ensuring zero stale caching.
+  - Added `"Edit as Admin"` action button on student and faculty public profile pages visible exclusively to authenticated Super Admins and Admins, deep-linking directly to `/admin/users?search=${rollNumber/name}` for instant edits.
+- **Empirical Validation**:
+  - TypeScript: 0 errors (`npx tsc --noEmit`).
+  - Playwright test (`scripts/verify_super_admin_edit_user.js`):
+    - Authenticated as Super Admin (`manibhushanam4k@gmail.com`).
+    - Searched for student `22091A3201`, opened Edit modal, updated headline and bio.
+    - Submitted changes with 200 OK and verified database reflects new values on both `User` and `Student` records.
+    - Navigated to public student profile `/students/22091A3201`.
+    - Verified "Edit as Admin" button is rendered (`true`).
+    - Verified new headline is rendered in the live UI (`true`).
+    - Verified clicking "Edit as Admin" navigates directly back to `/admin/users?search=22091A3201` (`true`).
+  - Visual Proofs:
+    - `verify_admin_users_directory.png` (Super Admin User Directory with Edit buttons)
+    - `verify_super_admin_edit_modal.png` (Comprehensive Edit User Modal with full credentials)
+    - `verify_student_profile_admin_reflect.png` (Public profile displaying updated details & Edit as Admin button)
+
+
 
 
 

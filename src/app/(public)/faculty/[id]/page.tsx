@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -77,6 +80,18 @@ export default async function FacultyProfilePage({ params }: FacultyProfilePageP
       session.user.email.toLowerCase() === faculty.user.email.toLowerCase()
   );
 
+  const viewerEmail = session?.user?.email?.toLowerCase().trim();
+  let isSuperAdminOrAdmin = false;
+  if (viewerEmail) {
+    const viewer = await prisma.user.findUnique({
+      where: { email: viewerEmail },
+      select: { role: true },
+    });
+    if (viewer && ['SUPER_ADMIN', 'ADMIN'].includes(viewer.role)) {
+      isSuperAdminOrAdmin = true;
+    }
+  }
+
   const role = faculty.roleCategory === 'HOD' ? 'HOD' : 'FACULTY';
   const achievements = faculty.achievements || [];
 
@@ -91,14 +106,21 @@ export default async function FacultyProfilePage({ params }: FacultyProfilePageP
           <ArrowLeft className="w-4 h-4" />
           Back to Faculty Directory
         </Link>
-        {isOwner && (
-          <Link href="/dashboard/faculty/settings">
+        {isOwner ? (
+          <Link href="/profile">
             <Button size="sm" variant="outline" className="gap-2">
               <Edit className="w-3.5 h-3.5" />
               Edit Profile
             </Button>
           </Link>
-        )}
+        ) : isSuperAdminOrAdmin ? (
+          <Link href={`/admin/users?search=${encodeURIComponent(faculty.name)}`}>
+            <Button size="sm" variant="primary" className="gap-2">
+              <Edit className="w-3.5 h-3.5" />
+              Edit as Admin
+            </Button>
+          </Link>
+        ) : null}
       </div>
 
       {/* Profile Header (Instagram & LinkedIn Hybrid) */}
