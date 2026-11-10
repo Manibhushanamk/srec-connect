@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Navbar } from '@/components/layout/Navbar';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { Footer } from '@/components/layout/Footer';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -52,7 +52,7 @@ export default function StudentSettingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col bg-[#070b14] text-slate-100">
-        <Navbar />
+        <AppHeader />
         <main className="flex-1 flex items-center justify-center">
           <p className="text-xs font-mono text-cyan-400 animate-pulse">Loading Profile...</p>
         </main>
@@ -64,7 +64,7 @@ export default function StudentSettingsPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#070b14] text-slate-100">
-      <Navbar />
+      <AppHeader />
 
       <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 py-10 w-full">
         <Link

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Navbar } from '@/components/layout/Navbar';
+import { AppHeader } from '@/components/layout/AppHeader';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -198,7 +198,7 @@ export default function FacultySubmitRecordPage() {
   if (submitted) {
     return (
       <div className="min-h-screen flex flex-col bg-background text-foreground">
-        <Navbar />
+        <AppHeader />
         <main className="flex-1 max-w-lg mx-auto px-4 py-16 text-center">
           <Card className="p-8 border-emerald-500/30 bg-card text-center">
             <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-500 mx-auto flex items-center justify-center mb-4">
@@ -229,7 +229,7 @@ export default function FacultySubmitRecordPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
-      <Navbar />
+      <AppHeader />
 
       <main className="flex-1 max-w-3xl mx-auto px-4 sm:px-6 py-10 w-full">
         <div className="flex items-center justify-between gap-4 mb-6">
