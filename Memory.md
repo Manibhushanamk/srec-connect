@@ -863,3 +863,23 @@
   - Playwright automated screenshots captured on live production URL:
     - `live_vercel_connect_srec.png`: Full home feed with active announcements, dynamic scholars, and clean relations.
     - `live_vercel_students.png`: Dynamic students directory with zero deleted user traces.
+
+
+### Google OAuth Verification Legal Pages & Search Console HTML Verification (Nov 11, 2026)
+- **Legal Pages Implementation**:
+  - Implemented `src/app/(public)/privacy/page.tsx` (`/privacy`): Comprehensive, institutional Privacy Policy covering all 14 mandatory sections (Google OAuth OpenID Connect authentication, Google Drive `drive.file` scope boundary, `assertDriveAllowed` protection for confidential grievance/disciplinary records, RBAC permissions, zero data commercialization, soft-delete & Admin Trash retention/deletion, forensic audit logging, student rights, and official contact channels).
+  - Implemented `src/app/(public)/terms/page.tsx` (`/terms`): Institutional Terms of Service covering all 16 required sections (eligibility, student account responsibilities, Google authentication, accuracy of records, upload limits [15 MB Drive / 20 MB general, PDF/PNG/JPG/WEBP/DOCX], intellectual property & institutional licensing, multi-tier verification workflow, administrator code of ethics, suspension protocols, and liability limits).
+  - Built `src/components/legal/LegalTableOfContents.tsx`: Interactive, responsive sticky Table of Contents with active IntersectionObserver section tracking, quick switcher between Privacy & Terms, print/PDF generation, and mobile collapsible jump drawer.
+  - Updated `src/components/layout/DesktopSidebar.tsx` and `src/components/layout/Footer.tsx` with clear, accessible navigation links to `/privacy` and `/terms`.
+- **Google Search Console HTML Ownership Verification**:
+  - Copied `googleac646f04fd2d037a.html` to `public/googleac646f04fd2d037a.html`.
+  - Preserved exact filename and original content (`google-site-verification: googleac646f04fd2d037a.html`).
+  - Verified static file is publicly served at root without redirects or authentication gates.
+- **Verification & Deployment**:
+  - `npm run typecheck`: 0 errors.
+  - `npm run build`: All 60 routes compiled statically and dynamically without errors.
+  - Vercel production deployment: `https://connect-srec.vercel.app` (Deployment ID: `dpl_5AnjXeeLXuZijSXSb6g7rg4bsLMn`).
+  - Playwright live validation captured:
+    - `https://connect-srec.vercel.app/privacy` (HTTP 200) -> `verify_live_privacy.png`, `verify_live_privacy_mobile.png`.
+    - `https://connect-srec.vercel.app/terms` (HTTP 200) -> `verify_live_terms.png`.
+    - `https://connect-srec.vercel.app/googleac646f04fd2d037a.html` (HTTP 200, matching exact verification string).

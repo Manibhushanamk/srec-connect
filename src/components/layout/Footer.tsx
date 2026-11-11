@@ -125,9 +125,20 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t border-slate-800/50">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-slate-500">
-              © {new Date().getFullYear()} Santhiram Engineering College (Autonomous), Nandyal. All rights reserved.
-            </p>
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-xs text-slate-500">
+              <p>
+                © {new Date().getFullYear()} Santhiram Engineering College (Autonomous), Nandyal. All rights reserved.
+              </p>
+              <div className="flex items-center gap-3 text-slate-400">
+                <Link href="/privacy" className="hover:text-white transition-colors underline-offset-4 hover:underline">
+                  Privacy Policy
+                </Link>
+                <span>•</span>
+                <Link href="/terms" className="hover:text-white transition-colors underline-offset-4 hover:underline">
+                  Terms of Service
+                </Link>
+              </div>
+            </div>
             <div className="flex items-center gap-6 text-sm text-slate-500">
               <span>AICTE Approved</span>
               <span>JNTUA Affiliated</span>

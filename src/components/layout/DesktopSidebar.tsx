@@ -275,9 +275,16 @@ export const DesktopSidebar: React.FC = () => {
       </div>
 
       {/* 4. Footer credits */}
-      <div className="px-3 text-[11px] text-muted-foreground">
+      <div className="px-3 text-[11px] text-muted-foreground space-y-1">
         <p>© 2026 Santhiram Engineering College</p>
-        <p className="text-[10px] text-muted-foreground/80 mt-0.5">CSE (AI & ML) Department Platform</p>
+        <p className="text-[10px] text-muted-foreground/80">CSE (AI & ML) Department Platform</p>
+        <div className="flex items-center gap-2 pt-1 text-[10px] text-muted-foreground/80">
+          <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
+          <span>•</span>
+          <Link href="/terms" className="hover:text-primary transition-colors">Terms</Link>
+          <span>•</span>
+          <Link href="/about" className="hover:text-primary transition-colors">About</Link>
+        </div>
       </div>
     </aside>
   );
