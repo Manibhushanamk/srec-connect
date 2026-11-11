@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyStatePreset } from '@/components/ui/EmptyState';
 import { ProfileHeader } from '@/components/portfolio/ProfileHeader';
 import { AchievementCard } from '@/components/cards/AchievementCard';
+import { FeedCard } from '@/components/social/FeedCard';
 import { formatDate } from '@/lib/utils';
 import {
   Award,
@@ -23,6 +24,7 @@ import {
   ArrowLeft,
   Edit,
   CheckCircle,
+  MessageSquare,
 } from 'lucide-react';
 
 interface StudentProfilePageProps {
@@ -118,6 +120,75 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
     .filter((a) => a.status === 'APPROVED' || a.status === 'PUBLISHED');
   const allAchievements = [...verifiedAchievements, ...teamVerifiedAchievements];
 
+  const currentUserId = (session?.user as any)?.id;
+
+  // Query student's public community posts
+  const userPosts = student.user?.id
+    ? await prisma.post.findMany({
+        where: {
+          authorId: student.user.id,
+          deletedAt: null,
+        },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatarUrl: true,
+              role: true,
+              headline: true,
+              student: { select: { rollNumber: true } },
+              faculty: { select: { designation: true } },
+            },
+          },
+          achievement: {
+            include: { category: true },
+          },
+          media: { orderBy: { order: 'asc' } },
+          likes: true,
+          comments: {
+            include: {
+              author: { select: { id: true, name: true, avatarUrl: true } },
+            },
+          },
+          collaborators: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    : [];
+
+  const formattedPosts = userPosts.map((post) => ({
+    id: post.id,
+    author: {
+      id: post.author.id,
+      name: post.author.name || student.name,
+      role: post.author.role,
+      avatarUrl: post.author.avatarUrl || student.avatarUrl || undefined,
+      headline: post.author.headline || student.headline || undefined,
+      rollNumber: post.author.student?.rollNumber || student.rollNumber,
+      isVerified: true,
+      department: student.department?.name || 'CSE (AI & ML)',
+    },
+    content: post.content,
+    images: post.media.map((m) => m.url),
+    createdAt: post.createdAt.toISOString(),
+    likesCount: post.likes.length,
+    commentsCount: post.comments.length,
+    isLiked: currentUserId ? post.likes.some((l) => l.userId === currentUserId) : false,
+    achievement: post.achievement
+      ? {
+          id: post.achievement.id,
+          title: post.achievement.title,
+          category: post.achievement.category?.name || 'Achievement',
+          issuer: post.achievement.organizationEventName,
+          date: post.achievement.achievementDate.toISOString(),
+          isVerified: post.achievement.status === 'APPROVED' || post.achievement.status === 'PUBLISHED',
+          certificateUrl: post.achievement.googleDriveUrl || post.achievement.certificateUrl || undefined,
+        }
+      : undefined,
+  }));
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Top Navigation */}
@@ -173,7 +244,7 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
         isVerified={student.isActive}
         isOwner={isOwner}
         stats={{
-          postsCount: 0,
+          postsCount: formattedPosts.length,
           verifiedAchievementsCount: allAchievements.length,
           eventsCount: 0,
           skillsCount: 6,
@@ -193,7 +264,7 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
             <CardContent className="pt-4 space-y-3.5 text-xs">
               <div>
                 <span className="text-muted-foreground block text-[11px] uppercase tracking-wider font-semibold">
-                  JNTUA Roll Number
+                  SREC Roll Number
                 </span>
                 <span className="font-mono font-bold text-sm text-foreground mt-0.5 flex items-center gap-1.5">
                   {student.rollNumber}
@@ -274,7 +345,7 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
                   description="Achievements submitted by this student will appear here once verified by faculty and HOD."
                 />
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 2xl:grid-cols-2 gap-5">
                   {allAchievements.map((achievement: any) => (
                     <AchievementCard
                       key={achievement.id}
@@ -297,6 +368,33 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
                       tags={achievement.tags}
                       href={`/achievements/${achievement.id}`}
                     />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Community Posts & Research Updates */}
+          <Card className="border-border">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-border/50">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                <MessageSquare className="w-4 h-4 text-primary" />
+                Community Posts &amp; Updates ({formattedPosts.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
+              {formattedPosts.length === 0 ? (
+                <div className="p-8 text-center border border-dashed border-border rounded-2xl bg-secondary/20">
+                  <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-50" />
+                  <p className="text-xs font-bold text-foreground">No Community Posts Yet</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Updates and research discussions shared by {student.name} will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {formattedPosts.map((post) => (
+                    <FeedCard key={post.id} {...post} />
                   ))}
                 </div>
               )}

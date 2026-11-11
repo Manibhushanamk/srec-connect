@@ -126,7 +126,7 @@ export default function AdminDeduplicationPage() {
             <Badge variant="rose" size="sm">Integrity Scanner</Badge>
           </div>
           <p className="mt-1 text-slate-400 text-xs sm:text-sm pl-7">
-            Identify and remediate duplicate student enrollments, conflicting JNTUA roll numbers, and redundant submissions.
+            Identify and remediate duplicate student enrollments, conflicting SREC roll numbers, and redundant submissions.
           </p>
         </div>
 

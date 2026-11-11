@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyStatePreset } from '@/components/ui/EmptyState';
 import { ProfileHeader } from '@/components/portfolio/ProfileHeader';
 import { AchievementCard } from '@/components/cards/AchievementCard';
+import { FeedCard } from '@/components/social/FeedCard';
 import { formatDate } from '@/lib/utils';
 import {
   Award,
@@ -24,6 +25,7 @@ import {
   MapPin,
   BookOpen,
   CheckCircle,
+  MessageSquare,
 } from 'lucide-react';
 
 interface FacultyProfilePageProps {
@@ -95,6 +97,75 @@ export default async function FacultyProfilePage({ params }: FacultyProfilePageP
   const role = faculty.roleCategory === 'HOD' ? 'HOD' : 'FACULTY';
   const achievements = faculty.achievements || [];
 
+  const currentUserId = (session?.user as any)?.id;
+
+  // Query faculty public community posts
+  const userPosts = faculty.user?.id
+    ? await prisma.post.findMany({
+        where: {
+          authorId: faculty.user.id,
+          deletedAt: null,
+        },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatarUrl: true,
+              role: true,
+              headline: true,
+              student: { select: { rollNumber: true } },
+              faculty: { select: { designation: true } },
+            },
+          },
+          achievement: {
+            include: { category: true },
+          },
+          media: { orderBy: { order: 'asc' } },
+          likes: true,
+          comments: {
+            include: {
+              author: { select: { id: true, name: true, avatarUrl: true } },
+            },
+          },
+          collaborators: true,
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+    : [];
+
+  const formattedPosts = userPosts.map((post) => ({
+    id: post.id,
+    author: {
+      id: post.author.id,
+      name: post.author.name || faculty.name,
+      role: post.author.role,
+      avatarUrl: post.author.avatarUrl || faculty.avatarUrl || undefined,
+      headline: post.author.headline || faculty.designation || undefined,
+      designation: post.author.faculty?.designation || faculty.designation,
+      isVerified: true,
+      department: faculty.department?.name || 'CSE (AI & ML)',
+    },
+    content: post.content,
+    images: post.media.map((m) => m.url),
+    createdAt: post.createdAt.toISOString(),
+    likesCount: post.likes.length,
+    commentsCount: post.comments.length,
+    isLiked: currentUserId ? post.likes.some((l) => l.userId === currentUserId) : false,
+    achievement: post.achievement
+      ? {
+          id: post.achievement.id,
+          title: post.achievement.title,
+          category: post.achievement.category?.name || 'Achievement',
+          issuer: post.achievement.organizationEventName,
+          date: post.achievement.achievementDate.toISOString(),
+          isVerified: post.achievement.status === 'APPROVED' || post.achievement.status === 'PUBLISHED',
+          certificateUrl: post.achievement.googleDriveUrl || post.achievement.certificateUrl || undefined,
+        }
+      : undefined,
+  }));
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Top Navigation */}
@@ -137,7 +208,7 @@ export default async function FacultyProfilePage({ params }: FacultyProfilePageP
         isVerified={faculty.isActive}
         isOwner={isOwner}
         stats={{
-          postsCount: 0,
+          postsCount: formattedPosts.length,
           verifiedAchievementsCount: achievements.length,
           eventsCount: 0,
           skillsCount: 8,
@@ -265,7 +336,7 @@ export default async function FacultyProfilePage({ params }: FacultyProfilePageP
                   description="Publications, patents, and faculty development achievements will be listed here once recorded and verified."
                 />
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 2xl:grid-cols-2 gap-5">
                   {achievements.map((achievement: any) => (
                     <AchievementCard
                       key={achievement.id}
@@ -288,6 +359,33 @@ export default async function FacultyProfilePage({ params }: FacultyProfilePageP
                       tags={achievement.tags}
                       href={`/achievements/${achievement.id}`}
                     />
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Community Posts & Research Updates */}
+          <Card className="border-border">
+            <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-border/50">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-foreground">
+                <MessageSquare className="w-4 h-4 text-primary" />
+                Community Posts &amp; Research Updates ({formattedPosts.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
+              {formattedPosts.length === 0 ? (
+                <div className="p-8 text-center border border-dashed border-border rounded-2xl bg-secondary/20">
+                  <MessageSquare className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-50" />
+                  <p className="text-xs font-bold text-foreground">No Community Posts Yet</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    Research notes and department updates shared by {faculty.name} will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {formattedPosts.map((post) => (
+                    <FeedCard key={post.id} {...post} />
                   ))}
                 </div>
               )}

@@ -169,7 +169,7 @@ export default async function AchievementsPage({
   };
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="w-full space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
         <div>
           <Badge variant="emerald" size="md" glow className="mb-3">
@@ -202,7 +202,7 @@ export default async function AchievementsPage({
           <EmptyStatePreset type="achievements" />
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 mb-8">
               {data.achievements.map((achievement) => (
                 <AchievementCard
                   key={achievement.id}

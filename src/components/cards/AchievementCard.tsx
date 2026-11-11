@@ -124,7 +124,7 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
     <>
       <div
         onClick={() => setShowModal(true)}
-        className="w-full bg-card rounded-3xl border border-border overflow-hidden shadow-subtle hover:border-primary/50 hover:shadow-card transition-all duration-200 flex flex-col group cursor-pointer"
+        className="@container w-full min-w-0 bg-card rounded-3xl border border-border overflow-hidden shadow-subtle hover:border-primary/50 hover:shadow-card transition-all duration-200 flex flex-col group cursor-pointer"
         role="button"
         tabIndex={0}
         onKeyDown={(e) => {
@@ -212,39 +212,39 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
           </div>
 
           {/* 3. Four Metric Honor Boxes */}
-          <div className="grid grid-cols-4 gap-2">
-            <div className="p-2.5 rounded-2xl bg-secondary/40 border border-border/60 text-center">
+          <div className="grid grid-cols-2 @[440px]:grid-cols-4 gap-2">
+            <div className="p-2.5 rounded-2xl bg-secondary/40 border border-border/60 text-center min-w-0">
               <p className="text-sm sm:text-base font-extrabold text-foreground truncate" title={positionRank || 'Winner'}>
                 {formatRank(positionRank)}
               </p>
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5 truncate">
                 Rank
               </p>
             </div>
 
-            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/30 text-center">
+            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/30 text-center min-w-0">
               <p className="text-sm sm:text-base font-extrabold text-primary truncate" title={formatLevel(level)}>
                 {level === 'INTERNATIONAL' ? 'Global' : level === 'NATIONAL' ? 'National' : level}
               </p>
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-primary mt-0.5">
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-primary mt-0.5 truncate">
                 Level
               </p>
             </div>
 
-            <div className="p-2.5 rounded-2xl bg-secondary/40 border border-border/60 text-center">
+            <div className="p-2.5 rounded-2xl bg-secondary/40 border border-border/60 text-center min-w-0">
               <p className="text-sm sm:text-base font-extrabold text-foreground truncate">
                 {academicYear || '2025-26'}
               </p>
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5 truncate">
                 Academic Year
               </p>
             </div>
 
-            <div className="p-2.5 rounded-2xl bg-secondary/40 border border-border/60 text-center">
+            <div className="p-2.5 rounded-2xl bg-secondary/40 border border-border/60 text-center min-w-0">
               <p className="text-sm sm:text-base font-extrabold text-foreground truncate">
                 {achievementDate ? achievementDate.slice(0, 11) : 'Published'}
               </p>
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5 truncate">
                 Date
               </p>
             </div>
@@ -273,8 +273,8 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
           )}
 
           {/* 6. Action Footer Bar */}
-          <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto">
-            <div className="flex items-center gap-2">
+          <div className="pt-3 border-t border-border flex items-center justify-between gap-2 mt-auto flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <a
                 href={proofUrl}
                 target="_blank"
@@ -282,8 +282,9 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
                 onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-primary text-white hover:bg-primary/90 transition-all shadow-xs"
               >
-                <ExternalLink className="w-3.5 h-3.5" />
-                <span>View Proof / Certificate</span>
+                <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                <span>View Proof</span>
+                <span className="hidden @[380px]:inline">/ Certificate</span>
               </a>
 
               <button
@@ -302,7 +303,7 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
                 e.stopPropagation();
                 setShowModal(true);
               }}
-              className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1"
+              className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1 shrink-0 ml-auto"
             >
               <span>View Dossier</span>
               <ArrowRight className="w-3.5 h-3.5" />

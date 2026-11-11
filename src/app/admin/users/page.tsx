@@ -349,7 +349,7 @@ export default function AdminUsersPage() {
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search by name, email, or JNTUA roll number..."
+                placeholder="Search by name, email, or SREC roll number..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 text-xs rounded-xl border border-border bg-secondary/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
@@ -1022,7 +1022,7 @@ export default function AdminUsersPage() {
 
                   {formData.role === 'STUDENT' ? (
                     <div>
-                      <label className="block text-xs font-semibold mb-1 text-foreground">JNTUA Roll Number *</label>
+                      <label className="block text-xs font-semibold mb-1 text-foreground">SREC Roll Number *</label>
                       <input
                         type="text"
                         required

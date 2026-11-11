@@ -112,6 +112,13 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
+  // Only HOD, Web Manager, Admin, and Super Admin can modify institutional anchors (batch & section)
+  const canManageAcademicAnchors =
+    dbUser.role === 'HOD' ||
+    dbUser.role === 'WEB_MANAGER' ||
+    dbUser.role === 'ADMIN' ||
+    dbUser.role === 'SUPER_ADMIN';
+
   // Update student profile
   if (dbUser.studentId) {
     await prisma.student.update({
@@ -120,8 +127,8 @@ export async function PATCH(req: NextRequest) {
         headline: typeof body.headline === 'string' ? body.headline.substring(0, 200) : undefined,
         bio: typeof body.bio === 'string' ? body.bio.substring(0, 1000) : undefined,
         phone: typeof body.phone === 'string' ? body.phone.substring(0, 20) : undefined,
-        batch: typeof body.batch === 'string' && body.batch.trim() ? body.batch.trim() : undefined,
-        section: typeof body.section === 'string' && body.section.trim() ? body.section.trim() : undefined,
+        batch: canManageAcademicAnchors && typeof body.batch === 'string' && body.batch.trim() ? body.batch.trim() : undefined,
+        section: canManageAcademicAnchors && typeof body.section === 'string' && body.section.trim() ? body.section.trim() : undefined,
         githubUrl: sanitizeUrl(body.githubUrl),
         linkedinUrl: sanitizeUrl(body.linkedinUrl),
         portfolioUrl: sanitizeUrl(body.portfolioUrl),

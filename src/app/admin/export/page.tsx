@@ -33,7 +33,7 @@ export default function AdminExportPage() {
     {
       id: 'STUDENTS' as ExportCategory,
       title: 'Student Master Directory',
-      description: 'Export all pre-provisioned and registered students with JNTUA roll numbers, batch, section, and email.',
+      description: 'Export all pre-provisioned and registered students with SREC roll numbers, batch, section, and email.',
       icon: GraduationCap,
       color: 'text-cyan-400',
       badge: 'Academic Records',

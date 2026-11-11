@@ -151,7 +151,7 @@ export function ScholarDirectoryCard({
   };
 
   return (
-    <div className="w-full bg-card rounded-3xl border border-border overflow-hidden shadow-subtle hover:border-primary/50 hover:shadow-card transition-all duration-200 flex flex-col group">
+    <div className="@container w-full bg-card rounded-3xl border border-border overflow-hidden shadow-subtle hover:border-primary/50 hover:shadow-card transition-all duration-200 flex flex-col group">
       {/* 1. Header Banner with Department Pill & Dot Pattern */}
       <div className="h-32 sm:h-36 w-full relative bg-gradient-to-r from-blue-900/70 via-indigo-900/50 to-slate-900/90 overflow-hidden shrink-0">
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />

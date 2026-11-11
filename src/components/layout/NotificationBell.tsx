@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { Bell, Check, Clock, ExternalLink, Sparkles, X } from 'lucide-react';
+import { Bell, Check, Clock, ExternalLink, Sparkles, X, ArrowRight } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
 
 export function NotificationBell() {
@@ -124,6 +124,26 @@ export function NotificationBell() {
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
+          </div>
+
+          {/* Quick Access to Pending Approval Desk */}
+          <div className="px-3.5 py-2 bg-primary/5 border-b border-border/80 flex items-center justify-between text-[11px]">
+            <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-primary" />
+              <span>Pending Approvals Desk</span>
+            </span>
+            <Link
+              href={
+                (session.user as any)?.role === 'STUDENT'
+                  ? '/dashboard/student'
+                  : '/admin/achievements?status=PENDING'
+              }
+              onClick={() => setIsOpen(false)}
+              className="font-semibold text-primary hover:underline flex items-center gap-1"
+            >
+              <span>{(session.user as any)?.role === 'STUDENT' ? 'My Desk' : 'Review Queue'}</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
 
           <div className="max-h-[340px] overflow-y-auto divide-y divide-border/60 no-scrollbar">

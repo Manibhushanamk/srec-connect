@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { AchievementCard } from '@/components/cards/AchievementCard';
 import {
   Award,
   CheckCircle2,
@@ -20,11 +22,22 @@ import {
 } from 'lucide-react';
 
 export default function AdminAchievementsPage() {
+  const searchParams = useSearchParams();
+  const initialStatus = (searchParams.get('status')?.toUpperCase() as any) || 'PENDING';
   const [achievements, setAchievements] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'PUBLISHED' | 'REJECTED'>('PENDING');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'PUBLISHED' | 'REJECTED'>(
+    ['ALL', 'PENDING', 'PUBLISHED', 'REJECTED'].includes(initialStatus) ? initialStatus : 'PENDING'
+  );
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const urlStatus = searchParams.get('status')?.toUpperCase();
+    if (urlStatus && ['ALL', 'PENDING', 'PUBLISHED', 'REJECTED'].includes(urlStatus)) {
+      setStatusFilter(urlStatus as any);
+    }
+  }, [searchParams]);
 
   // Editing modal state
   const [editingItem, setEditingItem] = useState<any | null>(null);
@@ -168,122 +181,114 @@ export default function AdminAchievementsPage() {
           </p>
         </Card>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6">
           {filtered.map((ach) => (
-            <Card
+            <div
               key={ach.id}
-              className="p-6 border-slate-800 bg-slate-900/40 hover:border-slate-700 transition-colors"
+              className="bg-card rounded-3xl border border-border overflow-hidden shadow-subtle flex flex-col justify-between"
             >
-              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span
-                      className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded font-bold ${
-                        ach.status === 'PUBLISHED'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                          : ach.status === 'PENDING'
-                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                          : 'bg-red-500/10 text-red-400 border border-red-500/30'
-                      }`}
+              {/* High-Fidelity Card Preview */}
+              <div className="p-3">
+                <AchievementCard
+                  id={ach.id}
+                  title={ach.title}
+                  description={ach.description}
+                  categoryName={ach.category?.name || 'Honor'}
+                  level={ach.level || 'NATIONAL'}
+                  positionRank={ach.positionRank}
+                  participationType={ach.participationType || 'SOLO'}
+                  organizationEventName={ach.organizationEventName}
+                  academicYear={ach.academicYear || '2025-2026'}
+                  achievementDate={ach.achievementDate ? String(ach.achievementDate) : new Date().toISOString()}
+                  personName={ach.personName}
+                  personType={ach.personType || 'STUDENT'}
+                  rollNumber={ach.primaryStudentRoll}
+                  departmentName={ach.department?.name || 'Computer Science & Engineering (AI & ML)'}
+                  googleDriveUrl={ach.googleDriveUrl}
+                  status={ach.status}
+                />
+              </div>
+
+              {/* Moderation & Editing Action Bar */}
+              <div className="p-4 bg-secondary/30 border-t border-border flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-[10px] font-mono uppercase px-2.5 py-1 rounded-full font-bold flex items-center gap-1.5 ${
+                      ach.status === 'PUBLISHED'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                        : ach.status === 'PENDING'
+                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                        : 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
+                    }`}
+                  >
+                    {ach.status === 'PENDING' && <Clock className="w-3 h-3 text-amber-400 animate-pulse" />}
+                    {ach.status === 'PUBLISHED' && <CheckCircle2 className="w-3 h-3 text-emerald-400" />}
+                    {ach.status === 'REJECTED' && <XCircle className="w-3 h-3 text-rose-400" />}
+                    <span>{ach.status}</span>
+                  </span>
+
+                  {ach.googleDriveUrl && (
+                    <a
+                      href={ach.googleDriveUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-semibold text-primary hover:underline flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20"
                     >
-                      {ach.status}
-                    </span>
-                    <Badge variant="cyan" size="sm">
-                      {ach.category?.name || 'Achievement'}
-                    </Badge>
-                    <span className="text-xs font-mono text-slate-400">
-                      {ach.department?.code}
-                    </span>
-                    <span className="text-slate-600">•</span>
-                    <span className="text-xs text-slate-400 font-mono">{ach.academicYear}</span>
-                  </div>
-
-                  <h3 className="text-base font-bold text-white mb-1.5">{ach.title}</h3>
-                  <p className="text-xs text-slate-400 leading-relaxed mb-3">
-                    {ach.description || 'No description provided.'}
-                  </p>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                      <span className="text-[10px] text-slate-400 block font-mono">Recipient</span>
-                      <span className="font-semibold text-slate-200 truncate block">
-                        {ach.personName} {ach.primaryStudentRoll && `(${ach.primaryStudentRoll})`}
-                      </span>
-                    </div>
-
-                    <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                      <span className="text-[10px] text-slate-400 block font-mono">Award / Rank</span>
-                      <span className="font-mono text-amber-400 font-semibold truncate block">
-                        {ach.positionRank || 'Participant'}
-                      </span>
-                    </div>
-
-                    <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                      <span className="text-[10px] text-slate-400 block font-mono">Host / Org</span>
-                      <span className="text-slate-300 truncate block">
-                        {ach.organizationEventName}
-                      </span>
-                    </div>
-
-                    <div className="p-2 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                      <span className="text-[10px] text-slate-400 block font-mono">Date & Level</span>
-                      <span className="text-emerald-400 font-mono text-[11px] truncate block">
-                        {ach.level} • {new Date(ach.achievementDate).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
+                      <ExternalLink className="w-3 h-3" />
+                      <span>Proof Doc</span>
+                    </a>
+                  )}
                 </div>
 
-                {/* Actions */}
-                <div className="flex sm:flex-col gap-2 shrink-0 pt-2 lg:pt-0">
-<Button
-                      variant="cyan"
-                      size="sm"
-                      onClick={() => setEditingItem({ ...ach })}
-                      leftIcon={<Edit className="w-3.5 h-3.5" />}
-                    >
-                      Edit Details
-                    </Button>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="cyan"
+                    size="sm"
+                    onClick={() => setEditingItem({ ...ach })}
+                    leftIcon={<Edit className="w-3.5 h-3.5" />}
+                  >
+                    Edit Details
+                  </Button>
 
-                    {ach.status !== 'PUBLISHED' && (
-                      <Button
-                        variant="success"
-                        size="sm"
-                        onClick={() => handleStatusChange(ach.id, 'PUBLISHED')}
-                        leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
+                  {ach.status !== 'PUBLISHED' && (
+                    <Button
+                      variant="success"
+                      size="sm"
+                      onClick={() => handleStatusChange(ach.id, 'PUBLISHED')}
+                      leftIcon={<CheckCircle2 className="w-3.5 h-3.5" />}
                     >
                       Approve & Publish
                     </Button>
                   )}
 
-{ach.status !== 'REJECTED' && (
-                      <Button
-                        variant="danger"
-                        size="sm"
-                        onClick={() => {
-                          const reason = prompt('Enter rejection reason:');
-                          if (reason !== null) {
-                            handleStatusChange(ach.id, 'REJECTED', reason);
-                          }
-                        }}
-                        leftIcon={<XCircle className="w-3.5 h-3.5" />}
-                      >
-                        Reject
-                      </Button>
-                    )}
-
-<Button
-                      variant="ghost"
+                  {ach.status !== 'REJECTED' && (
+                    <Button
+                      variant="danger"
                       size="sm"
-                      onClick={() => handleDelete(ach.id)}
-                      className="text-slate-500 hover:text-red-400"
-                      leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+                      onClick={() => {
+                        const reason = prompt('Enter rejection reason:');
+                        if (reason !== null) {
+                          handleStatusChange(ach.id, 'REJECTED', reason);
+                        }
+                      }}
+                      leftIcon={<XCircle className="w-3.5 h-3.5" />}
                     >
-                      Delete
+                      Reject
                     </Button>
+                  )}
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDelete(ach.id)}
+                    className="text-muted-foreground hover:text-destructive"
+                    leftIcon={<Trash2 className="w-3.5 h-3.5" />}
+                  >
+                    Delete
+                  </Button>
                 </div>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       )}

@@ -18,7 +18,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showRightRail }) =
 
   // Only show right context rail on home feed by default to leave full width for directories & portfolios
   const displayRightRail = showRightRail !== undefined ? showRightRail : isFeedPage;
-  const mainMaxWidthClass = isFeedPage ? 'max-w-2xl' : 'max-w-5xl xl:max-w-6xl';
+  const mainMaxWidthClass = isFeedPage ? 'max-w-2xl' : 'w-full';
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col transition-colors">
@@ -26,7 +26,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, showRightRail }) =
       <AppHeader />
 
       {/* 2. Main Responsive Content Grid */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 overflow-x-hidden">
+      <div className="flex-1 max-w-7xl 2xl:max-w-[1536px] w-full mx-auto px-3 sm:px-4 lg:px-6 py-6 overflow-x-hidden">
         <div className="flex gap-6 justify-center w-full max-w-full">
           {/* Left Sidebar (Desktop only) */}
           <DesktopSidebar />

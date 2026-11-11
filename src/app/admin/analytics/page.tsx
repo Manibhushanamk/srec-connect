@@ -102,7 +102,7 @@ export default function AdminAnalyticsPage() {
             <GraduationCap className="w-4 h-4 text-cyan-400" />
           </div>
           <p className="text-2xl font-bold text-white mt-1.5">{summary.studentCount || 0}</p>
-          <span className="text-[10px] text-cyan-400">JNTUA University Anchored</span>
+          <span className="text-[10px] text-cyan-400">SREC Institutional Anchor</span>
         </Card>
 
         <Card className="p-4 bg-slate-900/60 border-slate-800">

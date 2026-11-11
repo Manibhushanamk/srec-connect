@@ -25,6 +25,7 @@ import {
   Building2,
   Calendar,
   Lock,
+  ShieldCheck,
   Layers,
   ChevronRight,
   Sliders,
@@ -139,6 +140,8 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
 
   const isSuperAdmin = initialUser.role === 'SUPER_ADMIN' || initialUser.role === 'ADMIN';
   const isHOD = initialUser.role === 'HOD';
+  const isWebManager = initialUser.role === 'WEB_MANAGER';
+  const canManageAcademicAnchors = isSuperAdmin || isHOD || isWebManager;
   const isFaculty = initialUser.role === 'FACULTY' || isHOD || Boolean(initialUser.faculty);
   const isStudent = (initialUser.role === 'STUDENT' || !isFaculty) && Boolean(initialUser.student);
 
@@ -688,7 +691,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                     {isStudent && (
                       <>
                         <div>
-                          <span className="text-muted-foreground block text-[11px] uppercase font-semibold">University Roll Number</span>
+                          <span className="text-muted-foreground block text-[11px] uppercase font-semibold">SREC Roll Number</span>
                           <span className="font-mono font-bold text-foreground mt-0.5 block">
                             {initialUser.student?.rollNumber || 'Not Linked'}
                           </span>
@@ -774,7 +777,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                       </Link>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
                       {achievements.map((ach: any) => (
                         <AchievementCard
                           key={ach.id}
@@ -1111,31 +1114,65 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                   )}
 
                   {isStudent && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-semibold text-foreground mb-1">
-                          Academic Batch
-                        </label>
-                        <input
-                          type="text"
-                          value={batch}
-                          onChange={(e) => setBatch(e.target.value)}
-                          className="w-full text-xs bg-secondary/50 border border-border rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background transition-all"
-                          placeholder="e.g. 2022-2026"
-                        />
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-semibold text-foreground">
+                              Academic Batch
+                            </label>
+                            {!canManageAcademicAnchors && (
+                              <span className="text-[10px] font-mono text-muted-foreground flex items-center gap-1 bg-secondary px-2 py-0.5 rounded-full border border-border">
+                                <Lock className="w-2.5 h-2.5 text-amber-500" />
+                                Locked
+                              </span>
+                            )}
+                          </div>
+                          <input
+                            type="text"
+                            value={batch}
+                            disabled={!canManageAcademicAnchors}
+                            onChange={(e) => setBatch(e.target.value)}
+                            className={`w-full text-xs rounded-xl p-3 border transition-all ${
+                              canManageAcademicAnchors
+                                ? 'bg-secondary/50 border-border focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background'
+                                : 'bg-secondary/20 border-border/60 text-muted-foreground cursor-not-allowed'
+                            }`}
+                            placeholder="e.g. 2022-2026"
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-semibold text-foreground">
+                              Class Section
+                            </label>
+                            {!canManageAcademicAnchors && (
+                              <span className="text-[10px] font-mono text-muted-foreground flex items-center gap-1 bg-secondary px-2 py-0.5 rounded-full border border-border">
+                                <Lock className="w-2.5 h-2.5 text-amber-500" />
+                                Locked
+                              </span>
+                            )}
+                          </div>
+                          <input
+                            type="text"
+                            value={section}
+                            disabled={!canManageAcademicAnchors}
+                            onChange={(e) => setSection(e.target.value)}
+                            className={`w-full text-xs rounded-xl p-3 border transition-all ${
+                              canManageAcademicAnchors
+                                ? 'bg-secondary/50 border-border focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background'
+                                : 'bg-secondary/20 border-border/60 text-muted-foreground cursor-not-allowed'
+                            }`}
+                            placeholder="e.g. A"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-xs font-semibold text-foreground mb-1">
-                          Class Section
-                        </label>
-                        <input
-                          type="text"
-                          value={section}
-                          onChange={(e) => setSection(e.target.value)}
-                          className="w-full text-xs bg-secondary/50 border border-border rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background transition-all"
-                          placeholder="e.g. A"
-                        />
-                      </div>
+                      {!canManageAcademicAnchors && (
+                        <p className="text-[11px] text-muted-foreground/80 flex items-center gap-1.5 pt-1">
+                          <ShieldCheck className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <span>Academic Batch and Class Section are verified institutional anchors editable exclusively by the HOD, Web Manager, or Super Admin.</span>
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

@@ -117,6 +117,58 @@ export async function POST(req: NextRequest) {
             isLeader: false,
           },
         });
+
+        // Notify teammate about the pending achievement submission
+        if (studentRecord?.user?.id && studentRecord.user.id !== dbUser.id) {
+          await prisma.notification.create({
+            data: {
+              userId: studentRecord.user.id,
+              title: 'Team Achievement Pending Approval',
+              message: `${dbUser.name || 'A teammate'} added you to "${title}". It is awaiting department verification.`,
+              link: '/dashboard/student',
+            },
+          }).catch((err) => console.warn('[Teammate Notification Error]:', err));
+        }
+      }
+    }
+  }
+
+  // Notify submitter and department moderators about pending approval
+  if (!isFacultyOrHOD) {
+    // 1. Submitter notification
+    await prisma.notification.create({
+      data: {
+        userId: dbUser.id,
+        title: 'Achievement Submitted for Verification',
+        message: `"${title}" has been placed in the department pending approval desk. You can track status here.`,
+        link: '/dashboard/student',
+      },
+    }).catch((err) => console.warn('[Submitter Notification Error]:', err));
+
+    // 2. Department Moderators (HOD, Web Manager, Admin, Super Admin)
+    const moderators = await prisma.user.findMany({
+      where: {
+        OR: [
+          { role: 'HOD', departmentId: targetDepartmentId },
+          { role: 'SUPER_ADMIN' },
+          { role: 'ADMIN' },
+          { role: 'WEB_MANAGER' },
+        ],
+        status: 'ACTIVE',
+      },
+      select: { id: true },
+    });
+
+    for (const mod of moderators) {
+      if (mod.id !== dbUser.id) {
+        await prisma.notification.create({
+          data: {
+            userId: mod.id,
+            title: 'New Achievement in Approval Desk',
+            message: `New submission: "${title}" by ${dbUser.name} (${dbUser.student?.rollNumber || 'Student'}) requires approval.`,
+            link: '/admin/achievements?status=PENDING',
+          },
+        }).catch((err) => console.warn('[Moderator Notification Error]:', err));
       }
     }
   }

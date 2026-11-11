@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
           if (!rollNumber) {
             errors.push('Missing roll number');
           } else if (!/^\d{2}09(1A|5A)\d{2}[0-9A-Z]{2}$/.test(rollNumber)) {
-            errors.push(`Roll number ${rollNumber} does not match JNTUA format (e.g. 22091A3201)`);
+            errors.push(`Roll number ${rollNumber} does not match SREC format (e.g. 22091A3201)`);
           } else if (existingRolls.has(rollNumber)) {
             errors.push(`Roll number ${rollNumber} already exists in database`);
           } else if (seenRollsInFile.has(rollNumber)) {

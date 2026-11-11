@@ -28,7 +28,7 @@ export function parseRollNumber(roll: string): ParsedRollNumber {
   }
 
   const clean = roll.trim().toUpperCase().replace(/\[.*?\]/g, ''); // strip citations like [cite: 3]
-  // Standard JNTUA format: e.g. 22091A3201 or 22X51A3828
+  // Standard SREC format: e.g. 22091A3201 or 22X51A3828
   const match = clean.match(/^(\d{2})([0-9A-Z]{3})(\d)([0-9A-Z]{2})([0-9A-Z]{2})$/);
 
   if (!match) {

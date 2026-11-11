@@ -711,3 +711,46 @@
 
 
 
+
+## Session: SREC Roll System, Student Batch/Section Permissions, Responsive Card Auto-Arrangement, Pending Desk Overhaul & Profile Posts
+
+- **Global SREC Roll Transition**:
+  - Replaced all legacy "JNTUA Roll Number" references with "SREC Roll Number" / "SREC Roll" across UI labels, search placeholders, student helpers, bulk-import validators, admin tables, deduplication, and analytics.
+- **Locked Student Batch & Section Permissions**:
+  - Locked `batch` and `section` fields for students in `ProfileWorkspace.tsx` with a visual "Locked" padlock badge and explanatory note.
+  - Enforced server-side authorization in `src/app/api/user/profile/route.ts`: only `HOD`, `WEB_MANAGER`, `ADMIN`, and `SUPER_ADMIN` can modify student academic batch and class section.
+- **Card Width & Responsive Display Auto-Arrangement**:
+  - Installed `@tailwindcss/container-queries` and added to `tailwind.config.js`.
+  - Added `@container` to `AchievementCard` and `ScholarDirectoryCard`.
+  - Replaced viewport-based media queries inside cards with container queries (`@[440px]:grid-cols-4` on metric honor boxes, `@[380px]:inline` on proof button labels).
+  - Fixed double padding and removed artificial `max-w-5xl` constraints in `AppShell.tsx` for full pages, letting main content area breathe up to 1536px.
+  - Updated grid layouts across `/achievements`, `/students`, `/faculty`, `/students/[id]`, `/faculty/[id]`, and `/admin/achievements` to `xl:grid-cols-2 2xl:grid-cols-3` or `2xl:grid-cols-2` inside nested sidebars.
+  - Empirical card width measurements across viewports:
+    - Mobile 360px: 336px (100% full width, un-squished)
+    - Mobile 420px: 396px
+    - Tablet 768px: 456px
+    - Laptop 1024px: 664px (comfortable single-column layout beside desktop sidebar)
+    - Desktop 1280px: 448px (2 balanced columns)
+    - Wide Desktop 1920px: 376px (3 spacious columns)
+    - Profile Achievement Card: 513px (inside 2/3 column layout)
+- **Pending Approvals Desk & Notifications Integration**:
+  - Added instant Pending Approvals Desk notification banner in `NotificationBell.tsx` linking to `/dashboard/student` for students and `/admin/achievements?status=PENDING` for staff/admins.
+  - Automated notification dispatches on achievement submission to submitter, collaborators, and department moderators.
+- **Pending Approvals Desk Real Card Styling & In-Place Editing**:
+  - Overhauled `/admin/achievements` to render real, high-fidelity `AchievementCard` previews.
+  - Attached integrated moderation action bars ("Edit Details", "Approve & Publish", "Reject", "Proof Doc", "Delete").
+  - Integrated "In-Review Honor Editor" modal for modifying details before publishing.
+- **Public Profile Posts Section**:
+  - Added "Community Posts & Updates" section to `/students/[id]` and `/faculty/[id]` rendering public feed posts via `FeedCard` with synchronized `postsCount`.
+- **Empirical Validation**:
+  - TypeScript: 0 errors (`tsc --noEmit`).
+  - Playwright visual tests:
+    - `verify_card_responsive_mobile_360.png`
+    - `verify_card_responsive_mobile_420.png`
+    - `verify_card_responsive_tablet_768.png`
+    - `verify_card_responsive_laptop_1024.png`
+    - `verify_card_responsive_desktop_1280.png`
+    - `verify_card_responsive_wide_1920.png`
+    - `verify_student_profile_card_width_laptop.png`
+    - `verify_admin_desk_cards_responsive.png`
+    - `verify_admin_edit_modal_open.png`

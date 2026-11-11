@@ -142,7 +142,7 @@ export default async function StudentsPage({
   const getDefaultValue = (value: string | null | undefined) => value || 'all';
 
   return (
-    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="w-full space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
         <div>
           <Badge variant="emerald" size="md" glow className="mb-3">
@@ -168,7 +168,7 @@ export default async function StudentsPage({
           <EmptyStatePreset type="students" />
         ) : (
           <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 mb-8">
               {data.students.map((student) => {
                 const studentSkills =
                   student.department?.code === 'ECE'
