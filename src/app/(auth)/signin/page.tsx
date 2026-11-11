@@ -247,11 +247,11 @@ export default function SignInPage() {
 
                     <button
                       type="button"
-                      onClick={() => handleDevSignIn('22091a3201@srecnandyal.edu.in')}
+                      onClick={() => handleDevSignIn('viswanadhum9985559753@gmail.com')}
                       className="p-2 rounded-lg border border-border hover:border-primary text-left bg-secondary/40"
                     >
-                      <p className="font-bold text-[11px] text-foreground">Student (22091A3201)</p>
-                      <p className="text-[10px] text-muted-foreground truncate">K. V. Naveen Kumar</p>
+                      <p className="font-bold text-[11px] text-foreground">Student (22439EC024)</p>
+                      <p className="text-[10px] text-muted-foreground truncate">M. Viswanadham</p>
                     </button>
                   </div>
                 )}

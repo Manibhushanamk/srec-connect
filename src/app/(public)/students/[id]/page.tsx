@@ -36,6 +36,8 @@ export async function generateMetadata({ params }: StudentProfilePageProps): Pro
   const student = await prisma.student.findFirst({
     where: {
       OR: [{ id }, { rollNumber: id }],
+      deletedAt: null,
+      isActive: true,
     },
     include: { department: true },
   });
@@ -80,6 +82,18 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
 
   if (!student) {
     notFound();
+  }
+
+  // Hide trashed or suspended students from public view
+  if (student.deletedAt !== null || !student.isActive || student.user?.deletedAt !== null || student.user?.status === 'SUSPENDED') {
+    const viewerEmail = session?.user?.email?.toLowerCase().trim();
+    if (!viewerEmail) notFound();
+    const viewer = await prisma.user.findUnique({
+      where: { email: viewerEmail },
+      select: { role: true },
+    });
+    const isAdmin = viewer?.role === 'SUPER_ADMIN' || viewer?.role === 'ADMIN' || viewer?.role === 'HOD';
+    if (!isAdmin) notFound();
   }
 
   const isOwner = Boolean(

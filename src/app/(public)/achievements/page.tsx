@@ -48,6 +48,26 @@ async function getAchievements(searchParams: {
   const where: any = {
     status: 'PUBLISHED',
     deletedAt: null,
+    AND: [
+      {
+        OR: [
+          { primaryStudentId: null },
+          { primaryStudent: { deletedAt: null, isActive: true } },
+        ],
+      },
+      {
+        OR: [
+          { facultyId: null },
+          { faculty: { deletedAt: null, isActive: true } },
+        ],
+      },
+      {
+        OR: [
+          { createdById: null },
+          { createdBy: { deletedAt: null, status: 'ACTIVE' } },
+        ],
+      },
+    ],
   };
 
   if (searchParams.level && searchParams.level !== 'all') {

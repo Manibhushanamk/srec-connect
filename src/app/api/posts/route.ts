@@ -14,12 +14,15 @@ export async function GET(req: NextRequest) {
     const filter = searchParams.get('filter'); // 'ALL' | 'STUDENT' | 'FACULTY'
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 50);
 
-    const where: any = { deletedAt: null };
-    if (filter === 'STUDENT') {
-      where.author = { role: 'STUDENT' };
-    } else if (filter === 'FACULTY') {
-      where.author = { role: { in: ['FACULTY', 'HOD'] } };
-    }
+    const where: any = {
+      deletedAt: null,
+      author: {
+        deletedAt: null,
+        status: 'ACTIVE',
+        ...(filter === 'STUDENT' ? { role: 'STUDENT' } : {}),
+        ...(filter === 'FACULTY' ? { role: { in: ['FACULTY', 'HOD'] } } : {}),
+      },
+    };
 
     const posts = await prisma.post.findMany({
       where,
@@ -63,6 +66,12 @@ export async function GET(req: NextRequest) {
         likes: true,
         bookmarks: true,
         comments: {
+          where: {
+            author: {
+              deletedAt: null,
+              status: 'ACTIVE',
+            },
+          },
           orderBy: { createdAt: 'asc' },
           include: {
             author: {
@@ -84,6 +93,12 @@ export async function GET(req: NextRequest) {
           },
         },
         collaborators: {
+          where: {
+            user: {
+              deletedAt: null,
+              status: 'ACTIVE',
+            },
+          },
           include: {
             user: {
               select: {

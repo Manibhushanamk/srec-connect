@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     }
 
     const [students, faculty, events, posts] = await Promise.all([
-      // 1. Search Students
+      // 1. Search Students (Only active, non-trashed students with active accounts)
       prisma.student.findMany({
         where: {
           isActive: true,
@@ -25,6 +25,14 @@ export async function GET(req: NextRequest) {
             { rollNumber: { contains: query, mode: 'insensitive' } },
             { name: { contains: query, mode: 'insensitive' } },
             { departmentName: { contains: query, mode: 'insensitive' } },
+          ],
+          AND: [
+            {
+              OR: [
+                { user: null },
+                { user: { deletedAt: null, status: 'ACTIVE' } },
+              ],
+            },
           ],
         },
         select: {
@@ -39,7 +47,7 @@ export async function GET(req: NextRequest) {
         take: 5,
       }),
 
-      // 2. Search Faculty
+      // 2. Search Faculty (Only active, non-trashed faculty with active accounts)
       prisma.faculty.findMany({
         where: {
           isActive: true,
@@ -49,6 +57,14 @@ export async function GET(req: NextRequest) {
             { designation: { contains: query, mode: 'insensitive' } },
             { departmentName: { contains: query, mode: 'insensitive' } },
             { specialization: { contains: query, mode: 'insensitive' } },
+          ],
+          AND: [
+            {
+              OR: [
+                { user: null },
+                { user: { deletedAt: null, status: 'ACTIVE' } },
+              ],
+            },
           ],
         },
         select: {
@@ -61,10 +77,11 @@ export async function GET(req: NextRequest) {
         take: 5,
       }),
 
-      // 3. Search Events
+      // 3. Search Events (Only non-cancelled, active events)
       prisma.event.findMany({
         where: {
           deletedAt: null,
+          status: { not: 'CANCELLED' },
           OR: [
             { title: { contains: query, mode: 'insensitive' } },
             { venue: { contains: query, mode: 'insensitive' } },
@@ -81,10 +98,14 @@ export async function GET(req: NextRequest) {
         take: 5,
       }),
 
-      // 4. Search Posts
+      // 4. Search Posts (Only non-deleted posts from active, non-suspended authors)
       prisma.post.findMany({
         where: {
           deletedAt: null,
+          author: {
+            deletedAt: null,
+            status: 'ACTIVE',
+          },
           content: { contains: query, mode: 'insensitive' },
         },
         include: {

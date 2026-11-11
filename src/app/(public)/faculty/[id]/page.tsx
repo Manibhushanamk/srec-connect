@@ -37,6 +37,8 @@ export async function generateMetadata({ params }: FacultyProfilePageProps): Pro
   const faculty = await prisma.faculty.findFirst({
     where: {
       OR: [{ id }, { user: { id } }],
+      deletedAt: null,
+      isActive: true,
     },
     include: { department: true },
   });
@@ -74,6 +76,18 @@ export default async function FacultyProfilePage({ params }: FacultyProfilePageP
 
   if (!faculty) {
     notFound();
+  }
+
+  // Hide trashed or suspended faculty from public view
+  if (faculty.deletedAt !== null || !faculty.isActive || faculty.user?.deletedAt !== null || faculty.user?.status === 'SUSPENDED') {
+    const viewerEmail = session?.user?.email?.toLowerCase().trim();
+    if (!viewerEmail) notFound();
+    const viewer = await prisma.user.findUnique({
+      where: { email: viewerEmail },
+      select: { role: true },
+    });
+    const isAdmin = viewer?.role === 'SUPER_ADMIN' || viewer?.role === 'ADMIN' || viewer?.role === 'HOD';
+    if (!isAdmin) notFound();
   }
 
   const isOwner = Boolean(

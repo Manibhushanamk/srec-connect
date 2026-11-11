@@ -78,6 +78,14 @@ export async function GET(req: NextRequest) {
       where: {
         isActive: true,
         deletedAt: null,
+        AND: [
+          {
+            OR: [
+              { user: null },
+              { user: { deletedAt: null, status: 'ACTIVE' } },
+            ],
+          },
+        ],
         OR: [
           { rollNumber: { contains: upperQ } },
           { name: { contains: q, mode: 'insensitive' } },

@@ -780,3 +780,58 @@
     - `verify_admin_logs_forensic_modal.png`
     - `verify_admin_logs_hod_view.png`
     - `verify_admin_logs_student_blocked.png`
+
+## Session: Dynamic Feed De-hardcoding & Complete Relational Deletion Cascading
+
+- **Root Cause of Removed Users Leaking in Feeds**:
+  1. Early prototype mock data (`FALLBACK_POSTS`) in `src/app/(public)/page.tsx` hardcoded posts authored by `K. V. Naveen Kumar` (`22091A3201`) and `P. Sai Kumar` (`22091A3202`).
+  2. A fallback merge loop in `page.tsx` was forcibly injecting these mock posts into the live feed on every page load even when the database had live posts.
+  3. The "Featured Scholars" section on `page.tsx` hardcoded static `ScholarDirectoryCard` components referencing `P. Sai Kumar` and `K. V. Naveen Kumar`.
+  4. Soft-deleting a user in `src/app/api/admin/trash/route.ts` did not cascade `deletedAt` to the user's `Post` or `Achievement` records, leaving orphaned achievements in the database.
+  5. API endpoints (`/api/posts`, `/api/search`, `/api/members/search`) only filtered `where: { deletedAt: null }` on the post model, failing to enforce `author: { deletedAt: null, status: 'ACTIVE' }`.
+
+- **Comprehensive Solutions & Relational Cascading Landed**:
+  1. **Eradicated All Hardcoded Feed Fallbacks (`src/app/(public)/page.tsx`)**:
+     - Deleted `FALLBACK_POSTS` entirely.
+     - Feeds now load strictly from the dynamic database API `/api/posts?filter=${feedFilter}`.
+     - When no posts exist, renders a clean, professional institutional empty state card with `Sparkles` icon, rather than phantom mock students.
+  2. **Dynamic Featured Scholars API & UI (`src/app/api/scholars/featured/route.ts` & `src/app/(public)/page.tsx`)**:
+     - Created new endpoint `GET /api/scholars/featured` querying only verified active students and faculty (`where: { isActive: true, deletedAt: null, user: { deletedAt: null, status: 'ACTIVE' } }`).
+     - "Featured Scholars" in `page.tsx` now dynamically fetches and renders real active scholars (`Mani Bhushanam K`, `M. Viswanadham`, `Dr. P. Mallikarjuna Reddy`, `MURALI`).
+  3. **Strict Author & Relation Health on Feed API (`src/app/api/posts/route.ts`)**:
+     - Enforced `author: { deletedAt: null, status: 'ACTIVE' }` on all post queries.
+     - Enforced `where: { author: { deletedAt: null, status: 'ACTIVE' } }` on post comments.
+     - Enforced `where: { user: { deletedAt: null, status: 'ACTIVE' } }` on post collaborators.
+     - Enforced `where: { deletedAt: null }` on attached achievements.
+  4. **Deep Relational Cascading on Trash, Restore, & Purge (`src/app/api/admin/trash/route.ts`)**:
+     - **TRASH (Soft Delete):** Moving a `USER`, `STUDENT`, or `FACULTY` to trash atomically updates `deletedAt` and `status: 'SUSPENDED'` / `isActive: false` across user, student/faculty profile, all authored posts, and all associated achievements. Also purges collaborator links.
+     - **RESTORE (Recover):** Restoring from trash atomically clears `deletedAt` and activates `User`, `Student`/`Faculty`, posts, and achievements.
+     - **PURGE (Hard Delete):** Performs an atomic cascade in foreign-key dependency order: post media, comments, likes, bookmarks, collaborators, posts, achievement media, team members, achievements, notifications, event registrations/attendances, student/faculty profiles, and finally user record.
+     - **EMPTY_TRASH:** Cleans up all trashed records with complete cascade, preventing foreign key constraint violations or orphaned records.
+     - Auto-revalidates paths: `/`, `/students`, `/faculty`, `/achievements`.
+  5. **Directory & Search Filtering Guards (`src/app/api/search/route.ts` & `src/app/api/members/search/route.ts`)**:
+     - Ensured students and faculty are only returned if `isActive: true, deletedAt: null` and associated `user` is not suspended/deleted.
+     - Ensured posts are only returned if author is active and non-deleted.
+  6. **Achievements Directory Filter (`src/app/(public)/achievements/page.tsx`)**:
+     - Enforced that public honors filter out any achievements belonging to deleted students, faculty, or users.
+  7. **Direct URL Guard for Deleted Profiles (`src/app/(public)/students/[id]/page.tsx` & `src/app/(public)/faculty/[id]/page.tsx`)**:
+     - Trashed / suspended profiles now return HTTP 404 (Not Found) to public visitors and non-admin users.
+  8. **Dev Quick Sign-in Cleanup (`src/app/(auth)/signin/page.tsx`)**:
+     - Replaced removed student `22091A3201` with active scholar `viswanadhum9985559753@gmail.com` (`M. Viswanadham - 22439EC024`).
+  9. **Database Cleanup**:
+     - Soft-deleted 4 orphaned achievements that belonged to removed users Naveen Kumar and Sai Kumar.
+
+- **Empirical Validation**:
+  - TypeScript: 0 errors (`npm run typecheck`).
+  - Playwright test (`scripts/verify_removed_user_feed_relationships.js`):
+    - Feed: `K. V. Naveen Kumar` = false, `P. Sai Kumar` = false.
+    - Featured Scholars: Dynamic, `22091A3201` = false, `22091A3202` = false.
+    - Students Directory: Clean of removed users = true.
+    - Achievements Gallery: Clean of removed users' achievements = true.
+    - Direct Student URL `/students/22091A3201`: Returns 404 Not Found = true.
+  - Screenshots Captured:
+    - `verify_feed_no_removed_users.png`
+    - `verify_portfolios_dynamic_scholars.png`
+    - `verify_students_directory_clean.png`
+    - `verify_achievements_directory_clean.png`
+    - `verify_removed_student_404.png`
