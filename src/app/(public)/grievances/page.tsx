@@ -32,7 +32,7 @@ import { Card, CardContent } from '@/components/ui/Card';
 import { OfficialActionLetter } from '@/components/discipline/OfficialActionLetter';
 import { formatDate, formatDateTime } from '@/lib/utils';
 
-export default function StudentGrievancesPage() {
+function StudentGrievancesContent() {
   const { data: session } = useSession();
   const [activeTab, setActiveTab] = useState<'MY_CASES' | 'FILE_GRIEVANCE'>('MY_CASES');
   const [incidents, setIncidents] = useState<any[]>([]);
@@ -742,5 +742,19 @@ export default function StudentGrievancesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function StudentGrievancesPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="max-w-6xl mx-auto py-12 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        </div>
+      }
+    >
+      <StudentGrievancesContent />
+    </React.Suspense>
   );
 }

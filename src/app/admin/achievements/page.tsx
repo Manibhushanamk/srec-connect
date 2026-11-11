@@ -21,7 +21,7 @@ import {
   Filter,
 } from 'lucide-react';
 
-export default function AdminAchievementsPage() {
+function AdminAchievementsContent() {
   const searchParams = useSearchParams();
   const initialStatus = (searchParams.get('status')?.toUpperCase() as any) || 'PENDING';
   const [achievements, setAchievements] = useState<any[]>([]);
@@ -451,5 +451,24 @@ export default function AdminAchievementsPage() {
         )}
       </Modal>
     </div>
+  );
+}
+
+export default function AdminAchievementsPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="space-y-6 max-w-7xl mx-auto py-8">
+          <div className="h-10 w-48 bg-card rounded-xl animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="h-64 bg-card rounded-2xl animate-pulse border border-border/80" />
+            <div className="h-64 bg-card rounded-2xl animate-pulse border border-border/80" />
+            <div className="h-64 bg-card rounded-2xl animate-pulse border border-border/80" />
+          </div>
+        </div>
+      }
+    >
+      <AdminAchievementsContent />
+    </React.Suspense>
   );
 }

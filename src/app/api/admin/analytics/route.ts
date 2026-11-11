@@ -33,16 +33,16 @@ export async function GET(req: NextRequest) {
       totalIncidents,
       departmentStats,
     ] = await Promise.all([
-      prisma.student.count({ where: { isActive: true } }),
-      prisma.faculty.count({ where: { isActive: true } }),
+      prisma.student.count({ where: { isActive: true, deletedAt: null } }),
+      prisma.faculty.count({ where: { isActive: true, deletedAt: null } }),
       prisma.achievement.count({ where: { deletedAt: null } }),
       prisma.achievement.count({ where: { status: 'PUBLISHED', deletedAt: null } }),
       prisma.achievement.count({ where: { status: 'PENDING', deletedAt: null } }),
       prisma.event.count({ where: { deletedAt: null } }),
-      prisma.eventRegistration.count({ where: { status: 'REGISTERED' } }),
-      prisma.eventAttendance.count(),
-      prisma.post.count(),
-      prisma.incident.count(),
+      prisma.eventRegistration.count({ where: { status: 'REGISTERED', user: { deletedAt: null, status: 'ACTIVE' } } }),
+      prisma.eventAttendance.count({ where: { user: { deletedAt: null, status: 'ACTIVE' } } }),
+      prisma.post.count({ where: { deletedAt: null, author: { deletedAt: null, status: 'ACTIVE' } } }),
+      prisma.incident.count({ where: { deletedAt: null } }),
       prisma.department.findMany({
         where: { isActive: true },
         select: {
@@ -52,10 +52,10 @@ export async function GET(req: NextRequest) {
           name: true,
           _count: {
             select: {
-              students: true,
-              faculty: true,
-              achievements: true,
-              events: true,
+              students: { where: { isActive: true, deletedAt: null } },
+              faculty: { where: { isActive: true, deletedAt: null } },
+              achievements: { where: { deletedAt: null } },
+              events: { where: { deletedAt: null } },
             },
           },
         },

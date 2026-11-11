@@ -51,6 +51,10 @@ export async function GET(req: NextRequest) {
     const announcements = await prisma.announcement.findMany({
       where: {
         deletedAt: null,
+        author: {
+          deletedAt: null,
+          status: 'ACTIVE',
+        },
         OR: orConditions,
         AND: [
           {

@@ -1,3 +1,4 @@
+import React, { Suspense } from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
@@ -72,7 +73,9 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <Providers>
-          <GlobalNavigationLoader />
+          <Suspense fallback={null}>
+            <GlobalNavigationLoader />
+          </Suspense>
           {children}
         </Providers>
       </body>

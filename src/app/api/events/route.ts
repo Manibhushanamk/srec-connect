@@ -45,8 +45,8 @@ export async function GET(req: NextRequest) {
           createdBy: { select: { id: true, name: true, role: true } },
           _count: {
             select: {
-              registrations: { where: { status: 'REGISTERED' } },
-              attendances: true,
+              registrations: { where: { status: 'REGISTERED', user: { deletedAt: null, status: 'ACTIVE' } } },
+              attendances: { where: { user: { deletedAt: null, status: 'ACTIVE' } } },
             },
           },
         },

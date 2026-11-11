@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
@@ -157,11 +158,13 @@ export default async function StudentsPage({
       </div>
 
       {/* Top Horizontal Filter Bar */}
-      <StudentsFilterBar
-        departments={data.departments}
-        batches={data.batches}
-        sections={data.sections}
-      />
+      <Suspense fallback={<div className="h-12 w-full bg-card rounded-2xl animate-pulse" />}>
+        <StudentsFilterBar
+          departments={data.departments}
+          batches={data.batches}
+          sections={data.sections}
+        />
+      </Suspense>
 
       <main className="w-full">
         {data.students.length === 0 ? (
@@ -173,11 +176,9 @@ export default async function StudentsPage({
                 const studentSkills =
                   student.department?.code === 'ECE'
                     ? ['Embedded Systems', 'IoT Circuits', 'VLSI Design', 'Microcontrollers', 'C++']
-                    : student.rollNumber === '22091A3201'
-                    ? ['Smart Agriculture', 'IoT Hardware', 'Edge AI', 'Full Stack', 'Python']
-                    : student.rollNumber === '22091A3202'
-                    ? ['PyTorch', 'TensorFlow', 'Computer Vision', 'Deep Learning', 'Docker']
-                    : ['Python', 'Machine Learning', 'Data Structures', 'Web Development'];
+                    : student.department?.code === 'AIDS' || student.department?.code === 'AIML'
+                    ? ['PyTorch', 'TensorFlow', 'Computer Vision', 'Deep Learning', 'Python']
+                    : ['Data Structures', 'Full Stack', 'Cloud Computing', 'Algorithms', 'TypeScript'];
 
                 return (
                   <ScholarDirectoryCard

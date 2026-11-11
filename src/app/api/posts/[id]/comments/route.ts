@@ -10,7 +10,11 @@ export async function GET(
   try {
     const { id: postId } = await params;
     const comments = await prisma.postComment.findMany({
-      where: { postId },
+      where: {
+        postId,
+        post: { deletedAt: null },
+        author: { deletedAt: null, status: 'ACTIVE' },
+      },
       orderBy: { createdAt: 'asc' },
       include: {
         author: {
@@ -55,11 +59,11 @@ export async function POST(
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email.toLowerCase().trim() },
-      select: { id: true, name: true, role: true, avatarUrl: true },
+      select: { id: true, name: true, role: true, avatarUrl: true, status: true, deletedAt: true },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!user || user.status !== 'ACTIVE' || user.deletedAt) {
+      return NextResponse.json({ error: 'User account is suspended or inactive' }, { status: 403 });
     }
 
     const body = await req.json();

@@ -14,13 +14,23 @@ export async function POST(
     }
 
     const { id: postId } = await params;
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email.toLowerCase().trim() },
+
+    const targetPost = await prisma.post.findFirst({
+      where: { id: postId, deletedAt: null },
       select: { id: true },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!targetPost) {
+      return NextResponse.json({ error: 'Post not found or has been removed' }, { status: 404 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email.toLowerCase().trim() },
+      select: { id: true, status: true, deletedAt: true },
+    });
+
+    if (!user || user.status !== 'ACTIVE' || user.deletedAt) {
+      return NextResponse.json({ error: 'User account is suspended or inactive' }, { status: 403 });
     }
 
     const existingBookmark = await prisma.postBookmark.findUnique({

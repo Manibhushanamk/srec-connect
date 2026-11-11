@@ -16,7 +16,7 @@ import {
   Users,
 } from 'lucide-react';
 
-export default function HomePage() {
+function HomePageContent() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') === 'portfolios' ? 'PORTFOLIOS' : 'FEED';
   const [activeTab, setActiveTab] = useState<'FEED' | 'PORTFOLIOS'>(initialTab);
@@ -272,5 +272,20 @@ export default function HomePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="space-y-4 max-w-4xl mx-auto py-6">
+          <FeedCardSkeleton />
+          <FeedCardSkeleton />
+        </div>
+      }
+    >
+      <HomePageContent />
+    </React.Suspense>
   );
 }

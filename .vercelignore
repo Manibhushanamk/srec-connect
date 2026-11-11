@@ -1,0 +1,8 @@
+scripts/
+scratch/
+docs/
+tests/
+playwright-report/
+test-results/
+*.tsbuildinfo
+*.log

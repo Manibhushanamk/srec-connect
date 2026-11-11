@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { revalidatePath } from 'next/cache';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
@@ -152,6 +153,21 @@ export async function PATCH(req: NextRequest) {
         avatarUrl: sanitizeUrl(body.avatarUrl),
       },
     });
+  }
+
+  try {
+    revalidatePath('/');
+    revalidatePath('/profile');
+    revalidatePath('/students');
+    revalidatePath('/faculty');
+    if (dbUser.student?.rollNumber) {
+      revalidatePath(`/students/${dbUser.student.rollNumber}`);
+    }
+    if (dbUser.facultyId) {
+      revalidatePath(`/faculty/${dbUser.facultyId}`);
+    }
+  } catch (revErr) {
+    console.warn('[Profile PATCH] Revalidation warning:', revErr);
   }
 
   return NextResponse.json({ success: true, message: 'Profile updated successfully' });

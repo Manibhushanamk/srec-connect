@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
@@ -210,12 +211,14 @@ export default async function AchievementsPage({
       </div>
 
       {/* Top Horizontal Filter Bar */}
-      <AchievementsFilterBar
-        levels={LEVELS}
-        categories={data.categories}
-        departments={data.departments}
-        academicYears={data.academicYears}
-      />
+      <Suspense fallback={<div className="h-12 w-full bg-card rounded-2xl animate-pulse" />}>
+        <AchievementsFilterBar
+          levels={LEVELS}
+          categories={data.categories}
+          departments={data.departments}
+          academicYears={data.academicYears}
+        />
+      </Suspense>
 
       <main className="w-full">
         {data.achievements.length === 0 ? (

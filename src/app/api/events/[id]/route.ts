@@ -23,8 +23,8 @@ export async function GET(
         },
         _count: {
           select: {
-            registrations: { where: { status: 'REGISTERED' } },
-            attendances: true,
+            registrations: { where: { status: 'REGISTERED', user: { deletedAt: null, status: 'ACTIVE' } } },
+            attendances: { where: { user: { deletedAt: null, status: 'ACTIVE' } } },
           },
         },
       },

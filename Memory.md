@@ -835,3 +835,31 @@
     - `verify_students_directory_clean.png`
     - `verify_achievements_directory_clean.png`
     - `verify_removed_student_404.png`
+
+
+### Production Readiness & Vercel Deployment to connect-srec.vercel.app (Nov 11, 2026)
+- **Production Build Hardening**:
+  - Wrapped all search-dependent filter bars in `<Suspense>` boundaries (`FacultyFilterBar` in `faculty/page.tsx`, `AchievementsFilterBar` in `achievements/page.tsx`, `EventsFilterBar` in `events/page.tsx`).
+  - Added `@tailwindcss/container-queries` to `package.json` devDependencies.
+  - Added `postinstall: "prisma generate"` to ensure automatic Prisma client generation during cloud deployments.
+  - Added `.vercelignore` to optimize build payload size.
+  - Ran `npm run typecheck` (0 errors) and local `npm run build` (all 58 static/dynamic routes successfully generated with zero bail-outs).
+- **Vercel Project Setup & Configuration**:
+  - Linked project to `mani-s-projects-a0be41de/connect-srec`.
+  - Set framework preset to `Next.js` and Node.js version to `22.x`.
+  - Synced all 19 required environment variables to Vercel (Neon PostgreSQL `DATABASE_URL`, `DIRECT_URL`, `NEXTAUTH_SECRET`, `NEXTAUTH_URL=https://connect-srec.vercel.app`, Google OAuth credentials, Cloudflare R2 storage keys, and `ENABLE_CREDENTIALS_AUTH=true`).
+- **Production Deployment Execution**:
+  - Ran `vercel deploy --prod --yes` via Vercel CLI.
+  - Vercel build completed with status `● Ready` in 2m 46s.
+  - Production Alias assigned: `https://connect-srec.vercel.app`.
+- **Live Empirical Verification**:
+  - All public production endpoints verified returning HTTP 200:
+    - `/` -> 200 OK
+    - `/students` -> 200 OK
+    - `/faculty` -> 200 OK
+    - `/achievements` -> 200 OK
+    - `/events` -> 200 OK
+    - `/signin` -> 200 OK
+  - Playwright automated screenshots captured on live production URL:
+    - `live_vercel_connect_srec.png`: Full home feed with active announcements, dynamic scholars, and clean relations.
+    - `live_vercel_students.png`: Dynamic students directory with zero deleted user traces.

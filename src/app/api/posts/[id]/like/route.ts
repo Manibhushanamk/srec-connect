@@ -27,11 +27,11 @@ export async function POST(
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email.toLowerCase().trim() },
-      select: { id: true },
+      select: { id: true, status: true, deletedAt: true },
     });
 
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    if (!user || user.status !== 'ACTIVE' || user.deletedAt) {
+      return NextResponse.json({ error: 'User account is suspended or inactive' }, { status: 403 });
     }
 
     const existingLike = await prisma.postLike.findUnique({

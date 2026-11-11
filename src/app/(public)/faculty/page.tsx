@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
@@ -161,10 +162,12 @@ export default async function FacultyPage({
       </div>
 
       {/* Top Horizontal Filter Bar */}
-      <FacultyFilterBar
-        departments={data.departments}
-        roleCategories={ROLE_CATEGORIES}
-      />
+      <Suspense fallback={<div className="h-12 w-full bg-card rounded-2xl animate-pulse" />}>
+        <FacultyFilterBar
+          departments={data.departments}
+          roleCategories={ROLE_CATEGORIES}
+        />
+      </Suspense>
 
       <main className="w-full">
           {data.faculty.length === 0 ? (
