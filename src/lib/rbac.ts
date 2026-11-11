@@ -50,6 +50,7 @@ export const PERMISSIONS = {
   // Analytics & System
   ANALYTICS_VIEW: 'analytics.view',
   SYSTEM_SETTINGS_MANAGE: 'system.settings.manage',
+  AUDIT_LOGS_VIEW: 'system.audit_logs.view',
 } as const;
 
 export type PermissionKey = typeof PERMISSIONS[keyof typeof PERMISSIONS];
@@ -77,6 +78,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, PermissionKey[]> = {
     PERMISSIONS.POSTS_CREATE,
     PERMISSIONS.POSTS_MODERATE,
     PERMISSIONS.ANALYTICS_VIEW,
+    PERMISSIONS.AUDIT_LOGS_VIEW,
   ],
   WEB_MANAGER: [
     PERMISSIONS.USERS_STUDENT_CREATE,
@@ -181,6 +183,7 @@ export function getVisibleMenuGroups(context: PermissionContext): string[] {
       'events',
       'discipline',
       'notices',
+      'logs',
       'trash',
       'portals',
       'profile',
@@ -194,6 +197,7 @@ export function getVisibleMenuGroups(context: PermissionContext): string[] {
       'events',
       'discipline',
       'notices',
+      'logs',
       'portals',
       'profile',
     ];

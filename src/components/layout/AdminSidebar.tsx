@@ -83,6 +83,13 @@ const MENU_GROUPS = {
       { href: '/admin/notices', label: 'Announcements', icon: Bell },
     ],
   },
+  logs: {
+    label: 'Security & Audit Logs',
+    icon: History,
+    items: [
+      { href: '/admin/logs', label: 'Institutional Audit Logs', icon: History },
+    ],
+  },
   trash: {
     label: 'System Recovery',
     icon: Trash2,

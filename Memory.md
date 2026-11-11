@@ -754,3 +754,29 @@
     - `verify_student_profile_card_width_laptop.png`
     - `verify_admin_desk_cards_responsive.png`
     - `verify_admin_edit_modal_open.png`
+
+## Session: Advanced Security & Audit Intelligence Center (Exclusive to HOD & Super Admin) & Institutional RBAC Roles Matrix
+
+- **Institutional Security & Audit Intelligence Center (`src/app/admin/logs/page.tsx` & `src/app/api/admin/logs/route.ts`)**:
+  - Implemented advanced audit analytics, forensic inspection, and cryptographic logging dashboard.
+  - **Strict Access Clearance:** Restricted exclusively to `HOD`, `ADMIN`, and `SUPER_ADMIN`. Blocked for `WEB_MANAGER`, `FACULTY`, and `STUDENT` with 403 Forbidden and `/access-denied` server-side redirects.
+  - **Departmental Scoping for HOD:** Scoped to departmental scholars, faculty, and records. Super Admin has unrestricted campus-wide visibility.
+  - **KPI Metrics Strip:** Total Recorded Events, Today's Mutations (24h counter), Moderation Decisions, and Security & User Mutations.
+  - **Multi-Dimensional Filters:** All Stream, Moderation & Honors, Security & Roles, Storage & Ingestion, System Recovery (Trash). Full-text keyword search, Actor Role filter, and Date Range filter.
+  - **Forensic Deep-Dive Modal:** In-depth inspector modal displaying Actor clearance, Origin IP, Client User Agent, Target Entity ID, and syntax-highlighted collapsible JSON viewer for metadata diffs.
+  - **Compliance Data Exports:** 1-click export to CSV and JSON formats for institutional audits (NIRF, NAAC, NBA).
+  - **Active Audit Ingestion:** Added automatic audit event logging to `src/app/api/admin/users/route.ts` on any user record mutation.
+- **RBAC Roles & Responsibilities Matrix (`RolesAndResponsibilities.md`)**:
+  - Authored comprehensive governance specification detailing all 6 platform roles (`SUPER_ADMIN`, `ADMIN`, `HOD`, `WEB_MANAGER`, `FACULTY`, `STUDENT`).
+  - Outlined exact permissions across public feeds, profile customization, locked academic credentials, moderation pipelines, user management, audit logs, discipline cases, QR attendance, notices, and system recovery.
+- **Empirical Validation**:
+  - TypeScript: 0 errors (`tsc --noEmit`).
+  - Playwright test (`scripts/verify_audit_logs_advanced.js`):
+    - Super Admin: Accessed `/admin/logs`, verified 125 recorded events, verified forensic modal & JSON viewer.
+    - HOD: Accessed `/admin/logs`, verified department audit records render properly.
+    - Student: Blocked from `/admin/logs`, verified direct API call returns `403 Forbidden` (`"Forbidden: Audit log access is strictly restricted to HOD and Super Admin"`).
+  - Visual Proofs:
+    - `verify_admin_logs_super_admin.png`
+    - `verify_admin_logs_forensic_modal.png`
+    - `verify_admin_logs_hod_view.png`
+    - `verify_admin_logs_student_blocked.png`

@@ -448,6 +448,40 @@ export async function PATCH(req: NextRequest) {
       });
     }
 
+    // 7. Record immutable audit log
+    try {
+      const actorEmail = session?.user?.email;
+      if (actorEmail) {
+        const actorUser = await prisma.user.findUnique({
+          where: { email: actorEmail.toLowerCase().trim() },
+          select: { id: true, email: true, role: true },
+        });
+
+        if (actorUser) {
+          await prisma.auditLog.create({
+            data: {
+              actorId: actorUser.id,
+              actorEmail: actorUser.email,
+              actorRole: actorUser.role,
+              action: 'USER_UPDATED',
+              entityType: 'User',
+              entityId: userId,
+              metadata: JSON.stringify({
+                targetUserId: userId,
+                targetEmail: updatedUser.email,
+                targetName: updatedUser.name,
+                targetRole: updatedUser.role,
+                department: deptName || targetUser.departmentName,
+                updatedFields: Object.keys(userUpdateData),
+              }),
+            },
+          });
+        }
+      }
+    } catch (auditErr) {
+      console.warn('[API Users PATCH] Audit log creation warning:', auditErr);
+    }
+
     // 8. Invalidate paths across the platform for immediate reactivity
     try {
       revalidatePath('/students');
