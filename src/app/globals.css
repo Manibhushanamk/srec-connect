@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    color-scheme: light dark;
     --radius: 0.75rem;
 
     /* Light Theme: Clean LinkedIn/Instagram feed styling */
@@ -34,9 +35,21 @@
     --border: 214.3 31.8% 91.4%;    /* #E2E8F0 subtle 1px border */
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
+
+    &:has(> head > meta[name="color-scheme"][content="dark"]) {
+      color-scheme: dark;
+    }
+    &:has(> head > meta[name="color-scheme"][content="light"]) {
+      color-scheme: light;
+    }
+  }
+
+  .light {
+    color-scheme: light;
   }
 
   .dark {
+    color-scheme: dark;
     /* Dark Theme: Deep Slate/Space Navy (comfortable high contrast) */
     --background: 222.2 84% 4.9%;   /* #020817 deep midnight */
     --foreground: 210 40% 98%;
@@ -195,4 +208,15 @@
     rgba(0, 0, 0, 0.03) 75%,
     rgba(0, 0, 0, 0) 100%
   );
+}
+
+/* ── Modern Web Guidance: Rendering Performance & Content Containment ── */
+.directory-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+}
+
+article.social-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 450px;
 }

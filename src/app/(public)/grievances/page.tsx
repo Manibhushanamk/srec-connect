@@ -607,6 +607,9 @@ function StudentGrievancesContent() {
                                 <img
                                   src={attachedUrl}
                                   alt="Evidence Attachment"
+                                  width={600}
+                                  height={400}
+                                  loading="lazy"
                                   className="w-full h-full object-contain"
                                 />
                               </div>

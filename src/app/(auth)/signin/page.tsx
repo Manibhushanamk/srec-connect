@@ -99,7 +99,14 @@ function SignInContent() {
         <div className="text-center space-y-2">
           <Link href="/" className="inline-flex items-center gap-2.5 group">
             <div className="w-12 h-12 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
-              <img src="/images/srec-logo.png" alt="SREC Logo" className="w-12 h-12 object-contain drop-shadow-md" />
+              <img
+                src="/images/srec-logo.png"
+                alt="SREC Logo"
+                width={48}
+                height={48}
+                fetchPriority="high"
+                className="w-12 h-12 object-contain drop-shadow-md"
+              />
             </div>
             <div className="text-left">
               <span className="text-2xl font-black tracking-tight text-foreground flex items-center gap-1.5">

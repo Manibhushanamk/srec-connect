@@ -127,8 +127,13 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
         className="@container w-full min-w-0 bg-card rounded-3xl border border-border overflow-hidden shadow-subtle hover:border-primary/50 hover:shadow-card transition-all duration-200 flex flex-col group cursor-pointer"
         role="button"
         tabIndex={0}
+        aria-label={`View achievement details for ${title}`}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
+          if (e.key === 'Enter') {
+            if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return;
+            e.preventDefault();
+            setShowModal(true);
+          } else if (e.key === ' ') {
             e.preventDefault();
             setShowModal(true);
           }

@@ -151,7 +151,7 @@ export function ScholarDirectoryCard({
   };
 
   return (
-    <div className="@container w-full bg-card rounded-3xl border border-border overflow-hidden shadow-subtle hover:border-primary/50 hover:shadow-card transition-all duration-200 flex flex-col group">
+    <div className="@container directory-card w-full bg-card rounded-3xl border border-border overflow-hidden shadow-subtle hover:border-primary/50 hover:shadow-card transition-all duration-200 flex flex-col group">
       {/* 1. Header Banner with Department Pill & Dot Pattern */}
       <div className="h-32 sm:h-36 w-full relative bg-gradient-to-r from-blue-900/70 via-indigo-900/50 to-slate-900/90 overflow-hidden shrink-0">
         <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
@@ -171,7 +171,14 @@ export function ScholarDirectoryCard({
           <div className="relative inline-block">
             <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-card bg-primary/10 overflow-hidden shadow-md flex items-center justify-center font-bold text-2xl text-primary shrink-0 group-hover:scale-105 transition-transform">
               {avatarUrl ? (
-                <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+                <img
+                  src={avatarUrl}
+                  alt={name}
+                  width={96}
+                  height={96}
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                />
               ) : type === 'ACHIEVEMENT' ? (
                 <Award className="w-9 h-9 text-primary" />
               ) : (
@@ -201,6 +208,7 @@ export function ScholarDirectoryCard({
               type="button"
               onClick={handleShare}
               className="p-2 rounded-xl border border-border bg-background/80 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors shadow-2xs"
+              aria-label={copied ? 'Link Copied!' : `Share profile for ${name}`}
               title={copied ? 'Link Copied!' : 'Share Profile'}
             >
               <Share2 className="w-4 h-4" />

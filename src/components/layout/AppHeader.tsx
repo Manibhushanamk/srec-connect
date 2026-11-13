@@ -86,7 +86,14 @@ export const AppHeader: React.FC = () => {
           <Link href="/" className="flex items-center gap-2.5 sm:gap-3 focus:outline-none group min-w-0">
             {/* Official SREC Emblem */}
             <div className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <img src="/images/srec-logo.png" alt="SREC Logo" className="w-full h-full object-contain drop-shadow-sm" />
+              <img
+                src="/images/srec-logo.png"
+                alt="SREC Logo"
+                width={40}
+                height={40}
+                fetchPriority="high"
+                className="w-full h-full object-contain drop-shadow-sm"
+              />
             </div>
 
             <div className="flex flex-col min-w-0">
@@ -105,11 +112,15 @@ export const AppHeader: React.FC = () => {
           </Link>
 
           {/* Global Search Bar (Desktop) */}
-          <div className="hidden md:flex items-center flex-1 max-w-md mx-4 lg:mx-6">
+          <search className="hidden md:flex items-center flex-1 max-w-md mx-4 lg:mx-6">
             <div className="relative w-full">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <label htmlFor="header-global-search" className="sr-only">
+                Search students, faculty, research, events
+              </label>
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
               <input
-                type="text"
+                id="header-global-search"
+                type="search"
                 placeholder="Search students, faculty, research, events..."
                 className="w-full pl-10 pr-12 py-2 text-xs rounded-xl bg-secondary/60 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background transition-all"
               />
@@ -117,7 +128,7 @@ export const AppHeader: React.FC = () => {
                 ⌘K
               </kbd>
             </div>
-          </div>
+          </search>
 
           {/* Actions (Notifications, Theme, User, Mobile Hamburger) */}
           <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">

@@ -31,11 +31,12 @@ export const MobileBottomNav: React.FC = () => {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex flex-col items-center justify-center p-1.5 focus:outline-none group -mt-5"
+                className="flex flex-col items-center justify-center p-1.5 focus:outline-none group -mt-5 min-h-[44px] min-w-[44px]"
                 aria-label={item.label}
+                aria-current={isActive ? 'page' : undefined}
               >
                 <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center shadow-lg border-2 border-card group-active:scale-95 transition-transform">
-                  <Icon className="w-6 h-6 stroke-[2.5]" />
+                  <Icon className="w-6 h-6 stroke-[2.5]" aria-hidden="true" />
                 </div>
               </Link>
             );
@@ -45,14 +46,15 @@ export const MobileBottomNav: React.FC = () => {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl transition-all duration-150 ${
+              className={`flex flex-col items-center justify-center py-1 px-3 rounded-xl min-h-[44px] min-w-[44px] transition-all duration-150 ${
                 isActive
                   ? 'text-primary font-semibold'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
               aria-label={item.label}
+              aria-current={isActive ? 'page' : undefined}
             >
-              <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} />
+              <Icon className={`w-5 h-5 ${isActive ? 'stroke-[2.5]' : 'stroke-[1.8]'}`} aria-hidden="true" />
               <span className="text-[10px] mt-0.5">{item.label}</span>
             </Link>
           );

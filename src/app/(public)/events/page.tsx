@@ -174,6 +174,9 @@ export default async function EventsPage({
                           <img
                             src={event.posterUrl}
                             alt={event.title}
+                            width={400}
+                            height={176}
+                            loading="lazy"
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                         ) : (

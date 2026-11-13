@@ -53,16 +53,20 @@ export function EventsFilterBar({
       {/* Top Search, Status Tabs & Reset */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
         {/* Search */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <search className="relative flex-1">
+          <label htmlFor="events-search" className="sr-only">
+            Search campus events
+          </label>
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
           <input
             type="search"
-            id="search"
+            id="events-search"
             placeholder="Search campus events by title, venue, organizer, speaker..."
             defaultValue={currentSearch}
             className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
+                if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return;
                 updateFilter('search', (e.target as HTMLInputElement).value);
               }
             }}
@@ -72,12 +76,15 @@ export function EventsFilterBar({
               }
             }}
           />
-        </div>
+        </search>
 
         {/* Status Pills */}
-        <div className="flex items-center gap-1.5 p-1 bg-muted/60 border border-border rounded-xl overflow-x-auto">
+        <div className="flex items-center gap-1.5 p-1 bg-muted/60 border border-border rounded-xl overflow-x-auto" role="tablist" aria-label="Event Status">
           {statusTabs.map((status) => (
             <button
+              type="button"
+              role="tab"
+              aria-selected={currentStatus === status}
               key={status}
               onClick={() => updateFilter('status', status)}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg capitalize whitespace-nowrap transition-all ${
@@ -93,10 +100,11 @@ export function EventsFilterBar({
 
         {hasActiveFilters && (
           <button
+            type="button"
             onClick={clearFilters}
             className="self-end lg:self-auto px-3.5 py-2 text-xs font-semibold rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center gap-1.5 transition-colors shrink-0"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Reset Filters</span>
           </button>
         )}

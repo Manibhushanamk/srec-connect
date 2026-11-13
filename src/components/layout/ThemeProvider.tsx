@@ -27,6 +27,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (stored) {
       setThemeState(stored);
     }
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'srec_theme' && e.newValue) {
+        setThemeState(e.newValue as Theme);
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   useEffect(() => {
@@ -50,6 +58,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       } else {
         root.classList.remove('dark');
         root.classList.add('light');
+      }
+
+      // Modern Web Guidance: Keep meta[name="color-scheme"] synchronized
+      try {
+        let meta = document.querySelector('meta[name="color-scheme"]');
+        if (!meta) {
+          meta = document.createElement('meta');
+          meta.setAttribute('name', 'color-scheme');
+          document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', theme === 'system' ? 'light dark' : theme);
+      } catch {
+        // Safe fallback in restricted environments
       }
     };
 

@@ -120,13 +120,14 @@ export const DesktopSidebar: React.FC = () => {
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={isActive ? 'page' : undefined}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
                   isActive
                     ? 'bg-primary text-white font-semibold shadow-xs'
                     : 'text-foreground/80 hover:text-foreground hover:bg-muted'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-muted-foreground'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-muted-foreground'}`} aria-hidden="true" />
                 <span>{link.label}</span>
               </Link>
             );
@@ -147,13 +148,14 @@ export const DesktopSidebar: React.FC = () => {
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={isActive ? 'page' : undefined}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
                   isActive
                     ? 'bg-primary text-white font-semibold'
                     : 'text-foreground/80 hover:text-foreground hover:bg-muted'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-muted-foreground'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-muted-foreground'}`} aria-hidden="true" />
                 <span>{link.label}</span>
               </Link>
             );

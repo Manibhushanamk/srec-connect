@@ -267,7 +267,14 @@ export const FeedCard: React.FC<FeedPostProps> = ({
           <Link href={getAuthorProfileUrl(author)} className="relative group/avatar block" title={`View ${author.name}'s Profile`}>
             <div className="w-11 h-11 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-primary text-sm overflow-hidden group-hover/avatar:ring-2 group-hover/avatar:ring-primary transition-all">
               {author.avatarUrl ? (
-                <img src={author.avatarUrl} alt={author.name} className="w-full h-full object-cover" />
+                <img
+                  src={author.avatarUrl}
+                  alt={author.name}
+                  width={44}
+                  height={44}
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 author.name.substring(0, 2).toUpperCase()
               )}
@@ -435,6 +442,9 @@ export const FeedCard: React.FC<FeedPostProps> = ({
               <img
                 src={images[0]}
                 alt="Post Media"
+                width={800}
+                height={600}
+                loading="lazy"
                 className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.01]"
               />
             </div>
@@ -445,6 +455,9 @@ export const FeedCard: React.FC<FeedPostProps> = ({
                   <img
                     src={img}
                     alt={`Post Media ${idx + 1}`}
+                    width={400}
+                    height={400}
+                    loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.02]"
                   />
                 </div>

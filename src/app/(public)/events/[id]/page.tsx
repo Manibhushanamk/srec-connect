@@ -109,6 +109,9 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
             <img
               src={event.posterUrl}
               alt={event.title}
+              width={1200}
+              height={384}
+              fetchPriority="high"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/30 to-transparent" />

@@ -55,16 +55,20 @@ export function FacultyFilterBar({
     <div className="w-full bg-card border border-border rounded-2xl p-4 sm:p-5 shadow-xs space-y-4 transition-colors">
       {/* Search and Reset */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <search className="relative flex-1">
+          <label htmlFor="faculty-search" className="sr-only">
+            Search faculty
+          </label>
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
           <input
             type="search"
-            id="search"
+            id="faculty-search"
             placeholder="Search faculty by name, designation, research interest, or specialization..."
             defaultValue={currentSearch}
             className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm rounded-xl bg-background border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
+                if (e.nativeEvent.isComposing || (e as any).keyCode === 229) return;
                 updateFilter('search', (e.target as HTMLInputElement).value);
               }
             }}
@@ -74,14 +78,15 @@ export function FacultyFilterBar({
               }
             }}
           />
-        </div>
+        </search>
 
         {hasActiveFilters && (
           <button
+            type="button"
             onClick={clearFilters}
             className="self-end md:self-auto px-3.5 py-2 text-xs font-semibold rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center gap-1.5 transition-colors shrink-0"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Reset Filters</span>
           </button>
         )}
