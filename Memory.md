@@ -883,3 +883,43 @@
     - `https://connect-srec.vercel.app/privacy` (HTTP 200) -> `verify_live_privacy.png`, `verify_live_privacy_mobile.png`.
     - `https://connect-srec.vercel.app/terms` (HTTP 200) -> `verify_live_terms.png`.
     - `https://connect-srec.vercel.app/googleac646f04fd2d037a.html` (HTTP 200, matching exact verification string).
+
+---
+
+## Session Update: Modern Web Guidance Audit & Production Deployment (Nov 13, 2026)
+
+### Applied Modern Web Guidance Guides & Platform Standards
+1. **`dark-mode-toggle` & Color Scheme Synchronization**:
+   - Updated `src/app/layout.tsx` `viewport` export to declare `colorScheme: 'light dark'` and dual `themeColor` definitions for system light/dark queries.
+   - Synchronized `<meta name="color-scheme">` in `src/components/layout/ThemeProvider.tsx` dynamically for `light dark`, `light`, and `dark` states with cross-tab `storage` event synchronization.
+   - Updated `src/app/globals.css` with `:root { color-scheme: light dark; }`, `.dark { color-scheme: dark; }`, `.light { color-scheme: light; }`, and CSS `:root:has(> head > meta[name="color-scheme"][content="..."])` selectors.
+2. **`ime-safe-enter-submit`**:
+   - Prevented premature submissions during character conversion in CJK/IME keyboards by guarding `Enter` handlers with `e.nativeEvent.isComposing || (e as any).keyCode === 229` across:
+     - `src/components/achievements/AchievementsFilterBar.tsx`
+     - `src/components/events/EventsFilterBar.tsx`
+     - `src/components/faculty/FacultyFilterBar.tsx`
+     - `src/components/students/StudentsFilterBar.tsx`
+     - `src/components/cards/AchievementCard.tsx`
+3. **Semantic HTML `<search>` Landmarks & Accessible Forms**:
+   - Replaced generic search wrappers in all filter bars and `AppHeader.tsx` with native semantic `<search>` elements.
+   - Associated search inputs with explicit visually hidden labels (`sr-only`) and unique `id` attributes.
+   - Explicitly assigned `type="button"` to non-submitting action and reset buttons.
+4. **Core Web Vitals & Image Prioritization (`optimize-image-priority`, CLS Prevention)**:
+   - Preserved layout aspect ratios with explicit `width` and `height` dimensions on all avatars, posters, and logo graphics.
+   - Elevated LCP priority with `fetchPriority="high"` on hero assets (`AppHeader.tsx`, `signin/page.tsx`, `events/[id]/page.tsx`).
+   - Deprioritized below-the-fold media using native `loading="lazy"` on `ScholarDirectoryCard`, `FeedCard`, and directory listings.
+5. **CSS Rendering & Content Containment**:
+   - Added `content-visibility: auto` paired with `contain-intrinsic-size` on `.directory-card` and `article.social-card` to skip offscreen layout/paint passes on large directory feeds.
+6. **Accessibility & Touch Targets**:
+   - Ensured mobile navigation links and interactive controls maintain minimum 44x44px touch targets.
+   - Added `aria-current={isActive ? 'page' : undefined}` on navigation links in `MobileBottomNav.tsx` and `DesktopSidebar.tsx`.
+   - Added explicit accessible names (`aria-label`) on all icon-only buttons.
+
+### Verification & Production Release
+- **`modern-web-guidance legacy-scan`**: 0 findings remaining across all 33 qualified guides.
+- **TypeScript & Next.js Build**: `npm run typecheck` passed (exit code 0), `npm run build` static generation completed for all 60 routes.
+- **Live Production Deployment**:
+  - Deployed to Vercel production: `https://connect-srec.vercel.app` (Ready in 2m, HTTP 200).
+  - Verified live `<meta name="color-scheme" content="light dark">`.
+  - Captured Playwright screenshot verification: `live_prod_mwg_verified.png`.
+
