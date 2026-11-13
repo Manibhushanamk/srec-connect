@@ -923,3 +923,16 @@
   - Verified live `<meta name="color-scheme" content="light dark">`.
   - Captured Playwright screenshot verification: `live_prod_mwg_verified.png`.
 
+---
+
+## Session Update: GitHub Repo Creation (`srec-connect`) & Vercel Git Integration (Nov 13, 2026)
+- **GitHub Repository Created**: `https://github.com/Manibhushanamk/srec-connect` (Public repository created via GitHub CLI `gh repo create srec-connect`).
+- **Git Push Completed**:
+  - Configured git remote `origin` pointing to `https://github.com/Manibhushanamk/srec-connect.git`.
+  - Pushed all commits and branch `main` to `origin/main` with upstream tracking configured.
+- **Vercel Git Integration**:
+  - Executed `vercel git connect --yes` connecting Vercel project `connect-srec` directly to `https://github.com/Manibhushanamk/srec-connect`.
+  - Deployed updated production release via Vercel CLI (`vercel --prod --yes`).
+  - Production URL live at `https://connect-srec.vercel.app` (HTTP 200).
+
+
