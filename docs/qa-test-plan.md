@@ -39,7 +39,7 @@
 | **5** | `tests/drive-integration.test.ts` | Production: Google Drive Integration | 5 | 5 | Token auto-refresh, folder creation, file listing, boundary enforcement | ✅ PASS (5/5) |
 | **6** | `tests/drive-notices.test.ts` | Phase 9: Google Drive & Notices | 5 | 5 | Google Drive upload, boundary checks, notices distribution | ✅ PASS (5/5) |
 | **7** | `tests/social-feed.test.ts` | Phase 5: Social Community & Feed | 4 | 4 | Post creation, Sharp WebP compression under 500 KB, like, bookmark | ✅ PASS (4/4) |
-| **8** | `tests/portfolios.test.ts` | Phase 4: Profiles & Portfolios | 5 | 5 | Student and faculty profile resolution, roll number immutability | ✅ PASS (5/5) |
+| **8** | `tests/portfolios.test.ts` | Phase 4: Profiles & Portfolios | 5 | 5 | Student/faculty profile resolution, roll immutability, skills persistence & count integrity | ✅ PASS (5/5) |
 | **9** | `tests/user-admin-bulk.test.ts` | Phase 3: User & Academic Admin | 5 | 5 | Transactional bulk ingestion, duplicate constraints, activation toggling | ✅ PASS (5/5) |
 | **10** | `tests/analytics-search.test.ts` | Phase 10: Analytics, Search, SEO | 4 | 4 | Universal search, analytics aggregation, robots.txt, sitemap | ✅ PASS (4/4) |
 | **11** | `tests/backup-engine.test.ts` | Production: 14-Day Automated Backup | 7 | 7 | Relational snapshot, AES-256-GCM 12-byte IV, 14-day schedule, in-memory restore | ✅ PASS (7/7) |
