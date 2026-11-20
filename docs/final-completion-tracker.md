@@ -15,7 +15,7 @@
 | **TSK-01** | **Repository & Baseline Setup** | Workspace renamed to `srec-connect-final`, Git branch clean | `DONE` | Git clean on `main`, zero untracked runtime artifacts |
 | **TSK-02** | **TypeScript Type Safety** | 0 compilation errors across all modules (`tsc --noEmit`) | `DONE` | `npm run typecheck` passed with exit code 0 |
 | **TSK-03** | **Next.js Production Compilation** | 68/68 static and dynamic routes compiled in Next.js 15.5.25 | `DONE` | `npm run build` compiled 68 routes in 13.4s with 0 errors / 0 warnings |
-| **TSK-04** | **Test Count Reconciliation** | Discrepancy between 60 runner tests, 12 suites, and 74 assertions | `DONE` | Reconciled: 14 test files (13 suites + 1 script), 66 runner `it()` tests, 80 assertion checkpoints |
+| **TSK-04** | **Test Count Reconciliation** | Discrepancy between runner tests, suites, and assertion counts | `DONE` | Reconciled: 15 test files (14 suites + 1 script), 75 runner `it()` tests, 89 discrete assertion checkpoints (100% pass) |
 | **TSK-05** | **AES-256-GCM Encryption Standard** | NIST-standard 12-byte (96-bit) IV and 16-byte auth tag in `backup.ts` | `DONE` | Verified in `tests/backup-engine.test.ts` (Tests 1, 2, 3) |
 | **TSK-06** | **Encryption Key Isolation** | Master key derived from `BACKUP_ENCRYPTION_SECRET`; zero DB persistence | `DONE` | No keys stored in `SystemSetting`; fails safely if missing in production |
 | **TSK-07** | **Non-Public Vault Storage** | Removed `public/backups/`, relocated vault to `private/backups/` | `DONE` | `public/backups/` deleted; `.gitignore` hardened for `private/backups/*` |
@@ -31,7 +31,7 @@
 | **TSK-17** | **Observability & Health Probing** | Structured JSON logging with deep secret masking; `/api/health` latency probe | `DONE` | Verified in `tests/health-observability.test.ts` (4/4 tests passing) |
 | **TSK-18** | **Code Optimization & Dead Code** | Removed legacy `google-drive.ts` and `storage.ts` (-181 LOC), pooler tuning | `DONE` | Sequential streaming queries in `backup.ts` eliminate connection contention |
 | **TSK-19** | **Vercel Production Env Variables** | Configure `BACKUP_ENCRYPTION_SECRET` and `CRON_SECRET` on Vercel | `DONE` | Injected into Vercel production, preview, development via `vercel env add` |
-| **TSK-20** | **Production Edge Deployment** | Deploy local commits to production domain `https://srecconnect.dpdns.org` | `DONE` | Pushed commits to `origin/main`; live Vercel deployment verified active and healthy |
+| **TSK-20** | **Production Edge Deployment** | Deploy local commits to production domain `https://srecconnect.dpdns.org` | `DONE` | Pushed commits through `1a460be` to `origin/main`; live Vercel deployment verified active and healthy |
 
 ---
 
