@@ -229,7 +229,12 @@ export default async function FacultyPage({
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 mb-8">
               {data.faculty.map((member) => {
-                const facultySkills = member.specialization
+                const facultySkills = member.skills
+                  ? member.skills
+                      .split(/[,;&•]/)
+                      .map((s: string) => s.trim())
+                      .filter(Boolean)
+                  : member.specialization
                   ? member.specialization
                       .split(/[,;&•]/)
                       .map((s: string) => s.trim())

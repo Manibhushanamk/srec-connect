@@ -17,12 +17,21 @@ describe('Production Disaster Recovery: Independent PostgreSQL Database Restorat
   let initialProdUserCount: number;
   let initialProdStudentCount: number;
 
-  const prodUrl = process.env.DATABASE_URL!;
+  const prodUrl = process.env.DIRECT_URL || process.env.DATABASE_URL!;
   const stagingUrl = prodUrl.replace(/\/neondb(\?|$)/, '/srec_staging_recovery_db$1');
 
   before(async () => {
     prodPrisma = new PrismaClient({ datasources: { db: { url: prodUrl } } });
     stagingPrisma = new PrismaClient({ datasources: { db: { url: stagingUrl } } });
+
+    // Ensure staging schema columns match current Prisma schema definitions
+    try {
+      await stagingPrisma.$executeRawUnsafe('ALTER TABLE v3_production."User" ADD COLUMN IF NOT EXISTS "skills" TEXT;');
+      await stagingPrisma.$executeRawUnsafe('ALTER TABLE v3_production."Student" ADD COLUMN IF NOT EXISTS "skills" TEXT;');
+      await stagingPrisma.$executeRawUnsafe('ALTER TABLE v3_production."Faculty" ADD COLUMN IF NOT EXISTS "skills" TEXT;');
+    } catch {
+      // Non-fatal if already synchronized
+    }
 
     // Capture initial production record counts for immutability verification
     const dCount: any = await prodPrisma.$queryRaw`SELECT count(*)::int as count FROM v3_production."Department";`;

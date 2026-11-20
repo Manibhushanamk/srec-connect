@@ -41,6 +41,9 @@ interface UserItem {
   headline?: string | null;
   bio?: string | null;
   phone?: string | null;
+  skills?: string | null;
+  linkedinUrl?: string | null;
+  githubUrl?: string | null;
   departmentId?: string | null;
   department?: { id: string; name: string; code: string } | null;
   student?: {
@@ -66,6 +69,7 @@ interface UserItem {
     experience?: string | null;
     cabin?: string | null;
     specialization?: string | null;
+    skills?: string | null;
     bio?: string | null;
     avatarUrl?: string | null;
     googleScholar?: string | null;
@@ -115,10 +119,14 @@ export default function AdminUsersPage() {
     headline: '',
     bio: '',
     phone: '',
+    skills: '',
+    linkedinUrl: '',
+    githubUrl: '',
     student: {
       rollNumber: '',
       batch: '2022-2026',
       section: 'A',
+      skills: '',
       githubUrl: '',
       linkedinUrl: '',
       portfolioUrl: '',
@@ -130,6 +138,7 @@ export default function AdminUsersPage() {
       experience: '',
       cabin: '',
       specialization: '',
+      skills: '',
       googleScholar: '',
     },
   });
@@ -199,12 +208,16 @@ export default function AdminUsersPage() {
       headline: u.headline || u.student?.headline || '',
       bio: u.bio || u.student?.bio || u.faculty?.bio || '',
       phone: u.phone || u.student?.phone || '',
+      skills: u.skills || u.student?.skills || u.faculty?.skills || u.faculty?.specialization || '',
+      linkedinUrl: u.linkedinUrl || u.student?.linkedinUrl || '',
+      githubUrl: u.githubUrl || u.student?.githubUrl || '',
       student: {
         rollNumber: u.student?.rollNumber || '',
         batch: u.student?.batch || '2022-2026',
         section: u.student?.section || 'A',
-        githubUrl: u.student?.githubUrl || '',
-        linkedinUrl: u.student?.linkedinUrl || '',
+        skills: u.student?.skills || u.skills || '',
+        githubUrl: u.student?.githubUrl || u.githubUrl || '',
+        linkedinUrl: u.student?.linkedinUrl || u.linkedinUrl || '',
         portfolioUrl: u.student?.portfolioUrl || '',
       },
       faculty: {
@@ -214,6 +227,7 @@ export default function AdminUsersPage() {
         experience: u.faculty?.experience || '',
         cabin: u.faculty?.cabin || '',
         specialization: u.faculty?.specialization || '',
+        skills: u.faculty?.skills || u.skills || u.faculty?.specialization || '',
         googleScholar: u.faculty?.googleScholar || '',
       },
     });
@@ -734,6 +748,57 @@ export default function AdminUsersPage() {
                       placeholder="Academic biography, accomplishments, research interests..."
                     />
                   </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label htmlFor="user-linkedin" className="block text-xs font-semibold mb-1 text-foreground">LinkedIn Profile</label>
+                      <input
+                        id="user-linkedin"
+                        type="url"
+                        value={editFormData.linkedinUrl}
+                        onChange={(e) => setEditFormData({ ...editFormData, linkedinUrl: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-input bg-secondary/40 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        placeholder="https://linkedin.com/in/..."
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="user-github" className="block text-xs font-semibold mb-1 text-foreground">GitHub Profile</label>
+                      <input
+                        id="user-github"
+                        type="url"
+                        value={editFormData.githubUrl}
+                        onChange={(e) => setEditFormData({ ...editFormData, githubUrl: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-input bg-secondary/40 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        placeholder="https://github.com/..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* General Technical Skills for Administrative, Staff, or Alumni Accounts */}
+                  {editFormData.role !== 'STUDENT' && !editingUser.student && editFormData.role !== 'FACULTY' && editFormData.role !== 'HOD' && !editingUser.faculty && (
+                    <div>
+                      <label htmlFor="user-skills" className="block text-xs font-semibold mb-1 text-foreground">
+                        Technical Skills &amp; Core Competencies (Comma-separated)
+                      </label>
+                      <input
+                        id="user-skills"
+                        type="text"
+                        value={editFormData.skills}
+                        onChange={(e) => setEditFormData({ ...editFormData, skills: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-input bg-secondary/40 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        placeholder="e.g. Linux Administration, System Architecture, Next.js, Security"
+                      />
+                      {editFormData.skills && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {editFormData.skills.split(/[,;&•]/).map(s => s.trim()).filter(Boolean).map((skill, idx) => (
+                            <span key={idx} className="px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/30 text-[10px] font-semibold">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* 3. Student Credentials (shown for Student role or users with Student record) */}
@@ -827,6 +892,32 @@ export default function AdminUsersPage() {
                           placeholder="https://..."
                         />
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold mb-1 text-foreground">
+                        Technical Skills & Competencies (Comma-separated)
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.student.skills}
+                        onChange={(e) => setEditFormData({
+                          ...editFormData,
+                          skills: e.target.value,
+                          student: { ...editFormData.student, skills: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        placeholder="e.g. React, Next.js, PyTorch, Deep Learning, TypeScript, SQL"
+                      />
+                      {editFormData.student.skills && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {editFormData.student.skills.split(/[,;&•]/).map(s => s.trim()).filter(Boolean).map((skill, idx) => (
+                            <span key={idx} className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-semibold">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -942,6 +1033,32 @@ export default function AdminUsersPage() {
                           placeholder="https://scholar.google.com/..."
                         />
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold mb-1 text-foreground">
+                        Technical Skills & Competencies (Comma-separated)
+                      </label>
+                      <input
+                        type="text"
+                        value={editFormData.faculty.skills}
+                        onChange={(e) => setEditFormData({
+                          ...editFormData,
+                          skills: e.target.value,
+                          faculty: { ...editFormData.faculty, skills: e.target.value }
+                        })}
+                        className="w-full px-3 py-2 rounded-xl border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        placeholder="e.g. PyTorch, TensorFlow, Edge AI, Distributed Training, Python, C++"
+                      />
+                      {editFormData.faculty.skills && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {editFormData.faculty.skills.split(/[,;&•]/).map(s => s.trim()).filter(Boolean).map((skill, idx) => (
+                            <span key={idx} className="px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/30 text-[10px] font-semibold">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

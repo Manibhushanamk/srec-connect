@@ -53,6 +53,7 @@ export async function GET(req: NextRequest) {
               githubUrl: true,
               linkedinUrl: true,
               portfolioUrl: true,
+              skills: true,
             },
           },
           faculty: {
@@ -65,6 +66,7 @@ export async function GET(req: NextRequest) {
               experience: true,
               cabin: true,
               specialization: true,
+              skills: true,
               bio: true,
               avatarUrl: true,
               googleScholar: true,
@@ -225,6 +227,9 @@ export async function PATCH(req: NextRequest) {
       headline,
       bio,
       phone,
+      skills,
+      githubUrl,
+      linkedinUrl,
       student,
       faculty,
     } = body;
@@ -285,6 +290,9 @@ export async function PATCH(req: NextRequest) {
     if (headline !== undefined) userUpdateData.headline = headline;
     if (bio !== undefined) userUpdateData.bio = bio;
     if (phone !== undefined) userUpdateData.phone = phone;
+    if (skills !== undefined) userUpdateData.skills = skills;
+    if (githubUrl !== undefined) userUpdateData.githubUrl = githubUrl;
+    if (linkedinUrl !== undefined) userUpdateData.linkedinUrl = linkedinUrl;
 
     // 4. Student details handling
     let updatedStudentId = targetUser.studentId;
@@ -324,13 +332,22 @@ export async function PATCH(req: NextRequest) {
         } else if (phone !== undefined) {
           studentUpdateData.phone = phone;
         }
+        if (student?.skills !== undefined) {
+          studentUpdateData.skills = student.skills;
+        } else if (skills !== undefined) {
+          studentUpdateData.skills = skills;
+        }
         if (student?.githubUrl !== undefined) {
           studentUpdateData.githubUrl = student.githubUrl;
           userUpdateData.githubUrl = student.githubUrl;
+        } else if (githubUrl !== undefined) {
+          studentUpdateData.githubUrl = githubUrl;
         }
         if (student?.linkedinUrl !== undefined) {
           studentUpdateData.linkedinUrl = student.linkedinUrl;
           userUpdateData.linkedinUrl = student.linkedinUrl;
+        } else if (linkedinUrl !== undefined) {
+          studentUpdateData.linkedinUrl = linkedinUrl;
         }
         if (student?.portfolioUrl !== undefined) studentUpdateData.portfolioUrl = student.portfolioUrl;
         if (avatarUrl !== undefined) studentUpdateData.avatarUrl = avatarUrl;
@@ -361,9 +378,10 @@ export async function PATCH(req: NextRequest) {
             headline: student?.headline || '',
             bio: student?.bio || '',
             phone: student?.phone || '',
+            skills: student?.skills || skills || '',
             avatarUrl: avatarUrl || targetUser.avatarUrl,
-            githubUrl: student?.githubUrl,
-            linkedinUrl: student?.linkedinUrl,
+            githubUrl: student?.githubUrl || githubUrl,
+            linkedinUrl: student?.linkedinUrl || linkedinUrl,
             portfolioUrl: student?.portfolioUrl,
           },
         });
@@ -389,6 +407,11 @@ export async function PATCH(req: NextRequest) {
         if (faculty?.experience !== undefined) facultyUpdateData.experience = faculty.experience;
         if (faculty?.cabin !== undefined) facultyUpdateData.cabin = faculty.cabin;
         if (faculty?.specialization !== undefined) facultyUpdateData.specialization = faculty.specialization;
+        if (faculty?.skills !== undefined) {
+          facultyUpdateData.skills = faculty.skills;
+        } else if (skills !== undefined) {
+          facultyUpdateData.skills = skills;
+        }
         if (faculty?.bio !== undefined) {
           facultyUpdateData.bio = faculty.bio;
         } else if (bio !== undefined) {
@@ -412,6 +435,7 @@ export async function PATCH(req: NextRequest) {
             experience: faculty?.experience || '10+ Years',
             cabin: faculty?.cabin,
             specialization: faculty?.specialization || 'Artificial Intelligence & Machine Learning',
+            skills: faculty?.skills || skills || faculty?.specialization || 'Artificial Intelligence & Machine Learning',
             bio: faculty?.bio || '',
             avatarUrl: avatarUrl || targetUser.avatarUrl,
             googleScholar: faculty?.googleScholar,

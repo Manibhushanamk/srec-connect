@@ -209,30 +209,36 @@ export default async function FacultyProfilePage({ params }: FacultyProfilePageP
       </div>
 
       {/* Profile Header (Instagram & LinkedIn Hybrid) */}
-      <ProfileHeader
-        name={faculty.name}
-        designation={faculty.designation}
-        role={role}
-        department={faculty.department?.name || 'Computer Science & Engineering (AI & ML)'}
-        avatarUrl={faculty.avatarUrl || faculty.user?.avatarUrl || undefined}
-        headline={`${faculty.designation} | ${faculty.degrees || 'Faculty'} | Department of CSE (AI & ML)`}
-        bio={faculty.bio || undefined}
-        email={faculty.email || faculty.user?.email || undefined}
-        location="SREC Campus, Nandyal"
-        isVerified={faculty.isActive}
-        isOwner={isOwner}
-        stats={{
-          postsCount: formattedPosts.length,
-          verifiedAchievementsCount: achievements.length,
-          eventsCount: 0,
-          skillsCount: 8,
-        }}
-        skills={
-          faculty.specialization
-            ? faculty.specialization.split(',').map((s) => s.trim())
-            : ['Deep Learning', 'Neural Networks', 'Academic Research', 'Curriculum Design']
-        }
-      />
+      {(() => {
+        const facultySkills = faculty.skills
+          ? faculty.skills.split(/[,;&•]/).map((s: string) => s.trim()).filter(Boolean)
+          : faculty.specialization
+          ? faculty.specialization.split(/[,;&•]/).map((s: string) => s.trim()).filter(Boolean)
+          : ['Deep Learning', 'Neural Networks', 'Academic Research', 'Curriculum Design'];
+
+        return (
+          <ProfileHeader
+            name={faculty.name}
+            designation={faculty.designation}
+            role={role}
+            department={faculty.department?.name || 'Computer Science & Engineering (AI & ML)'}
+            avatarUrl={faculty.avatarUrl || faculty.user?.avatarUrl || undefined}
+            headline={`${faculty.designation} | ${faculty.degrees || 'Faculty'} | Department of CSE (AI & ML)`}
+            bio={faculty.bio || undefined}
+            email={faculty.email || faculty.user?.email || undefined}
+            location="SREC Campus, Nandyal"
+            isVerified={faculty.isActive}
+            isOwner={isOwner}
+            stats={{
+              postsCount: formattedPosts.length,
+              verifiedAchievementsCount: achievements.length,
+              eventsCount: 0,
+              skillsCount: facultySkills.length,
+            }}
+            skills={facultySkills}
+          />
+        );
+      })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Academic Credentials & Department Office */}

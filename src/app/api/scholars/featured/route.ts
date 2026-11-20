@@ -72,7 +72,9 @@ export async function GET() {
     ]);
 
     const formattedStudents = students.map((s) => {
-      const skills = s.department?.code === 'AIML' || s.departmentName?.includes('AI')
+      const skills = s.skills
+        ? s.skills.split(/[,;&•]/).map((item) => item.trim()).filter(Boolean).slice(0, 5)
+        : s.department?.code === 'AIML' || s.departmentName?.includes('AI')
         ? ['Artificial Intelligence', 'Machine Learning', 'Python', 'Data Structures']
         : s.department?.code === 'ECE'
         ? ['Embedded Systems', 'IoT Circuits', 'VLSI Design', 'Microcontrollers']
@@ -103,7 +105,9 @@ export async function GET() {
     });
 
     const formattedFaculty = faculty.map((f) => {
-      const skills = f.specialization
+      const skills = f.skills
+        ? f.skills.split(/[,;&•]/).map((item) => item.trim()).filter(Boolean).slice(0, 5)
+        : f.specialization
         ? f.specialization.split(',').map((item) => item.trim()).filter(Boolean).slice(0, 5)
         : ['Academic Research', 'Curriculum Engineering', 'Student Mentorship'];
 

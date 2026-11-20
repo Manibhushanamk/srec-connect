@@ -50,6 +50,7 @@ interface ProfileWorkspaceProps {
     phone: string | null;
     linkedinUrl: string | null;
     githubUrl: string | null;
+    skills?: string | null;
     department?: { name: string; code: string } | null;
     departmentName?: string | null;
     counts?: {
@@ -69,6 +70,7 @@ interface ProfileWorkspaceProps {
       githubUrl?: string | null;
       portfolioUrl?: string | null;
       avatarUrl?: string | null;
+      skills?: string | null;
       achievements?: any[];
     } | null;
     faculty?: {
@@ -83,6 +85,7 @@ interface ProfileWorkspaceProps {
       googleScholar?: string | null;
       linkedinUrl?: string | null;
       avatarUrl?: string | null;
+      skills?: string | null;
       achievements?: any[];
     } | null;
     posts?: any[];
@@ -136,7 +139,19 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
   const [portfolioUrl, setPortfolioUrl] = useState(
     initialUser.student?.portfolioUrl || ''
   );
+  const [skills, setSkills] = useState(
+    initialUser.skills ||
+    initialUser.student?.skills ||
+    initialUser.faculty?.skills ||
+    initialUser.faculty?.specialization ||
+    ''
+  );
   const [imgError, setImgError] = useState(false);
+
+  const skillsList = skills
+    .split(/[,;&•]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   const isSuperAdmin = initialUser.role === 'SUPER_ADMIN' || initialUser.role === 'ADMIN';
   const isHOD = initialUser.role === 'HOD';
@@ -196,6 +211,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
           linkedinUrl: linkedinUrl.trim() || undefined,
           githubUrl: githubUrl.trim() || undefined,
           portfolioUrl: portfolioUrl.trim() || undefined,
+          skills: skills.trim(),
           // Academic credentials
           designation: designation.trim(),
           degrees: degrees.trim(),
@@ -616,7 +632,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                   </div>
                   <div className="p-4 rounded-2xl bg-card border border-border text-center">
                     <p className="text-xl font-black text-foreground">
-                      {isFaculty ? specializationList.length : 5}
+                      {isFaculty ? (specializationList.length || skillsList.length || 3) : (skillsList.length || 5)}
                     </p>
                     <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">
                       {isFaculty ? 'Research Areas' : 'Skills'}
@@ -743,6 +759,47 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                       </div>
                     </div>
                   )}
+
+                  {/* Technical Skills & Competencies */}
+                  <div className="pt-3 border-t border-border/60">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-muted-foreground block text-[11px] uppercase font-semibold">
+                        Technical Skills &amp; Competencies
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('customize')}
+                        className="text-[11px] text-primary hover:underline font-semibold flex items-center gap-1"
+                      >
+                        <Sliders className="w-3 h-3" />
+                        <span>Edit Skills</span>
+                      </button>
+                    </div>
+                    {skillsList.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {skillsList.map((skill, i) => (
+                          <span
+                            key={i}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-primary/10 text-primary border border-primary/20"
+                          >
+                            <Sparkles className="w-3 h-3 text-primary" />
+                            <span>{skill}</span>
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic flex items-center gap-1.5">
+                        <span>No technical competencies listed yet.</span>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('customize')}
+                          className="text-primary hover:underline font-medium not-italic"
+                        >
+                          Add your skills now →
+                        </button>
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 {/* 3. Verified Achievements & Research Publications */}
@@ -1022,6 +1079,98 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                   className="w-full text-xs bg-secondary/50 border border-border rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background transition-all"
                   placeholder="https://myportfolio.com"
                 />
+              </div>
+
+              {/* Technical Skills & Competencies */}
+              <div className="pt-3 border-t border-border/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-foreground">
+                    Technical Skills &amp; Core Competencies
+                  </label>
+                  <span className="text-[11px] text-muted-foreground font-mono">
+                    {skillsList.length} {skillsList.length === 1 ? 'skill' : 'skills'}
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={skills}
+                  onChange={(e) => setSkills(e.target.value)}
+                  className="w-full text-xs bg-secondary/50 border border-border rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background transition-all"
+                  placeholder="e.g. Python, PyTorch, React, TypeScript, Next.js, Docker, SQL, Machine Learning"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Separate each skill or technical competency with a comma. These display as interactive badges on your portfolio and public directory cards.
+                </p>
+
+                {/* Quick Add Badges */}
+                <div className="pt-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">
+                    Click to Quick-Add Common Skills:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      'Python',
+                      'PyTorch',
+                      'TypeScript',
+                      'Next.js',
+                      'React',
+                      'FastAPI',
+                      'Tailwind CSS',
+                      'PostgreSQL',
+                      'Docker',
+                      'Deep Learning',
+                      'Machine Learning',
+                      'Computer Vision',
+                      'Data Structures',
+                      'Git',
+                      'Cloud Computing',
+                    ].map((badge) => {
+                      const isAdded = skillsList.some(
+                        (s) => s.toLowerCase() === badge.toLowerCase()
+                      );
+                      return (
+                        <button
+                          key={badge}
+                          type="button"
+                          onClick={() => {
+                            if (isAdded) return;
+                            const newSkills = skills.trim()
+                              ? `${skills.trim()}, ${badge}`
+                              : badge;
+                            setSkills(newSkills);
+                          }}
+                          className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all ${
+                            isAdded
+                              ? 'bg-primary/20 text-primary border-primary/40 font-semibold cursor-default'
+                              : 'bg-secondary/40 text-muted-foreground border-border hover:bg-secondary hover:text-foreground hover:border-primary/30 cursor-pointer'
+                          }`}
+                        >
+                          {isAdded ? `✓ ${badge}` : `+ ${badge}`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Live Preview of Chips */}
+                {skillsList.length > 0 && (
+                  <div className="pt-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">
+                      Live Badge Preview:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5 p-3 rounded-xl bg-secondary/30 border border-border/80">
+                      {skillsList.map((skill, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-primary/10 text-primary border border-primary/20"
+                        >
+                          <Sparkles className="w-3 h-3 text-primary" />
+                          <span>{skill}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Academic Credentials Section */}

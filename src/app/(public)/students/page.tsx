@@ -173,12 +173,13 @@ export default async function StudentsPage({
           <>
             <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 mb-8">
               {data.students.map((student) => {
-                const studentSkills =
-                  student.department?.code === 'ECE'
-                    ? ['Embedded Systems', 'IoT Circuits', 'VLSI Design', 'Microcontrollers', 'C++']
-                    : student.department?.code === 'AIDS' || student.department?.code === 'AIML'
-                    ? ['PyTorch', 'TensorFlow', 'Computer Vision', 'Deep Learning', 'Python']
-                    : ['Data Structures', 'Full Stack', 'Cloud Computing', 'Algorithms', 'TypeScript'];
+                const studentSkills = student.skills
+                  ? student.skills.split(/[,;&•]/).map((s: string) => s.trim()).filter(Boolean)
+                  : student.department?.code === 'ECE'
+                  ? ['Embedded Systems', 'IoT Circuits', 'VLSI Design', 'Microcontrollers', 'C++']
+                  : student.department?.code === 'AIDS' || student.department?.code === 'AIML'
+                  ? ['PyTorch', 'TensorFlow', 'Computer Vision', 'Deep Learning', 'Python']
+                  : ['Data Structures', 'Full Stack', 'Cloud Computing', 'Algorithms', 'TypeScript'];
 
                 return (
                   <ScholarDirectoryCard

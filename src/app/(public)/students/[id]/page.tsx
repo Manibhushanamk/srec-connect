@@ -242,28 +242,39 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
       </div>
 
       {/* Profile Header (Instagram & LinkedIn Hybrid) */}
-      <ProfileHeader
-        name={student.name}
-        rollNumber={student.rollNumber}
-        role="STUDENT"
-        department={student.department?.name || 'Computer Science & Engineering (AI & ML)'}
-        batch={student.batch || undefined}
-        section={student.section || undefined}
-        avatarUrl={student.avatarUrl || student.user?.avatarUrl || undefined}
-        headline={student.headline || `Undergraduate Student | Roll: ${student.rollNumber}`}
-        bio={student.bio || undefined}
-        email={student.email || student.user?.email || undefined}
-        githubUrl={student.githubUrl || undefined}
-        linkedinUrl={student.linkedinUrl || undefined}
-        isVerified={student.isActive}
-        isOwner={isOwner}
-        stats={{
-          postsCount: formattedPosts.length,
-          verifiedAchievementsCount: allAchievements.length,
-          eventsCount: 0,
-          skillsCount: 6,
-        }}
-      />
+      {(() => {
+        const studentSkills = student.skills
+          ? student.skills.split(/[,;&•]/).map((s: string) => s.trim()).filter(Boolean)
+          : student.user?.skills
+          ? student.user.skills.split(/[,;&•]/).map((s: string) => s.trim()).filter(Boolean)
+          : ['Python', 'TypeScript', 'Next.js', 'PyTorch', 'Data Structures', 'Git'];
+
+        return (
+          <ProfileHeader
+            name={student.name}
+            rollNumber={student.rollNumber}
+            role="STUDENT"
+            department={student.department?.name || 'Computer Science & Engineering (AI & ML)'}
+            batch={student.batch || undefined}
+            section={student.section || undefined}
+            avatarUrl={student.avatarUrl || student.user?.avatarUrl || undefined}
+            headline={student.headline || `Undergraduate Student | Roll: ${student.rollNumber}`}
+            bio={student.bio || undefined}
+            email={student.email || student.user?.email || undefined}
+            githubUrl={student.githubUrl || undefined}
+            linkedinUrl={student.linkedinUrl || undefined}
+            isVerified={student.isActive}
+            isOwner={isOwner}
+            stats={{
+              postsCount: formattedPosts.length,
+              verifiedAchievementsCount: allAchievements.length,
+              eventsCount: 0,
+              skillsCount: studentSkills.length,
+            }}
+            skills={studentSkills}
+          />
+        );
+      })()}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Official Institutional Academic Record */}

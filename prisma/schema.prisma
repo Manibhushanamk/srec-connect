@@ -72,6 +72,7 @@ model User {
   phone          String?
   linkedinUrl    String?
   githubUrl      String?
+  skills         String?
   departmentId   String?
   department     Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   departmentName String?
@@ -194,6 +195,7 @@ model Student {
   linkedinUrl    String?
   githubUrl      String?
   portfolioUrl   String?
+  skills         String?
   isActive       Boolean     @default(true)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
@@ -222,6 +224,7 @@ model Faculty {
   email          String?
   cabin          String?
   specialization String?
+  skills         String?
   bio            String?
   avatarUrl      String?
   googleScholar  String?

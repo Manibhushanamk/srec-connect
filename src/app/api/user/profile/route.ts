@@ -77,6 +77,9 @@ export async function PATCH(req: NextRequest) {
   if (body.avatarUrl !== undefined) {
     userDataToUpdate.avatarUrl = sanitizeUrl(body.avatarUrl);
   }
+  if (typeof body.skills === 'string') {
+    userDataToUpdate.skills = body.skills.trim().substring(0, 500);
+  }
 
   if (Object.keys(userDataToUpdate).length > 0) {
     await prisma.user.update({
@@ -128,6 +131,7 @@ export async function PATCH(req: NextRequest) {
         headline: typeof body.headline === 'string' ? body.headline.substring(0, 200) : undefined,
         bio: typeof body.bio === 'string' ? body.bio.substring(0, 1000) : undefined,
         phone: typeof body.phone === 'string' ? body.phone.substring(0, 20) : undefined,
+        skills: typeof body.skills === 'string' ? body.skills.trim().substring(0, 500) : undefined,
         batch: canManageAcademicAnchors && typeof body.batch === 'string' && body.batch.trim() ? body.batch.trim() : undefined,
         section: canManageAcademicAnchors && typeof body.section === 'string' && body.section.trim() ? body.section.trim() : undefined,
         githubUrl: sanitizeUrl(body.githubUrl),
@@ -148,6 +152,7 @@ export async function PATCH(req: NextRequest) {
         experience: typeof body.experience === 'string' && body.experience.trim() ? body.experience.trim() : undefined,
         cabin: typeof body.cabin === 'string' && body.cabin.trim() ? body.cabin.trim() : undefined,
         specialization: typeof body.specialization === 'string' && body.specialization.trim() ? body.specialization.trim() : undefined,
+        skills: typeof body.skills === 'string' ? body.skills.trim().substring(0, 500) : (typeof body.specialization === 'string' ? body.specialization.trim().substring(0, 500) : undefined),
         bio: typeof body.bio === 'string' ? body.bio.substring(0, 1000) : undefined,
         googleScholar: sanitizeUrl(body.googleScholar),
         avatarUrl: sanitizeUrl(body.avatarUrl),
