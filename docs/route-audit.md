@@ -143,3 +143,17 @@
 1. **Zero Unintended 404s:** Every legitimate role transition, navigation button, and footer link routes to an existing page.
 2. **Branded 404 Recovery:** In the event an invalid URL is entered (e.g. `/unknown-path`), `src/app/not-found.tsx` renders a branded page with search and directory links.
 3. **Role Routing Resilience:** `Navbar.tsx` correctly resolves dashboard routes for all roles (`SUPER_ADMIN` -> `/admin`, `HOD` -> `/admin`, `WEB_MANAGER` -> `/admin`, `FACULTY` -> `/dashboard/faculty`, `STUDENT` -> `/dashboard/student`).
+
+---
+
+## 4. Live Domain Probing vs Local Build State
+
+Live probing conducted against production deployment domain `https://srecconnect.dpdns.org`:
+
+| Route Target | Probed Method | Live Response Code | Deployed State Analysis |
+|---|:---:|:---:|---|
+| `https://srecconnect.dpdns.org/` | `HEAD` | `HTTP/2 200 OK` | ✅ **VERIFIED LIVE** — Application root is active and responsive on Vercel Edge. |
+| `https://srecconnect.dpdns.org/api/health` | `HEAD` | `HTTP/2 404` | ⚠️ **PENDING DEPLOYMENT PUSH** — Exists in local build; activates once local git commits are pushed to `origin/main`. |
+| `https://srecconnect.dpdns.org/report-bug` | `HEAD` | `HTTP/2 404` | ⚠️ **PENDING DEPLOYMENT PUSH** — Exists in local build; activates once local git commits are pushed to `origin/main`. |
+
+> **Operational Note:** All 68 routes are fully compiled, typechecked, and verified in the local production build (`npm run build`). Once the repository commits are pushed to `origin/main`, Vercel's automated CI/CD pipeline will deploy the updated bundle to the live domain.

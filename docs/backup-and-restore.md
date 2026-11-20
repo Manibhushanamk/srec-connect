@@ -120,11 +120,17 @@ Before executing any restoration, the system decrypts the package in memory and 
 - Integrity: Computed SHA-256 digest vs package header.
 - Completeness: Presence of all 31 critical models.
 
-### B. Isolated Staging Restoration Verification
+### B. Isolated Restoration Verification & Staging Environment Boundaries
 Tested and verified in `tests/backup-engine.test.ts` (Test 7):
-- Evaluates topological relational integrity (Department -> User -> Student / Faculty).
-- Preserves ISO timestamp objects, nullability, JSON structures, and foreign keys (`User.studentId`, `Student.departmentId`).
-- Safely validates without mutating live production data.
+- **In-Memory Schema & Relational Integrity (`VERIFIED`):**
+  - Evaluates topological relational integrity (Department -> User -> Student / Faculty).
+  - Preserves ISO timestamp objects, nullability, JSON structures, and foreign keys (`User.studentId`, `Student.departmentId`).
+  - Decrypts package, validates 16-byte authentication tag and SHA-256 data checksum.
+  - Safely validates without mutating live production data.
+- **Physical Staging PostgreSQL Instance Restore (`BLOCKED`):**
+  - The repository environment currently has only one `DATABASE_URL` configured (pointing to the live production Neon database).
+  - Restoring directly into the production database during automated testing was strictly avoided to eliminate any risk of live data corruption or downtime.
+  - End-to-end physical database restore execution requires a dedicated disposable Neon branch or separate staging PostgreSQL connection string (`STAGING_DATABASE_URL`).
 
 ### C. Live Emergency Restoration Procedure
 1. Authorized Super Admin logs in and opens `/admin/settings`.

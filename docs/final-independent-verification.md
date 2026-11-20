@@ -5,7 +5,7 @@
 **Evaluation Date:** November 20, 2026  
 **Auditor:** Senior Production Engineering, Architecture, Security, QA & Reliability Team  
 **Release Recommendation:** ✅ **APPROVED WITH DOCUMENTED OPERATIONAL PREREQUISITES**  
-*(0 Critical Vulnerabilities, 0 High Security Risks, 0 Compilation Errors, 60/60 Tests Passing)*
+*(0 Critical Vulnerabilities, 0 High Security Risks, 0 Compilation Errors, 60/60 Tests Passing, 87.24% Line Coverage)*
 
 ---
 
@@ -17,14 +17,15 @@ Every previous claim has been independently tested, verified against the actual 
 | :---: | :--- | :---: | :--- |
 | **01** | **Next.js Production Compilation** | `VERIFIED` | `npm run build` compiled all **68 static & dynamic routes** in 13.4s with 0 errors and 0 warnings. |
 | **02** | **TypeScript Type Safety** | `VERIFIED` | `npm run typecheck` (`tsc --noEmit`) completed with exit code 0 and 0 errors across all files. |
-| **03** | **Automated Behavioral Test Suite** | `VERIFIED` | **60/60 tests passed** across 12 test suites (`npm test`). Duration: 62.2s. |
+| **03** | **Automated Behavioral Test Suite** | `VERIFIED` | **60/60 tests passing** across 12 suites + 1 top-level file (totaling **74 verification checkpoints**) in 47.5s (`npm test`). |
 | **04** | **Measured Code Coverage** | `VERIFIED` | Node test coverage (`--experimental-test-coverage`): **87.24% line coverage**, **85.51% function coverage**, **69.54% branch coverage**. |
 | **05** | **AES-256-GCM Encryption Standard** | `VERIFIED` | Implemented in `src/lib/backup.ts` using NIST-standard **12-byte (96-bit) random IV**, 16-byte auth tag validation, and SHA-256 integrity checksum. |
 | **06** | **Encryption Key Isolation** | `VERIFIED` | Standardized on `BACKUP_ENCRYPTION_SECRET`. **Zero database persistence**: key is strictly derived from environment configuration; production fails safely if unset. |
 | **07** | **Backup Non-Public Storage Vault** | `VERIFIED` | Completely removed `public/backups/`. Local vault relocated to non-routable `private/backups/` outside Next.js web root. |
-| **08** | **Production Cron Scheduler** | `VERIFIED` | Configured `vercel.json` with daily cron (`0 2 * * *`) targeting `/api/cron/backup`. Hardened unauthenticated access prevention. |
+| **08** | **Production Cron Scheduler** | `PARTIALLY VERIFIED` | Repository configuration (`vercel.json` daily cron `0 2 * * *`) and endpoint (`/api/cron/backup`) are `VERIFIED`. Live Vercel scheduler execution history requires Vercel dashboard access. |
 | **09** | **14-Day Backup Idempotency** | `VERIFIED` | `isBackupDue(14)` accurately evaluates delta since last completed backup. Verified in `tests/backup-engine.test.ts`. |
-| **10** | **Isolated Staging Restoration** | `VERIFIED` | Implemented `restoreDatabasePayload({ isolatedTestOnly: true })` in `tests/backup-engine.test.ts` (Test 7). Verified relational schema, foreign keys, dates, and null safety. |
+| **10A** | **In-Memory Schema & Relational Restore**| `VERIFIED` | `restoreDatabasePayload({ isolatedTestOnly: true })` tested in `tests/backup-engine.test.ts` (Test 7). Schema, foreign keys, dates, and null safety validate cleanly. |
+| **10B** | **Physical Staging PostgreSQL Restore** | `BLOCKED` | No separate staging database URL or disposable Neon branch exists in `.env`. Physical restore writes into production Neon were blocked to prevent data loss. |
 | **11** | **Google Drive Headless Refresh** | `VERIFIED` | Implemented in `src/lib/drive.ts`. Auto-refreshes tokens expiring within 5 minutes. Verified in `tests/drive-integration.test.ts` (5/5 passed). |
 | **12** | **Google Drive Security Boundary** | `VERIFIED` | `assertDriveAllowed()` strictly blocks unauthorized uploads. Private backups are created with zero public sharing. |
 | **13** | **In-App Bug Reporting Lifecycle** | `VERIFIED` | Public `/report-bug` and `/admin/bugs` triage dashboard. Tested submission, severity filtering, status transitions, and soft-delete in `tests/bug-reporting.test.ts` (4/4 passed). |
@@ -33,6 +34,7 @@ Every previous claim has been independently tested, verified against the actual 
 | **16** | **Dead Code Elimination** | `VERIFIED` | Permanently removed `src/lib/google-drive.ts` (-126 LOC) and `src/lib/storage.ts` (-55 LOC). |
 | **17** | **Neon Pooler Load Optimization** | `VERIFIED` | Converted 31 parallel `Promise.all` queries in `extractDatabaseSnapshot()` to sequential stream, reducing connection contention to 1. |
 | **18** | **Super Admin Live Drive Authorization**| `BLOCKED` | Connecting live Super Admin Google Drive requires interactive OAuth login click via `/admin/settings` by the real institutional administrator. |
+| **19** | **Live Domain Status (`srecconnect.dpdns.org`)**| `PARTIALLY VERIFIED` | Live domain root `/` returns HTTP 200. New routes (`/api/health`, `/report-bug`) return 404 on live domain until local commits are pushed to `origin/main`. |
 
 ---
 
@@ -68,6 +70,10 @@ An aggressive audit was conducted comparing previous documentation against the a
 - **Discrepancy:** Previous report asserted "80%+ coverage" without quoting instrumented coverage tool output.
 - **Resolution:** Executed Node test runner with `--experimental-test-coverage`. Actual measured metrics: **87.24% line coverage**, **85.51% function coverage**, **69.54% branch coverage**.
 
+### Contradiction 8: Test Count vs Assertion Count Mismatch (60 vs 74)
+- **Discrepancy:** QA report previously listed 13 test files with test numbers summing to 74, yet reported 60 tests and 12 suites.
+- **Resolution:** Investigated real test execution. `tests/auth-rbac.test.ts` is an asynchronous top-level script containing 15 individual assertion checkpoints. Node's test runner registers it as **1 test** with 0 suite headers. The remaining 12 test files define **12 suites** and **59 `it()` tests**. Therefore, Node test runner reports **60 tests** across **12 suites**, verifying **74 total assertion checkpoints** (59 + 15). All documentation has been aligned.
+
 ---
 
 ## 3. High-Priority Backup & Disaster Recovery Audit
@@ -83,6 +89,7 @@ An aggressive audit was conducted comparing previous documentation against the a
 - **Google Drive Storage:** Backups uploaded to private folder `SREC Connect Backups`. No public `anyoneWithLink` permissions are created.
 - **Local Vault Storage:** Non-routable `private/backups/` directory. Zero static file serving.
 - **Disaster Recovery Protocol:** Documented step-by-step in `docs/backup-and-restore.md`. Live restore requires pre-restore safety snapshot and explicit confirmation code `CONFIRM_RESTORE_SREC`.
+- **Staging Database Restore Reality:** In-memory schema and foreign key restoration verified (Test 7). Physical write restore into PostgreSQL is `BLOCKED` until a dedicated staging database / Neon branch is provisioned.
 
 ---
 
@@ -103,6 +110,10 @@ The following items cannot be completed autonomously by an AI agent and require 
      - `NEXTAUTH_SECRET`, `NEXTAUTH_URL` (`https://srecconnect.dpdns.org`).
      - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
 
+3. **Deploy Local Commits to Production (`PENDING PUSH`):**
+   - Local `main` is ahead of `origin/main` by commits containing the production fixes (`cff2216`, `b9a8ee1`, `4d25d0f`).
+   - Run `git push origin main` (or trigger Vercel deployment) to activate `/api/health`, `/report-bug`, `/admin/settings`, and `vercel.json` on `srecconnect.dpdns.org`.
+
 ---
 
 ## 5. Final Release Certification
@@ -112,10 +123,11 @@ The following items cannot be completed autonomously by an AI agent and require 
 | **0 Critical Vulnerabilities** | ✅ YES | No secrets in code, no public backup leaks, SQL injection protected. |
 | **0 High Risks** | ✅ YES | All high risks remediated (key isolation, GCM nonce, cron auth). |
 | **0 Compilation Warnings** | ✅ YES | 68 routes compiled in Next.js 15.5.25 without errors or warnings. |
-| **60/60 Automated Tests** | ✅ YES | 100% pass rate across all 12 test suites. |
+| **60/60 Automated Tests** | ✅ YES | 100% pass rate in Node test runner across 12 suites (74 assertion checkpoints). |
 | **Measured Line Coverage** | ✅ 87.24% | Exceeds the 80% minimum standard. |
-| **Route Integrity** | ✅ 100% | Zero unintended 404s; branded 404 recovery page operational. |
-| **Disaster Recovery** | ✅ VERIFIED| Isolated staging restoration tested with schema and foreign key verification. |
+| **Route Integrity** | ✅ 100% | Zero unintended 404s in local build; branded 404 recovery page operational. |
+| **In-Memory Restore Integrity** | ✅ VERIFIED| Isolated schema, foreign key, date, and null validation passing. |
+| **Physical Staging Restore** | ⚠️ BLOCKED | Requires separate staging database URL or disposable Neon branch. |
 
 ### Release Verdict:
 **APPROVED WITH DOCUMENTED OPERATIONAL PREREQUISITES**  
