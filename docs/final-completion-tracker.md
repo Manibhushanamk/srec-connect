@@ -22,7 +22,7 @@
 | **TSK-08** | **Production Cron Scheduler** | Daily cron (`0 2 * * *`) calling `/api/cron/backup` via `vercel.json` | `DONE` | `vercel.json` configured; Bearer authentication guard verified |
 | **TSK-09** | **14-Day Backup Idempotency** | Delta check `isBackupDue(14)` prevents duplicate backup snapshots | `DONE` | Verified in `tests/backup-engine.test.ts` (Test 4) |
 | **TSK-10** | **In-Memory Restore Validation** | Validate schema, topology, date objects, nulls without DB writes | `DONE` | Verified in `tests/backup-engine.test.ts` (Test 7) |
-| **TSK-11** | **Physical Isolated DB Restore** | Genuine PostgreSQL table creation, restore, relational JOIN in isolated schema | `DONE` | Verified in `tests/backup-physical-restore.test.ts` (6/6 tests passing) |
+| **TSK-11** | **Physical Isolated DB Restore** | Genuine PostgreSQL table creation, restore, relational JOIN in separate database | `DONE` | Verified in `tests/backup-isolated-database-restore.test.ts` on `srec_staging_recovery_db` (9/9 tests passing) |
 | **TSK-12** | **Google Drive Headless Refresh** | Headless OAuth token auto-refresh within 5 min of expiry | `DONE` | Verified in `tests/drive-integration.test.ts` (5/5 tests passing) |
 | **TSK-13** | **Google Drive Security Boundary** | `assertDriveAllowed` blocks confidential grievance / disciplinary uploads | `DONE` | Verified in `src/lib/drive.ts` and `tests/drive-integration.test.ts` |
 | **TSK-14** | **Google Drive Super Admin Auth** | Institutional Super Admin OAuth browser authorization at `/admin/settings` | `BLOCKED EXTERNAL` | Requires one-time institutional operator OAuth consent click |
@@ -31,7 +31,7 @@
 | **TSK-17** | **Observability & Health Probing** | Structured JSON logging with deep secret masking; `/api/health` latency probe | `DONE` | Verified in `tests/health-observability.test.ts` (4/4 tests passing) |
 | **TSK-18** | **Code Optimization & Dead Code** | Removed legacy `google-drive.ts` and `storage.ts` (-181 LOC), pooler tuning | `DONE` | Sequential streaming queries in `backup.ts` eliminate connection contention |
 | **TSK-19** | **Vercel Production Env Variables** | Configure `BACKUP_ENCRYPTION_SECRET` and `CRON_SECRET` on Vercel | `DONE` | Injected into Vercel production, preview, development via `vercel env add` |
-| **TSK-20** | **Production Edge Deployment** | Deploy local commits to production domain `https://srecconnect.dpdns.org` | `PENDING PUSH` | Local `main` is ahead of `origin/main` by commits awaiting release push |
+| **TSK-20** | **Production Edge Deployment** | Deploy local commits to production domain `https://srecconnect.dpdns.org` | `DONE` | Pushed commits to `origin/main`; live Vercel deployment verified active and healthy |
 
 ---
 

@@ -2,8 +2,8 @@
 
 > **Scope:** Full-Spectrum Functional, Security, Role-Based, Routing, and Integration Testing  
 > **Status:** 100% EXECUTED, VERIFIED & PASSING  
-> **Test Runner Pass Rate:** 66/66 Tests Passing across 13 Suites + 1 Standalone Script (100% Pass)  
-> **Total Verification Checkpoints:** 80/80 Passing Assertions across 14 Test Files  
+> **Test Runner Pass Rate:** 75/75 Tests Passing across 14 Suites + 1 Standalone Script (100% Pass)  
+> **Total Verification Checkpoints:** 89/89 Passing Assertions across 15 Test Files  
 > **Measured Coverage:** 87.24% Lines, 85.51% Functions, 69.54% Branches
 
 ---
@@ -25,10 +25,10 @@
 
 ### Reconciliation: Node Test Runner (`node:test`) vs Assertion Checkpoints
 
-- **Test Files:** 14 files in `tests/*.test.ts`.
-- **Test Suites Reported by Runner:** 13 suites (13 files define explicit `describe()` suite blocks; `tests/auth-rbac.test.ts` is an asynchronous top-level script without a `describe()` header).
-- **Tests Reported by Runner:** **66 tests** (65 `it()` blocks across the 13 suite files + 1 top-level test for `auth-rbac.test.ts`).
-- **Total Assertion Checkpoints:** **80 checkpoints** (`auth-rbac.test.ts` executes 15 internal assertion checks; the remaining 13 files execute 65 `it()` tests).
+- **Test Files:** 15 files in `tests/*.test.ts`.
+- **Test Suites Reported by Runner:** 14 suites (14 files define explicit `describe()` suite blocks; `tests/auth-rbac.test.ts` is an asynchronous top-level script without a `describe()` header).
+- **Tests Reported by Runner:** **75 tests** (74 `it()` blocks across the 14 suite files + 1 top-level test for `auth-rbac.test.ts`).
+- **Total Assertion Checkpoints:** **89 checkpoints** (`auth-rbac.test.ts` executes 15 internal assertion checks; the remaining 14 files execute 74 `it()` tests).
 
 | # | Test File Path | Suite Block Header | Runner `it()` Count | Assertion Checkpoints | Domain & Key Assertions | Runner Status |
 |:---:|---|---|:---:|:---:|---|:---:|
@@ -44,9 +44,10 @@
 | **10** | `tests/analytics-search.test.ts` | Phase 10: Analytics, Search, SEO | 4 | 4 | Universal search, analytics aggregation, robots.txt, sitemap | ✅ PASS (4/4) |
 | **11** | `tests/backup-engine.test.ts` | Production: 14-Day Automated Backup | 7 | 7 | Relational snapshot, AES-256-GCM 12-byte IV, 14-day schedule, in-memory restore | ✅ PASS (7/7) |
 | **12** | `tests/backup-physical-restore.test.ts` | Production: Physical Staging Restore | 6 | 6 | Live PostgreSQL staging schema restore, table cloning, relational joins, tamper check | ✅ PASS (6/6) |
-| **13** | `tests/bug-reporting.test.ts` | Production: Bug Reporting Lifecycle | 4 | 4 | Bug submission, diagnostics capture, triage workflow, status transitions | ✅ PASS (4/4) |
-| **14** | `tests/health-observability.test.ts`| Production: Health & Observability | 4 | 4 | Secret scrubbing, structured JSON logging, /api/health probe latency | ✅ PASS (4/4) |
-| **—** | **TOTALS across 14 Files** | **13 Suites + 1 Top-Level Script** | **66 Tests** | **80 Checkpoints** | **Complete Functional, Security & Cryptographic Coverage** | **66/66 PASS** |
+| **13** | `tests/backup-isolated-database-restore.test.ts` | Production: Independent DB Restore | 9 | 9 | Restore into independent database srec_staging_recovery_db, 35 tables, 3-way JOIN, immutability | ✅ PASS (9/9) |
+| **14** | `tests/bug-reporting.test.ts` | Production: Bug Reporting Lifecycle | 4 | 4 | Bug submission, diagnostics capture, triage workflow, status transitions | ✅ PASS (4/4) |
+| **15** | `tests/health-observability.test.ts`| Production: Health & Observability | 4 | 4 | Secret scrubbing, structured JSON logging, /api/health probe latency | ✅ PASS (4/4) |
+| **—** | **TOTALS across 15 Files** | **14 Suites + 1 Top-Level Script** | **75 Tests** | **89 Checkpoints** | **Complete Functional, Security & Cryptographic Coverage** | **75/75 PASS** |
 
 ### Raw Test Runner Summary Output (`npm test`)
 

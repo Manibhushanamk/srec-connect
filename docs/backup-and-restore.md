@@ -121,19 +121,27 @@ Before executing any restoration, the system decrypts the package in memory and 
 - Completeness: Presence of all 31 critical models.
 
 ### B. Isolated Restoration Verification & Staging Environment Boundaries
-Tested and verified in `tests/backup-engine.test.ts` and `tests/backup-physical-restore.test.ts`:
+Tested and verified in `tests/backup-engine.test.ts`, `tests/backup-physical-restore.test.ts`, and `tests/backup-isolated-database-restore.test.ts`:
 - **In-Memory Schema & Relational Integrity (`VERIFIED`):**
   - Evaluates topological relational integrity (Department -> User -> Student / Faculty).
   - Preserves ISO timestamp objects, nullability, JSON structures, and foreign keys (`User.studentId`, `Student.departmentId`).
   - Decrypts package, validates 16-byte authentication tag and SHA-256 data checksum.
   - Safely validates without mutating live production data (`tests/backup-engine.test.ts`).
-- **Physical Staging PostgreSQL Instance Restore (`VERIFIED`):**
+- **Physical Schema-Isolated PostgreSQL Restore (`VERIFIED`):**
   - Tested in `tests/backup-physical-restore.test.ts` (6 automated tests, 6 verification checkpoints).
-  - Uses native PostgreSQL schema isolation (`CREATE SCHEMA isolated_staging_recovery`) on the live PostgreSQL instance.
+  - Uses native PostgreSQL schema isolation (`CREATE SCHEMA isolated_staging_recovery`) on the PostgreSQL instance.
   - Clones table structures (`Department`, `Student`, `User`, `SystemSetting`) with primary keys and defaults.
   - Ingests decrypted backup JSON directly into physical PostgreSQL relational tables via native `json_populate_recordset(null::table, json_data)`.
   - Verifies record count parity, foreign key relational integrity (`JOIN` between restored `Student` and `Department`), timestamp parsing, nullability, and cryptographic rejection of tampered packages.
   - Proves zero write mutations to live production tables (`v3_production.*`) and tears down the isolated test schema cleanly via `DROP SCHEMA CASCADE`.
+- **Independent PostgreSQL Database Disaster Recovery (`VERIFIED`):**
+  - Tested in `tests/backup-isolated-database-restore.test.ts` (9 automated tests, 9 verification checkpoints).
+  - Dynamically provisions a completely independent PostgreSQL database: `srec_staging_recovery_db` on Neon (separate from `neondb`).
+  - Synced full 35-model DDL schema via `prisma db push`.
+  - Ingests decrypted backup records into staging database across topological model order (`Department`, `Batch`, `Section`, `Category`, `SystemSetting`, `User`, `Student`, `Faculty`, `BugReport`, `Event`, `Incident`, `Achievement`, `Post`).
+  - Resolves circular foreign key dependencies (`User.studentId` <-> `Student.userId`) via controlled constraint attachment.
+  - Verifies multi-way relational JOINs (Student JOIN Department JOIN User), Date objects, null safety, system settings key-value maps, and application authentication lookups on restored data.
+  - Proves zero write mutations to live production database `neondb` (Department, User, and Student counts remain 100% identical before and after test).
 
 ### C. Live Emergency Restoration Procedure
 1. Authorized Super Admin logs in and opens `/admin/settings`.
