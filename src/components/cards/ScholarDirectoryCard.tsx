@@ -90,14 +90,7 @@ export function ScholarDirectoryCard({
 }: ScholarDirectoryCardProps) {
   const [copied, setCopied] = useState(false);
 
-  const defaultSkills =
-    type === 'STUDENT'
-      ? ['PyTorch', 'TensorFlow', 'Computer Vision', 'Next.js', 'PostgreSQL', 'Docker']
-      : type === 'FACULTY'
-      ? ['Deep Learning', 'Natural Language Processing', 'Edge AI', 'Big Data', 'Robotics']
-      : ['National Recognition', 'Autonomous SREC', 'Verified Proof', 'Peer Reviewed'];
-
-  const displaySkills = skills.length > 0 ? skills : defaultSkills;
+  const displaySkills = skills;
 
   const formatRank = (rank?: string | null) => {
     if (!rank) return '1st';
@@ -338,17 +331,21 @@ export function ScholarDirectoryCard({
               ? 'VERIFIED RECOGNITION HIGHLIGHTS'
               : 'VERIFIED TECHNICAL SKILLS'}
           </p>
-          <div className="flex flex-wrap gap-1.5">
-            {displaySkills.slice(0, 6).map((skill, idx) => (
-              <span
-                key={idx}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-secondary/60 hover:bg-secondary border border-border/80 text-foreground transition-colors shadow-2xs"
-              >
-                <Award className="w-3 h-3 text-primary shrink-0" />
-                <span>{skill}</span>
-              </span>
-            ))}
-          </div>
+          {displaySkills.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {displaySkills.slice(0, 6).map((skill, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-secondary/60 hover:bg-secondary border border-border/80 text-foreground transition-colors shadow-2xs"
+                >
+                  <Award className="w-3 h-3 text-primary shrink-0" />
+                  <span>{skill}</span>
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">No technical competencies listed yet.</p>
+          )}
         </div>
       </div>
     </div>

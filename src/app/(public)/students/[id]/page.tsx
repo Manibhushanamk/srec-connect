@@ -247,7 +247,7 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
           ? student.skills.split(/[,;&•]/).map((s: string) => s.trim()).filter(Boolean)
           : student.user?.skills
           ? student.user.skills.split(/[,;&•]/).map((s: string) => s.trim()).filter(Boolean)
-          : ['Python', 'TypeScript', 'Next.js', 'PyTorch', 'Data Structures', 'Git'];
+          : [];
 
         return (
           <ProfileHeader

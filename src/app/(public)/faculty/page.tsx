@@ -239,7 +239,7 @@ export default async function FacultyPage({
                       .split(/[,;&•]/)
                       .map((s: string) => s.trim())
                       .filter(Boolean)
-                  : ['Artificial Intelligence', 'Machine Learning'];
+                  : [];
                 const expYears = parseInt(member.experience || '8', 10) || 8;
 
                 return (

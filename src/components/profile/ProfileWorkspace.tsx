@@ -632,7 +632,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                   </div>
                   <div className="p-4 rounded-2xl bg-card border border-border text-center">
                     <p className="text-xl font-black text-foreground">
-                      {isFaculty ? (specializationList.length || skillsList.length || 3) : (skillsList.length || 5)}
+                      {isFaculty ? (skillsList.length || specializationList.length) : skillsList.length}
                     </p>
                     <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mt-0.5">
                       {isFaculty ? 'Research Areas' : 'Skills'}

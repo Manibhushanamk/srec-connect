@@ -49,7 +49,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   linkedinUrl,
   isVerified,
   stats,
-  skills = ['Deep Learning', 'Computer Vision', 'PyTorch', 'Next.js', 'Python', 'Natural Language Processing'],
+  skills = [],
   isOwner = true,
 }) => {
   const [activeTab, setActiveTab] = useState<'PORTFOLIO' | 'FEED' | 'ACHIEVEMENTS'>('PORTFOLIO');

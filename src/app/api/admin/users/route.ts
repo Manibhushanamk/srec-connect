@@ -334,6 +334,7 @@ export async function PATCH(req: NextRequest) {
         }
         if (student?.skills !== undefined) {
           studentUpdateData.skills = student.skills;
+          userUpdateData.skills = student.skills;
         } else if (skills !== undefined) {
           studentUpdateData.skills = skills;
         }
@@ -409,6 +410,7 @@ export async function PATCH(req: NextRequest) {
         if (faculty?.specialization !== undefined) facultyUpdateData.specialization = faculty.specialization;
         if (faculty?.skills !== undefined) {
           facultyUpdateData.skills = faculty.skills;
+          userUpdateData.skills = faculty.skills;
         } else if (skills !== undefined) {
           facultyUpdateData.skills = skills;
         }

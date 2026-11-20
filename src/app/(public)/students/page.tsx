@@ -68,6 +68,7 @@ async function getStudents(searchParams: {
           user: {
             select: {
               email: true,
+              skills: true,
               _count: { select: { posts: true, eventRegistrations: true } },
             },
           },
@@ -175,11 +176,9 @@ export default async function StudentsPage({
               {data.students.map((student) => {
                 const studentSkills = student.skills
                   ? student.skills.split(/[,;&•]/).map((s: string) => s.trim()).filter(Boolean)
-                  : student.department?.code === 'ECE'
-                  ? ['Embedded Systems', 'IoT Circuits', 'VLSI Design', 'Microcontrollers', 'C++']
-                  : student.department?.code === 'AIDS' || student.department?.code === 'AIML'
-                  ? ['PyTorch', 'TensorFlow', 'Computer Vision', 'Deep Learning', 'Python']
-                  : ['Data Structures', 'Full Stack', 'Cloud Computing', 'Algorithms', 'TypeScript'];
+                  : student.user?.skills
+                  ? student.user.skills.split(/[,;&•]/).map((s: string) => s.trim()).filter(Boolean)
+                  : [];
 
                 return (
                   <ScholarDirectoryCard

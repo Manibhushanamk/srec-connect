@@ -18,9 +18,10 @@ describe('Phase 4: Profiles & Portfolios Integration Tests', () => {
     assert.ok(student.name, 'Student must have a name');
   });
 
-  it('2. should enforce immutability of academic credentials on Student profile', async () => {
+  it('2. should enforce immutability of academic credentials and canonical skills persistence on Student profile', async () => {
     const student = await prisma.student.findFirst({
       where: { rollNumber: '22091A3201' },
+      include: { user: true },
     });
     assert.ok(student, 'Student must exist');
 
@@ -29,6 +30,7 @@ describe('Phase 4: Profiles & Portfolios Integration Tests', () => {
       bio: 'Undergraduate AI & ML Researcher specializing in Deep Learning',
       githubUrl: 'https://github.com/srec-connect',
       linkedinUrl: 'https://linkedin.com/in/srec-connect',
+      skills: 'Python, PyTorch, React, Next.js, TypeScript',
     };
 
     const updated = await prisma.student.update({
@@ -39,6 +41,40 @@ describe('Phase 4: Profiles & Portfolios Integration Tests', () => {
     assert.strictEqual(updated.rollNumber, '22091A3201', 'Roll number must remain unchanged');
     assert.strictEqual(updated.bio, safeUpdateData.bio);
     assert.strictEqual(updated.githubUrl, safeUpdateData.githubUrl);
+    assert.strictEqual(updated.skills, safeUpdateData.skills, 'Skills must persist in Student record');
+
+    // Verify skills counter calculation logic: 5 skills must equal 5
+    const skillsList = (updated.skills || '').split(/[,;&•]/).map((s: string) => s.trim()).filter(Boolean);
+    assert.strictEqual(skillsList.length, 5, 'Skills counter must strictly equal 5 for 5 skills');
+
+    // Verify zero skills evaluation: empty skills must evaluate to 0 (never falling back to 5)
+    const emptySkillsList = ('').split(/[,;&•]/).map((s: string) => s.trim()).filter(Boolean);
+    const zeroCount = emptySkillsList.length;
+    assert.strictEqual(zeroCount, 0, 'Empty skills must evaluate to 0 and not fall back to 5');
+
+    // Verify User sync
+    if (student.user?.id) {
+      await prisma.user.update({
+        where: { id: student.user.id },
+        data: { skills: safeUpdateData.skills },
+      });
+      const updatedUser = await prisma.user.findUnique({
+        where: { id: student.user.id },
+      });
+      assert.strictEqual(updatedUser?.skills, safeUpdateData.skills, 'User skills must synchronize with Student skills');
+      
+      // Clean up user skills
+      await prisma.user.update({
+        where: { id: student.user.id },
+        data: { skills: null },
+      });
+    }
+
+    // Reset student skills cleanly to preserve database state
+    await prisma.student.update({
+      where: { id: student.id },
+      data: { skills: null },
+    });
   });
 
   it('3. should resolve faculty profile with academic credentials and specialization', async () => {

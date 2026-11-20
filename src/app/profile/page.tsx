@@ -142,6 +142,7 @@ export default async function ProfilePage() {
     phone: user.phone,
     linkedinUrl: user.linkedinUrl,
     githubUrl: user.githubUrl,
+    skills: user.skills || user.student?.skills || user.faculty?.skills || null,
     department: user.department ? { name: user.department.name, code: user.department.code } : null,
     departmentName: user.departmentName,
     counts: {
@@ -162,6 +163,7 @@ export default async function ProfilePage() {
           githubUrl: user.student.githubUrl,
           portfolioUrl: user.student.portfolioUrl,
           avatarUrl: user.student.avatarUrl,
+          skills: user.student.skills || user.skills || null,
           achievements: studentAllAchievements.map((a) => ({
             id: a.id,
             title: a.title,
@@ -196,6 +198,7 @@ export default async function ProfilePage() {
           googleScholar: user.faculty.googleScholar,
           linkedinUrl: user.linkedinUrl,
           avatarUrl: user.faculty.avatarUrl,
+          skills: user.faculty.skills || user.skills || user.faculty.specialization || null,
           achievements: facultyAllAchievements.map((a) => ({
             id: a.id,
             title: a.title,

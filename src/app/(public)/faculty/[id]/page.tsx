@@ -214,7 +214,7 @@ export default async function FacultyProfilePage({ params }: FacultyProfilePageP
           ? faculty.skills.split(/[,;&•]/).map((s: string) => s.trim()).filter(Boolean)
           : faculty.specialization
           ? faculty.specialization.split(/[,;&•]/).map((s: string) => s.trim()).filter(Boolean)
-          : ['Deep Learning', 'Neural Networks', 'Academic Research', 'Curriculum Design'];
+          : [];
 
         return (
           <ProfileHeader
