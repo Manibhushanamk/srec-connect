@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signIn } from 'next-auth/react';
 import {
   Settings,
   HardDrive,
@@ -206,7 +206,9 @@ export default function AdminSettingsPage() {
         setDriveMessage('✅ Super Admin Google Drive connected and folders initialized.');
         fetchData();
       } else {
-        setDriveMessage(`❌ Failed to connect: ${data.error}`);
+        // Direct OAuth Re-authentication with offline Drive consent
+        setDriveMessage('Redirecting to Google for Super Admin Drive authorization...');
+        await signIn('google', { callbackUrl: '/admin/settings?tab=drive' });
       }
     } catch (err: any) {
       setDriveMessage(`❌ Error connecting Drive: ${err.message}`);

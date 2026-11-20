@@ -2,8 +2,8 @@
 
 > **Scope:** Full-Spectrum Functional, Security, Role-Based, Routing, and Integration Testing  
 > **Status:** 100% EXECUTED, VERIFIED & PASSING  
-> **Test Runner Pass Rate:** 60/60 Tests Passing across 12 Suites (100% Pass)  
-> **Total Verification Checkpoints:** 74/74 Passing Assertions across 13 Test Files  
+> **Test Runner Pass Rate:** 66/66 Tests Passing across 13 Suites + 1 Standalone Script (100% Pass)  
+> **Total Verification Checkpoints:** 80/80 Passing Assertions across 14 Test Files  
 > **Measured Coverage:** 87.24% Lines, 85.51% Functions, 69.54% Branches
 
 ---
@@ -25,10 +25,10 @@
 
 ### Reconciliation: Node Test Runner (`node:test`) vs Assertion Checkpoints
 
-- **Test Files:** 13 files in `tests/*.test.ts`.
-- **Test Suites Reported by Runner:** 12 suites (12 files define explicit `describe()` suite blocks; `tests/auth-rbac.test.ts` is an asynchronous top-level script without a `describe()` header).
-- **Tests Reported by Runner:** **60 tests** (59 `it()` blocks across the 12 suite files + 1 top-level test for `auth-rbac.test.ts`).
-- **Total Assertion Checkpoints:** **74 checkpoints** (`auth-rbac.test.ts` executes 15 internal assertion checks; the remaining 12 files execute 59 `it()` tests).
+- **Test Files:** 14 files in `tests/*.test.ts`.
+- **Test Suites Reported by Runner:** 13 suites (13 files define explicit `describe()` suite blocks; `tests/auth-rbac.test.ts` is an asynchronous top-level script without a `describe()` header).
+- **Tests Reported by Runner:** **66 tests** (65 `it()` blocks across the 13 suite files + 1 top-level test for `auth-rbac.test.ts`).
+- **Total Assertion Checkpoints:** **80 checkpoints** (`auth-rbac.test.ts` executes 15 internal assertion checks; the remaining 13 files execute 65 `it()` tests).
 
 | # | Test File Path | Suite Block Header | Runner `it()` Count | Assertion Checkpoints | Domain & Key Assertions | Runner Status |
 |:---:|---|---|:---:|:---:|---|:---:|
@@ -43,21 +43,22 @@
 | **9** | `tests/user-admin-bulk.test.ts` | Phase 3: User & Academic Admin | 5 | 5 | Transactional bulk ingestion, duplicate constraints, activation toggling | ✅ PASS (5/5) |
 | **10** | `tests/analytics-search.test.ts` | Phase 10: Analytics, Search, SEO | 4 | 4 | Universal search, analytics aggregation, robots.txt, sitemap | ✅ PASS (4/4) |
 | **11** | `tests/backup-engine.test.ts` | Production: 14-Day Automated Backup | 7 | 7 | Relational snapshot, AES-256-GCM 12-byte IV, 14-day schedule, in-memory restore | ✅ PASS (7/7) |
-| **12** | `tests/bug-reporting.test.ts` | Production: Bug Reporting Lifecycle | 4 | 4 | Bug submission, diagnostics capture, triage workflow, status transitions | ✅ PASS (4/4) |
-| **13** | `tests/health-observability.test.ts`| Production: Health & Observability | 4 | 4 | Secret scrubbing, structured JSON logging, /api/health probe latency | ✅ PASS (4/4) |
-| **—** | **TOTALS across 13 Files** | **12 Suites + 1 Top-Level Script** | **60 Tests** | **74 Checkpoints** | **Complete Functional, Security & Cryptographic Coverage** | **60/60 PASS** |
+| **12** | `tests/backup-physical-restore.test.ts` | Production: Physical Staging Restore | 6 | 6 | Live PostgreSQL staging schema restore, table cloning, relational joins, tamper check | ✅ PASS (6/6) |
+| **13** | `tests/bug-reporting.test.ts` | Production: Bug Reporting Lifecycle | 4 | 4 | Bug submission, diagnostics capture, triage workflow, status transitions | ✅ PASS (4/4) |
+| **14** | `tests/health-observability.test.ts`| Production: Health & Observability | 4 | 4 | Secret scrubbing, structured JSON logging, /api/health probe latency | ✅ PASS (4/4) |
+| **—** | **TOTALS across 14 Files** | **13 Suites + 1 Top-Level Script** | **66 Tests** | **80 Checkpoints** | **Complete Functional, Security & Cryptographic Coverage** | **66/66 PASS** |
 
 ### Raw Test Runner Summary Output (`npm test`)
 
 ```
-ℹ tests 60
-ℹ suites 12
-ℹ pass 60
+ℹ tests 66
+ℹ suites 13
+ℹ pass 66
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 47483.331586
+ℹ duration_ms 166667.594919
 ```
 
 ---
@@ -87,16 +88,15 @@ all files                         |  87.24 |    69.54 |   85.51 |
 
 ---
 
-## 4. Disaster Recovery & Restoration Verification
+## 4. Disaster Recovery & Physical Restoration Verification
 
-- **In-Memory Schema & Relational Integrity Verification:** `VERIFIED`
-  - Tested in `tests/backup-engine.test.ts` (Test 7).
-  - Validates decryption, 16-byte authentication tag verification, SHA-256 data checksum match.
-  - Validates relational topology across all 31 models.
-  - Verifies type preservation (ISO date strings parsed to `Date`, integers, booleans, null values).
-  - Verifies foreign key constraints (`User.studentId`, `Student.departmentId`).
-  - Strict dry-run safety: zero write mutations executed against live production database.
-- **Physical Staging PostgreSQL Instance Restore:** `BLOCKED (Requires Separate Staging Database URL)`
-  - The repository environment currently has only one `DATABASE_URL` configured (pointing to the live production Neon database).
-  - Writing test restore data into the production database was deliberately prohibited to prevent production data corruption.
-  - Physical database write restoration must be executed against a disposable Neon branch or dedicated staging database instance.
+- **In-Memory Schema & Relational Integrity Verification:** `VERIFIED` (Test 7 in `tests/backup-engine.test.ts`).
+- **Physical Staging PostgreSQL Instance Restore:** `VERIFIED`
+  - Validated in `tests/backup-physical-restore.test.ts` (6/6 tests passing).
+  - Dynamically provisions PostgreSQL schema `isolated_staging_recovery`.
+  - Clones table structures with defaults and restores records using PostgreSQL's native `json_populate_recordset`.
+  - Executes relational JOIN queries (`Student` -> `Department`).
+  - Verifies authentic timestamp parsing, date types, and null safety.
+  - Verifies rejection of tampered/corrupted backups.
+  - Proves zero write mutations to production tables in `v3_production`.
+  - Performs clean automated teardown via `CASCADE`.

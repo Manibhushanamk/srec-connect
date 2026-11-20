@@ -4,6 +4,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from './prisma';
 import { Role } from '@prisma/client';
 import { AuthUserContext } from './rbac';
+import { saveSuperAdminDriveTokens } from './drive';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -12,7 +13,7 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
       authorization: {
         params: {
-          prompt: 'select_account',
+          prompt: 'consent select_account',
           access_type: 'offline',
           response_type: 'code',
           scope: 'openid email profile https://www.googleapis.com/auth/drive.file',
@@ -274,6 +275,16 @@ export const authOptions: NextAuthOptions = {
           token.studentId = dbUser.studentId;
           token.facultyId = dbUser.facultyId;
           if (dbUser.avatarUrl) token.picture = dbUser.avatarUrl;
+
+          // Auto-persist Super Admin Google Drive credentials for automated 14-day background backups
+          if (account?.access_token && (dbUser.role === Role.SUPER_ADMIN || lookupEmail === (process.env.INITIAL_ADMIN_EMAIL || '').toLowerCase().trim())) {
+            saveSuperAdminDriveTokens({
+              access_token: account.access_token,
+              refresh_token: account.refresh_token || (token.refreshToken as string | undefined),
+              expiry_date: account.expires_at ? account.expires_at * 1000 : undefined,
+              email: lookupEmail,
+            }).catch((err) => console.warn('[Auth] Failed to auto-persist Super Admin Drive tokens:', err));
+          }
         }
       }
       return token;
@@ -310,6 +321,7 @@ export const authOptions: NextAuthOptions = {
             (session.user as any).facultyId = dbUser.facultyId;
             if (dbUser.avatarUrl) session.user.image = dbUser.avatarUrl;
             (session as any).accessToken = token.accessToken;
+            (session as any).refreshToken = token.refreshToken;
             return session;
           }
         }
@@ -324,6 +336,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).facultyId = token.facultyId;
       }
       (session as any).accessToken = token.accessToken;
+      (session as any).refreshToken = token.refreshToken;
       return session;
     },
 

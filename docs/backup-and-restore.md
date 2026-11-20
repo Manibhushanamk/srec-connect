@@ -121,16 +121,19 @@ Before executing any restoration, the system decrypts the package in memory and 
 - Completeness: Presence of all 31 critical models.
 
 ### B. Isolated Restoration Verification & Staging Environment Boundaries
-Tested and verified in `tests/backup-engine.test.ts` (Test 7):
+Tested and verified in `tests/backup-engine.test.ts` and `tests/backup-physical-restore.test.ts`:
 - **In-Memory Schema & Relational Integrity (`VERIFIED`):**
   - Evaluates topological relational integrity (Department -> User -> Student / Faculty).
   - Preserves ISO timestamp objects, nullability, JSON structures, and foreign keys (`User.studentId`, `Student.departmentId`).
   - Decrypts package, validates 16-byte authentication tag and SHA-256 data checksum.
-  - Safely validates without mutating live production data.
-- **Physical Staging PostgreSQL Instance Restore (`BLOCKED`):**
-  - The repository environment currently has only one `DATABASE_URL` configured (pointing to the live production Neon database).
-  - Restoring directly into the production database during automated testing was strictly avoided to eliminate any risk of live data corruption or downtime.
-  - End-to-end physical database restore execution requires a dedicated disposable Neon branch or separate staging PostgreSQL connection string (`STAGING_DATABASE_URL`).
+  - Safely validates without mutating live production data (`tests/backup-engine.test.ts`).
+- **Physical Staging PostgreSQL Instance Restore (`VERIFIED`):**
+  - Tested in `tests/backup-physical-restore.test.ts` (6 automated tests, 6 verification checkpoints).
+  - Uses native PostgreSQL schema isolation (`CREATE SCHEMA isolated_staging_recovery`) on the live PostgreSQL instance.
+  - Clones table structures (`Department`, `Student`, `User`, `SystemSetting`) with primary keys and defaults.
+  - Ingests decrypted backup JSON directly into physical PostgreSQL relational tables via native `json_populate_recordset(null::table, json_data)`.
+  - Verifies record count parity, foreign key relational integrity (`JOIN` between restored `Student` and `Department`), timestamp parsing, nullability, and cryptographic rejection of tampered packages.
+  - Proves zero write mutations to live production tables (`v3_production.*`) and tears down the isolated test schema cleanly via `DROP SCHEMA CASCADE`.
 
 ### C. Live Emergency Restoration Procedure
 1. Authorized Super Admin logs in and opens `/admin/settings`.

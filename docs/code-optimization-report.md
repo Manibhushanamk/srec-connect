@@ -22,7 +22,7 @@ As part of the final independent verification and gap-closure mission, an aggres
 | **Key Persistence** | Stored in database (`SystemSetting`) | Environment-only derivation | Strict zero-trust isolation |
 | **Server-Side Observability** | Unstructured `console.log` | Structured JSON Logger (`src/lib/logger.ts`) | Strict secret scrubbing |
 | **Uptime & Health Probe** | None (404) | `/api/health` with DB latency probe | Production-ready uptime |
-| **Automated Behavioral Tests** | 53 passing | **60 passing** | +7 verified tests (100% pass) |
+| **Automated Behavioral Tests** | 53 passing | **66 passing** | +13 verified tests across 14 files (100% pass) |
 | **Measured Test Coverage** | Unmeasured assumption | **87.24% lines**, **85.51% functions** | Exceeds 80% standard |
 | **Next.js Production Build** | Multiple lockfile warnings | **68 routes (0 warnings, 0 errors)** | 13.4s clean compilation |
 
@@ -117,7 +117,7 @@ As part of the final independent verification and gap-closure mission, an aggres
 
 ## 4. Verification & Quality Gate Confirmation
 
-- [x] **Full Test Suite:** 60/60 passing (100% green).
+- [x] **Full Test Suite:** 66/66 passing across 14 files (100% green, 80 checkpoints).
 - [x] **Measured Coverage:** 87.24% line coverage, 85.51% function coverage.
 - [x] **Static & Dynamic Route Generation:** 68/68 pages generated with zero errors.
 - [x] **Type Safety Check:** 0 TypeScript compiler errors (`tsc --noEmit`).
