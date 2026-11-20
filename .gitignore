@@ -36,7 +36,7 @@ next-env.d.ts
 # uploads and backups
 public/uploads/*
 !public/uploads/.gitkeep
-public/backups/*
-!public/backups/.gitkeep
+private/backups/*
+!private/backups/.gitkeep
 .vercel
 .env*

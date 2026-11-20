@@ -128,21 +128,34 @@ class ProductionLogger {
     const logEntry = this.formatLog('CRITICAL', message, context, error);
 
     try {
-      await prisma.auditLog.create({
-        data: {
-          action: 'SYSTEM_CRITICAL_ALERT',
-          targetType: 'SYSTEM_RELIABILITY',
-          targetId: context?.route || 'srec-connect-core',
-          userEmail: context?.userEmail || 'system@srecconnect.dpdns.org',
-          ipAddress: context?.ip || '127.0.0.1',
-          details: JSON.stringify({
-            message,
-            error: logEntry.error,
-            route: context?.route,
-            timestamp: logEntry.timestamp,
-          }),
-        },
-      });
+      let actorId = context?.userId;
+      if (!actorId) {
+        const adminUser = await prisma.user.findFirst({
+          where: { role: 'SUPER_ADMIN' },
+          select: { id: true, email: true },
+        });
+        actorId = adminUser?.id;
+      }
+
+      if (actorId) {
+        await prisma.auditLog.create({
+          data: {
+            actorId,
+            actorEmail: context?.userEmail || 'system@srecconnect.dpdns.org',
+            actorRole: context?.role || 'SYSTEM',
+            action: 'SYSTEM_CRITICAL_ALERT',
+            entityType: 'SYSTEM_RELIABILITY',
+            entityId: context?.route || 'srec-connect-core',
+            ipAddress: context?.ip || '127.0.0.1',
+            metadata: JSON.stringify({
+              message,
+              error: logEntry.error,
+              route: context?.route,
+              timestamp: logEntry.timestamp,
+            }),
+          },
+        });
+      }
     } catch (auditErr) {
       console.error('[ProductionLogger] Failed to write critical audit log to database:', auditErr);
     }

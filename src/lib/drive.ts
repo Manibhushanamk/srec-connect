@@ -417,9 +417,13 @@ export async function downloadDriveFile(fileId: string): Promise<Buffer> {
   // Support local backup vault fallback
   if (fileId.startsWith('local-backup-')) {
     const backupId = fileId.replace('local-backup-', '');
-    const localFilePath = path.join(process.cwd(), 'public', 'backups', `${backupId}.enc.json`);
-    if (fs.existsSync(localFilePath)) {
-      return fs.readFileSync(localFilePath);
+    const privateFilePath = path.join(process.cwd(), 'private', 'backups', `${backupId}.enc.json`);
+    if (fs.existsSync(privateFilePath)) {
+      return fs.readFileSync(privateFilePath);
+    }
+    const legacyFilePath = path.join(process.cwd(), 'public', 'backups', `${backupId}.enc.json`);
+    if (fs.existsSync(legacyFilePath)) {
+      return fs.readFileSync(legacyFilePath);
     }
   }
 

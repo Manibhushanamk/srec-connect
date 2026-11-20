@@ -15,12 +15,17 @@ export async function GET(req: NextRequest) {
     const authHeader = req.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
 
-    // Verify secret if configured
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    if (process.env.NODE_ENV === 'production' && !cronSecret) {
+      console.error('[Cron Backup] Security Error: CRON_SECRET is not configured in production environment.');
+      return NextResponse.json({ error: 'Server configuration error: CRON_SECRET is required.' }, { status: 500 });
+    }
+
+    if (cronSecret) {
       const urlSecret = req.nextUrl.searchParams.get('secret');
-      if (urlSecret !== cronSecret) {
-        console.warn('[Cron Backup] Unauthorized cron request attempt.');
-        return NextResponse.json({ error: 'Unauthorized. Invalid cron secret.' }, { status: 401 });
+      const isAuthorized = authHeader === `Bearer ${cronSecret}` || urlSecret === cronSecret;
+      if (!isAuthorized) {
+        console.warn('[Cron Backup] Unauthorized cron request attempt rejected.');
+        return NextResponse.json({ error: 'Unauthorized. Invalid or missing cron secret.' }, { status: 401 });
       }
     }
 

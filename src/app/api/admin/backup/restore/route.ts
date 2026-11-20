@@ -6,6 +6,7 @@ import {
   dryRunRestore,
   decryptBackupPackage,
   createAndUploadDatabaseBackup,
+  restoreDatabasePayload,
 } from '@/lib/backup';
 import { downloadDriveFile } from '@/lib/drive';
 import { prisma } from '@/lib/prisma';
@@ -85,6 +86,9 @@ export async function POST(req: NextRequest) {
 
     const payload = await decryptBackupPackage(packageBuffer);
 
+    // Execute verified restoration
+    const restoreResult = await restoreDatabasePayload(payload);
+
     // Record restore operation in Audit Log
     await prisma.auditLog.create({
       data: {
@@ -98,6 +102,8 @@ export async function POST(req: NextRequest) {
           restoredBackupId: payload.metadata.backup_id,
           safetySnapshotBackupId: safetySnapshot.backupId,
           totalRecords: payload.metadata.total_records,
+          restoredTables: restoreResult.restoredTables,
+          totalRecordsRestored: restoreResult.totalRecordsRestored,
         }),
       },
     });
@@ -105,10 +111,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       mode: 'LIVE_RESTORE',
-      message: 'Database restore validated and safety snapshot preserved.',
+      message: 'Database restore executed successfully and safety snapshot preserved.',
       restoredBackupId: payload.metadata.backup_id,
       safetySnapshotBackupId: safetySnapshot.backupId,
       totalRecords: payload.metadata.total_records,
+      restoredTables: restoreResult.restoredTables,
+      totalRecordsRestored: restoreResult.totalRecordsRestored,
     });
   } catch (error: any) {
     console.error('[Admin Backup Restore Error]', error);

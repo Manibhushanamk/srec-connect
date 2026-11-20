@@ -41,7 +41,8 @@ export async function GET() {
     checks.googleDrive = {
       isConnected: driveStatus.isConnected,
       email: driveStatus.email || null,
-      folderId: driveStatus.folderId || null,
+      rootFolderId: (driveStatus as any).rootFolderId || null,
+      backupFolderId: (driveStatus as any).backupFolderId || null,
     };
   } catch (driveErr: any) {
     checks.googleDrive = {

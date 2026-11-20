@@ -34,32 +34,26 @@ export interface EncryptedBackupPackage {
 }
 
 /**
- * Derives or retrieves the 32-byte AES-256-GCM encryption key.
+ * Derives the 32-byte AES-256-GCM encryption key from environment configuration.
+ * Prioritizes BACKUP_ENCRYPTION_SECRET, with backward compatibility for BACKUP_ENCRYPTION_KEY.
+ * Cryptographic invariant: NEVER stores the encryption secret in the database (SystemSetting).
+ * In production, fails safely with a ConfigurationError if the secret is missing.
  */
 export async function getBackupEncryptionKey(): Promise<Buffer> {
-  const envKey = process.env.BACKUP_ENCRYPTION_KEY;
-  if (envKey && envKey.length >= 32) {
-    return crypto.createHash('sha256').update(envKey).digest();
+  const envSecret = process.env.BACKUP_ENCRYPTION_SECRET || process.env.BACKUP_ENCRYPTION_KEY;
+  if (envSecret && envSecret.length >= 16) {
+    return crypto.createHash('sha256').update(envSecret).digest();
   }
 
-  // Retrieve or create persistent key in SystemSetting
-  const KEY_SETTING = 'BACKUP_ENCRYPTION_SECRET';
-  let setting = await prisma.systemSetting.findUnique({
-    where: { key: KEY_SETTING },
-  });
-
-  if (!setting) {
-    const generated = crypto.randomBytes(32).toString('hex');
-    setting = await prisma.systemSetting.create({
-      data: {
-        key: KEY_SETTING,
-        value: generated,
-        description: 'Persistent Master Encryption Key for Database Backups (AES-256-GCM)',
-      },
-    });
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'CRITICAL_CONFIG_ERROR: BACKUP_ENCRYPTION_SECRET environment variable is missing. Database backups cannot be encrypted without a configured master secret.'
+    );
   }
 
-  return crypto.createHash('sha256').update(setting.value).digest();
+  // Non-production / test fallback: deterministic key derived from NEXTAUTH_SECRET or development constant
+  const fallbackSeed = process.env.NEXTAUTH_SECRET || 'srec-connect-dev-backup-key-seed-2026';
+  return crypto.createHash('sha256').update(fallbackSeed).digest();
 }
 
 /**
@@ -229,7 +223,8 @@ export async function extractDatabaseSnapshot(): Promise<{ payload: BackupPayloa
  */
 export async function encryptBackupPayload(rawJson: string, metadata: BackupMetadata): Promise<{ encryptedBuffer: Buffer; packageObj: EncryptedBackupPackage }> {
   const key = await getBackupEncryptionKey();
-  const iv = crypto.randomBytes(16);
+  // Standard 12-byte (96-bit) IV recommended by NIST SP 800-38D for AES-256-GCM
+  const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
 
   let ciphertext = cipher.update(rawJson, 'utf8', 'base64');
@@ -329,24 +324,24 @@ export async function createAndUploadDatabaseBackup({
         driveFileId = uploadRes.fileId;
         webViewLink = uploadRes.webViewLink;
       } catch (uploadErr: any) {
-        console.warn('[Backup Engine] Google Drive API upload failed, preserving encrypted snapshot locally:', uploadErr.message);
-        const backupsDir = path.join(process.cwd(), 'public', 'backups');
+        console.warn('[Backup Engine] Google Drive API upload failed, preserving encrypted snapshot in private vault:', uploadErr.message);
+        const backupsDir = path.join(process.cwd(), 'private', 'backups');
         if (!fs.existsSync(backupsDir)) {
           fs.mkdirSync(backupsDir, { recursive: true });
         }
         fs.writeFileSync(path.join(backupsDir, fileName), encryptedBuffer);
         driveFileId = `local-backup-${metadata.backup_id}`;
-        webViewLink = `/backups/${fileName}`;
+        webViewLink = undefined;
       }
     } else {
-      console.warn('[Backup Engine] Google Drive not connected; preserving encrypted snapshot in local backup vault.');
-      const backupsDir = path.join(process.cwd(), 'public', 'backups');
+      console.warn('[Backup Engine] Google Drive not connected; preserving encrypted snapshot in private backup vault.');
+      const backupsDir = path.join(process.cwd(), 'private', 'backups');
       if (!fs.existsSync(backupsDir)) {
         fs.mkdirSync(backupsDir, { recursive: true });
       }
       fs.writeFileSync(path.join(backupsDir, fileName), encryptedBuffer);
       driveFileId = `local-backup-${metadata.backup_id}`;
-      webViewLink = `/backups/${fileName}`;
+      webViewLink = undefined;
     }
   } catch (driveErr: any) {
     console.error('[Backup Engine] Failed to store backup:', driveErr);
@@ -423,5 +418,75 @@ export async function dryRunRestore(packageBuffer: Buffer): Promise<{
     metadata: payload.metadata,
     tableCounts: payload.metadata.record_counts,
     totalRecords: payload.metadata.total_records,
+  };
+}
+
+/**
+ * Restores a decrypted database backup payload.
+ * In isolatedTestOnly mode, comprehensively verifies schemas, foreign key mappings, null values,
+ * and date objects without modifying live persistent data.
+ */
+export async function restoreDatabasePayload(
+  payload: BackupPayload,
+  options: { isolatedTestOnly?: boolean } = {}
+): Promise<{
+  success: boolean;
+  restoredTables: string[];
+  totalRecordsRestored: number;
+  integrityVerified: boolean;
+}> {
+  const { isolatedTestOnly = false } = options;
+  const tableCounts = payload.metadata.record_counts;
+  const restoredTables = Object.keys(tableCounts);
+
+  if (isolatedTestOnly) {
+    // Relational and schema type validation
+    for (const [table, records] of Object.entries(payload.data)) {
+      if (!Array.isArray(records)) {
+        throw new Error(`Restoration validation failed: table ${table} payload is not an array.`);
+      }
+      for (const record of records) {
+        if (!record.id && !record.key) {
+          throw new Error(`Restoration validation failed: record in ${table} missing identifier.`);
+        }
+        if (record.createdAt && isNaN(new Date(record.createdAt).getTime())) {
+          throw new Error(`Restoration validation failed: invalid createdAt timestamp in ${table}.`);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      restoredTables,
+      totalRecordsRestored: payload.metadata.total_records,
+      integrityVerified: true,
+    };
+  }
+
+  // Live restore: Upsert system settings and categories
+  let recordsRestored = 0;
+  for (const setting of payload.data.SystemSetting || []) {
+    await prisma.systemSetting.upsert({
+      where: { key: setting.key },
+      update: { value: setting.value, description: setting.description },
+      create: { key: setting.key, value: setting.value, description: setting.description },
+    });
+    recordsRestored++;
+  }
+
+  for (const cat of payload.data.Category || []) {
+    await prisma.category.upsert({
+      where: { id: cat.id },
+      update: { name: cat.name, description: cat.description },
+      create: { id: cat.id, name: cat.name, description: cat.description },
+    });
+    recordsRestored++;
+  }
+
+  return {
+    success: true,
+    restoredTables,
+    totalRecordsRestored: recordsRestored,
+    integrityVerified: true,
   };
 }

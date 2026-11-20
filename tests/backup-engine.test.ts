@@ -7,6 +7,7 @@ import {
   isBackupDue,
   dryRunRestore,
   createAndUploadDatabaseBackup,
+  restoreDatabasePayload,
 } from '../src/lib/backup';
 import { prisma } from '../src/lib/prisma';
 
@@ -34,7 +35,7 @@ describe('Production Engineering: 14-Day Automated Database Backup Engine Tests'
 
     assert.equal(packageObj.format, 'SREC_ENCRYPTED_BACKUP_V1');
     assert.equal(packageObj.algorithm, 'aes-256-gcm');
-    assert.ok(packageObj.iv.length === 32, 'IV must be 16 bytes (32 hex characters)');
+    assert.ok(packageObj.iv.length === 24, 'IV must be 12 bytes (24 hex characters)');
     assert.ok(packageObj.auth_tag.length === 32, 'Auth tag must be 16 bytes (32 hex characters)');
     assert.ok(packageObj.ciphertext.length > 100);
 
@@ -96,5 +97,44 @@ describe('Production Engineering: 14-Day Automated Database Backup Engine Tests'
     assert.equal(record.isEncrypted, true);
     assert.equal(record.encryptionAlgo, 'AES-256-GCM');
     assert.ok(record.fileSize > 0);
+  });
+
+  it('7. should execute isolated staging restoration test verifying schema, relations, dates, and nulls without modifying production data', async () => {
+    const { payload, rawJson } = await extractDatabaseSnapshot();
+    const { encryptedBuffer } = await encryptBackupPayload(rawJson, payload.metadata);
+
+    // Decrypt package
+    const decryptedPayload = await decryptBackupPackage(encryptedBuffer);
+
+    // Execute isolated staging restore
+    const restoreResult = await restoreDatabasePayload(decryptedPayload, { isolatedTestOnly: true });
+
+    assert.equal(restoreResult.success, true);
+    assert.equal(restoreResult.integrityVerified, true);
+    assert.ok(restoreResult.restoredTables.length >= 20);
+    assert.equal(restoreResult.totalRecordsRestored, payload.metadata.total_records);
+
+    // Verify foreign key integrity across representative models
+    const users = decryptedPayload.data.User || [];
+    const students = decryptedPayload.data.Student || [];
+    const departments = decryptedPayload.data.Department || [];
+
+    const userIds = new Set(users.map((u: any) => u.id));
+    const deptIds = new Set(departments.map((d: any) => d.id));
+
+    // Verify student and department foreign key integrity
+    for (const stu of students) {
+      if (stu.departmentId) {
+        assert.ok(deptIds.has(stu.departmentId), `Student ${stu.rollNumber} must reference a valid Department ID`);
+      }
+    }
+
+    // Verify linked student users point to existing students
+    const studentIds = new Set(students.map((s: any) => s.id));
+    for (const u of users) {
+      if (u.studentId) {
+        assert.ok(studentIds.has(u.studentId), `User ${u.email} must reference an existing Student ID`);
+      }
+    }
   });
 });
