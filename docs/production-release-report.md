@@ -82,7 +82,7 @@ A comprehensive production engineering and gap-closure mission was executed on *
 | :--- | :--- | :--- | :---: |
 | **1** | **Google Drive Live Authorization** | Sign in as `principal@srecnandyal.edu.in` -> `/admin/settings` -> click **"Connect Google Drive"** to establish real OAuth refresh token. | `BLOCKED (Requires Browser Action)` |
 | **2** | **Vercel Environment Variables** | Verify `BACKUP_ENCRYPTION_SECRET`, `CRON_SECRET`, `DATABASE_URL`, `NEXTAUTH_SECRET`, and `GOOGLE_CLIENT_ID` in Vercel settings. | `OPERATOR VERIFICATION` |
-| **3** | **Deploy Commits to Production** | Execute `git push origin main` to deploy local commits (`cff2216`, `b9a8ee1`, `4d25d0f`) to activate new routes on `srecconnect.dpdns.org`. | `PENDING PUSH` |
+| **3** | **Production Edge Deployment** | Local commits pushed to `origin/main` (commit `4da7db3`). Active on Vercel deployment `dpl_8XghxXzxEczXqKwACtMNDsxG3ftb` serving `https://srecconnect.dpdns.org`. | `DEPLOYED & ACTIVE` |
 
 ---
 

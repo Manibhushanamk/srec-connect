@@ -52,14 +52,14 @@
 ### Raw Test Runner Summary Output (`npm test`)
 
 ```
-ℹ tests 66
-ℹ suites 13
-ℹ pass 66
+ℹ tests 75
+ℹ suites 14
+ℹ pass 75
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 166667.594919
+ℹ duration_ms 196954.045262
 ```
 
 ---

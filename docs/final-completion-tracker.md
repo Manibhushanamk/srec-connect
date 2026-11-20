@@ -31,7 +31,7 @@
 | **TSK-17** | **Observability & Health Probing** | Structured JSON logging with deep secret masking; `/api/health` latency probe | `DONE` | Verified in `tests/health-observability.test.ts` (4/4 tests passing) |
 | **TSK-18** | **Code Optimization & Dead Code** | Removed legacy `google-drive.ts` and `storage.ts` (-181 LOC), pooler tuning | `DONE` | Sequential streaming queries in `backup.ts` eliminate connection contention |
 | **TSK-19** | **Vercel Production Env Variables** | Configure `BACKUP_ENCRYPTION_SECRET` and `CRON_SECRET` on Vercel | `DONE` | Injected into Vercel production, preview, development via `vercel env add` |
-| **TSK-20** | **Production Edge Deployment** | Deploy local commits to production domain `https://srecconnect.dpdns.org` | `DONE` | Pushed commits through `1a460be` to `origin/main`; live Vercel deployment verified active and healthy |
+| **TSK-20** | **Production Edge Deployment** | Deploy local commits to production domain `https://srecconnect.dpdns.org` | `DONE` | Pushed commits through `4da7db3` to `origin/main`; live Vercel deployment `dpl_8XghxXzxEczXqKwACtMNDsxG3ftb` verified active and healthy |
 
 ---
 
