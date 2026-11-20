@@ -3,8 +3,10 @@
 ## 1. Project Overview & Institutional Identity
 - **Institution:** Santhiram Engineering College (Autonomous), Nandyal, Andhra Pradesh
 - **Department:** Computer Science & Engineering (Artificial Intelligence & Machine Learning)
-- **Current Version:** v3.0.0 (Production Ready)
+- **Current Version:** v3.0.0 (Production Certified & Live Deployed)
 - **Stack:** Next.js 15.5.25 (App Router), React 19, TypeScript, Tailwind CSS, Prisma ORM 6.19.3, Neon Serverless PostgreSQL (`v3_production` schema), NextAuth v4 (Google Workspace SSO), Sharp (adaptive WebP compression).
+- **Latest Deployed Commit:** `347a627` (HEAD -> main, origin/main, Vercel deployment `dpl_C1Zj3ZZWFFEu9QJyswqCwkS77jfz` serving `https://srecconnect.dpdns.org`).
+- **Profile Skills Data Integrity:** Resolved counter mismatch (`skillsList.length || 5` -> `skillsList.length`), eliminated fake hardcoded fallback arrays across directory cards/headers, enabled bidirectional DB sync, verified via `tests/portfolios.test.ts` (5/5) and 5 Playwright screenshots.
 
 ### G. Data Relationships Strengthening & Relational Integrity
 - **Audit Tool (`scratch/audit_relationships.ts`) & Migration Script (`scratch/fix_relationships.ts`)**:
