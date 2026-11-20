@@ -109,6 +109,10 @@ model User {
   announcementsCreated Announcement[]    @relation("CreatedAnnouncements")
   notifications       Notification[]     @relation("UserNotifications")
   
+  // Bug Reporting Relations
+  reportedBugs        BugReport[]        @relation("ReportedBugs")
+  assignedBugs        BugReport[]        @relation("AssignedBugs")
+  
   auditLogs           AuditLog[]
 
   @@index([email])
@@ -816,4 +820,106 @@ model SystemSetting {
   value       String
   description String?
   updatedAt   DateTime @updatedAt
+}
+
+// ── BUG REPORTING & ISSUE MANAGEMENT ──
+
+enum BugCategory {
+  UI_VISUAL
+  LOGIN_AUTH
+  PERMISSION_ACCESS
+  DATA_DATABASE
+  GOOGLE_DRIVE
+  UPLOAD_DOWNLOAD
+  EVENTS
+  COMPLAINTS
+  PROFILE
+  PERFORMANCE
+  MOBILE
+  OTHER
+}
+
+enum BugSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum BugStatus {
+  NEW
+  TRIAGED
+  INVESTIGATING
+  FIX_IN_PROGRESS
+  RESOLVED
+  CLOSED
+  DUPLICATE
+  CANNOT_REPRODUCE
+  REOPENED
+}
+
+model BugReport {
+  id                 String       @id @default(cuid())
+  title              String
+  description        String
+  category           BugCategory  @default(OTHER)
+  severity           BugSeverity  @default(MEDIUM)
+  status             BugStatus    @default(NEW)
+  stepsToReproduce   String?
+  expectedBehavior   String?
+  actualBehavior     String?
+  route              String?
+  deviceInfo         String?
+  screenshotUrl      String?
+  
+  reporterId         String?
+  reporter           User?        @relation("ReportedBugs", fields: [reporterId], references: [id], onDelete: SetNull)
+  reporterEmail      String?
+  reporterRole       String?
+  
+  assignedToId       String?
+  assignedTo         User?        @relation("AssignedBugs", fields: [assignedToId], references: [id], onDelete: SetNull)
+  
+  resolutionNotes    String?
+  internalNotes      String?
+  auditTrail         String?      // JSON array of state transitions & timestamps
+  
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  deletedAt          DateTime?
+
+  @@index([status])
+  @@index([category])
+  @@index([severity])
+  @@index([reporterId])
+  @@index([assignedToId])
+  @@index([createdAt])
+}
+
+// ── AUTOMATED DATABASE BACKUP RECORDS ──
+
+model BackupRecord {
+  id                 String       @id @default(cuid())
+  backupId           String       @unique
+  fileName           String
+  fileSize           Int
+  checksum           String       // SHA-256
+  isEncrypted        Boolean      @default(true)
+  encryptionAlgo     String?      @default("AES-256-GCM")
+  driveFileId        String?
+  driveFolderId      String?
+  driveWebViewLink   String?
+  status             String       @default("COMPLETED") // PENDING, COMPLETED, VERIFIED, FAILED, RESTORED
+  tableCounts        String?      // JSON map of table names to row counts
+  totalRecords       Int          @default(0)
+  durationMs         Int          @default(0)
+  initiatedBy        String       @default("CRON_14_DAYS") // CRON_14_DAYS or user email
+  failureReason      String?
+  verifiedAt         DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([backupId])
 }

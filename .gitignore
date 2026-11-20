@@ -33,8 +33,10 @@ client_secret*.json
 *.tsbuildinfo
 next-env.d.ts
 
-# uploads
+# uploads and backups
 public/uploads/*
 !public/uploads/.gitkeep
+public/backups/*
+!public/backups/.gitkeep
 .vercel
 .env*

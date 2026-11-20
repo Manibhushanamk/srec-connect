@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { Menu, X, Shield, Award, Users, BookOpen, Calendar, LayoutDashboard, LogOut, Sun, Moon, ChevronDown, Sparkles } from 'lucide-react';
+import { Menu, X, Shield, Award, Users, BookOpen, Calendar, LayoutDashboard, LogOut, Sun, Moon, ChevronDown, Sparkles, Bug } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { BugReportModal } from '@/components/shared/BugReportModal';
 
 const NAV_LINKS = [
   { href: '/', label: 'Home', icon: Sparkles },
@@ -22,6 +23,7 @@ export function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isBugModalOpen, setIsBugModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -54,14 +56,17 @@ export function Navbar() {
   const userAvatar = session?.user?.image;
 
   const getDashboardHref = () => {
-    if (isRoot || userRole === 'ADMIN') return '/admin';
+    if (isRoot || userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'WEB_MANAGER') return '/admin';
+    if (userRole === 'HOD') return '/admin/discipline';
     if (userRole === 'FACULTY') return '/dashboard/faculty';
     if (userRole === 'STUDENT') return '/dashboard/student';
     return '/';
   };
 
   const getDashboardLabel = () => {
-    if (isRoot) return 'Root Admin Dashboard';
+    if (isRoot || userRole === 'SUPER_ADMIN') return 'Super Admin Console';
+    if (userRole === 'WEB_MANAGER') return 'Web Ops Console';
+    if (userRole === 'HOD') return 'HOD Department Console';
     if (userRole === 'ADMIN') {
       if (userAdminType === 'DEPARTMENT') return 'Department Admin Dashboard';
       if (userAdminType === 'MANAGER') return 'Sub-Admin Dashboard';
@@ -117,6 +122,15 @@ export function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
+            <button
+              onClick={() => setIsBugModalOpen(true)}
+              className="p-2.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all duration-200"
+              aria-label="Report a bug or issue"
+              title="Report a bug or issue"
+            >
+              <Bug className="w-5 h-5" />
+            </button>
+
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
               className="p-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-space-800/50 transition-all duration-200"
@@ -293,6 +307,13 @@ export function Navbar() {
                 <Sparkles className="w-5 h-5" />
                 Profile Settings
               </Link>
+              <button
+                onClick={() => { setIsProfileMenuOpen(false); setIsBugModalOpen(true); }}
+                className="flex items-center gap-3 w-full px-4 py-3 text-rose-400 hover:bg-rose-500/10 transition-colors"
+              >
+                <Bug className="w-5 h-5" />
+                Report a Bug
+              </button>
               <hr className="my-2 border-slate-700/30 mx-2" />
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}
@@ -305,6 +326,8 @@ export function Navbar() {
           </div>
         </div>
       )}
+
+      <BugReportModal isOpen={isBugModalOpen} onClose={() => setIsBugModalOpen(false)} />
     </header>
   );
 }

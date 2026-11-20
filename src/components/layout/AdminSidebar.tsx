@@ -31,6 +31,7 @@ import {
   Database,
   AlertTriangle,
   Trash2,
+  Bug,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { getVisibleMenuGroups, PermissionContext } from '@/lib/rbac';
@@ -38,11 +39,12 @@ import { Role, AdminType } from '@prisma/client';
 
 const MENU_GROUPS = {
   overview: {
-    label: 'Overview',
+    label: 'Overview & Triage',
     icon: LayoutDashboard,
     items: [
       { href: '/admin', label: 'Command Center', icon: LayoutDashboard },
       { href: '/admin/analytics', label: 'Analytics Hub', icon: BarChart3 },
+      { href: '/admin/bugs', label: 'Bug Reports Desk', icon: Bug },
     ],
   },
   users: {
@@ -91,9 +93,10 @@ const MENU_GROUPS = {
     ],
   },
   trash: {
-    label: 'System Recovery',
-    icon: Trash2,
+    label: 'System & Backups',
+    icon: Database,
     items: [
+      { href: '/admin/settings', label: 'Settings & Drive Backups', icon: Settings },
       { href: '/admin/trash', label: 'Trash Management', icon: Trash2 },
     ],
   },
