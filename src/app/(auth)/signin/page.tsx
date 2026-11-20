@@ -174,48 +174,48 @@ function SignInContent() {
                 )}
               </Button>
 
-              <p className="text-[11px] text-center text-muted-foreground">
-                College email domain: <code className="font-mono text-foreground font-semibold">@srecnandyal.edu.in</code>
+              <p className="text-xs text-center text-muted-foreground">
+                College email domain: <code className="font-mono text-primary font-bold bg-muted/60 px-1.5 py-0.5 rounded border border-border/40">@srecnandyal.edu.in</code>
               </p>
             </div>
 
             {/* Role & Automatic Dashboard Routing Explainer */}
-            <div className="pt-4 border-t border-border/60 space-y-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Automatic Role Landing Routing
+            <div className="pt-4 border-t border-border/80 space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-foreground">
+                Automatic Institutional Role Routing
               </p>
 
-              <div className="space-y-1.5 text-[11px]">
-                <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/40 border border-border/50">
-                  <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                    <GraduationCap className="w-3.5 h-3.5 text-cyan-500" />
+              <div className="space-y-2 text-xs">
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/50 border border-border/70 hover:bg-secondary/70 transition-colors">
+                  <span className="flex items-center gap-2 font-bold text-foreground">
+                    <GraduationCap className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                     Student Scholars
                   </span>
-                  <span className="text-muted-foreground text-[10px]">Community Feed & Portfolios</span>
+                  <span className="text-muted-foreground font-medium text-[11px] bg-background/60 px-2 py-0.5 rounded-md border border-border/40">Community Feed & Portfolios</span>
                 </div>
 
-                <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/40 border border-border/50">
-                  <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                    <Users className="w-3.5 h-3.5 text-blue-500" />
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/50 border border-border/70 hover:bg-secondary/70 transition-colors">
+                  <span className="flex items-center gap-2 font-bold text-foreground">
+                    <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     Faculty Mentors
                   </span>
-                  <span className="text-muted-foreground text-[10px]">Verification Desk & Reports</span>
+                  <span className="text-muted-foreground font-medium text-[11px] bg-background/60 px-2 py-0.5 rounded-md border border-border/40">Verification Desk & Reports</span>
                 </div>
 
-                <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/40 border border-border/50">
-                  <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                    <Building2 className="w-3.5 h-3.5 text-indigo-500" />
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/50 border border-border/70 hover:bg-secondary/70 transition-colors">
+                  <span className="flex items-center gap-2 font-bold text-foreground">
+                    <Building2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     HOD & Web Managers
                   </span>
-                  <span className="text-muted-foreground text-[10px]">Department Ops & Ingestion</span>
+                  <span className="text-muted-foreground font-medium text-[11px] bg-background/60 px-2 py-0.5 rounded-md border border-border/40">Department Ops & Ingestion</span>
                 </div>
 
-                <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/40 border border-border/50">
-                  <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                    <Shield className="w-3.5 h-3.5 text-amber-500" />
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/50 border border-border/70 hover:bg-secondary/70 transition-colors">
+                  <span className="flex items-center gap-2 font-bold text-foreground">
+                    <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     Super Administrator
                   </span>
-                  <span className="text-muted-foreground text-[10px]">Sovereign Command Center</span>
+                  <span className="text-muted-foreground font-medium text-[11px] bg-background/60 px-2 py-0.5 rounded-md border border-border/40">Sovereign Command Center</span>
                 </div>
               </div>
             </div>
@@ -268,7 +268,7 @@ function SignInContent() {
         </Card>
 
         {/* Institutional Footer */}
-        <div className="text-center text-[10px] text-muted-foreground space-y-1">
+        <div className="text-center text-xs text-muted-foreground font-medium space-y-1">
           <p>Santhiram Engineering College (Autonomous), Nandyal</p>
           <p>Department of CSE (AI & ML) • Academic Year 2026–2027</p>
         </div>

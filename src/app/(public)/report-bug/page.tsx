@@ -104,28 +104,28 @@ export default function ReportBugPage() {
   };
 
   return (
-    <div className="min-h-screen bg-space-950 text-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-background text-foreground py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto">
         {/* Back Link */}
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors mb-6"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-primary hover:text-primary/80 transition-colors mb-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-md px-1 py-0.5"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to SREC Connect</span>
         </Link>
 
         {/* Card */}
-        <div className="bg-space-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden p-6 sm:p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-3 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
+        <div className="bg-card border border-border rounded-2xl shadow-xl overflow-hidden p-6 sm:p-8">
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-border">
+            <div className="p-3 rounded-xl bg-destructive/10 text-destructive border border-destructive/20">
               <Bug className="w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-white">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground">
                 SREC CONNECT Issue & Bug Reporting
               </h1>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 Direct conduit to the production reliability and engineering team.
               </p>
             </div>
@@ -133,18 +133,18 @@ export default function ReportBugPage() {
 
           {submittedReportId ? (
             <div className="p-8 text-center space-y-4">
-              <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 className="w-10 h-10" />
               </div>
-              <h2 className="text-2xl font-bold text-white">Report Successfully Logged</h2>
-              <p className="text-sm text-slate-300 max-w-md mx-auto">
+              <h2 className="text-2xl font-bold text-foreground">Report Successfully Logged</h2>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto">
                 Thank you for bringing this to our attention. Our team has received your report and will investigate promptly.
               </p>
-              <div className="inline-block p-4 rounded-xl bg-space-950 border border-slate-800 text-sm font-mono text-cyan-400">
+              <div className="inline-block p-4 rounded-xl bg-muted/60 border border-border text-sm font-mono text-primary font-bold">
                 Tracking Reference: {submittedReportId}
               </div>
               <div className="pt-6">
-                <Link href="/" className="btn-cyan px-6 py-2.5 inline-block text-sm font-semibold">
+                <Link href="/" className="btn-cyan px-6 py-2.5 inline-block text-sm font-semibold rounded-xl shadow-md">
                   Return to Campus Feed
                 </Link>
               </div>
@@ -152,23 +152,24 @@ export default function ReportBugPage() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && (
-                <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2" role="alert">
                   <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <span>{error}</span>
+                  <span className="font-medium">{error}</span>
                 </div>
               )}
 
               {/* Title */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                  Issue Summary <span className="text-rose-500">*</span>
+                <label htmlFor="bug-title" className="block text-xs font-bold text-foreground uppercase tracking-wider mb-2">
+                  Issue Summary <span className="text-destructive">*</span>
                 </label>
                 <input
+                  id="bug-title"
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Broken navigation link on faculty dashboard"
-                  className="w-full px-4 py-2.5 rounded-xl bg-space-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                  className="w-full px-4 py-2.5 rounded-xl bg-background border border-input text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                   required
                 />
               </div>
@@ -176,13 +177,14 @@ export default function ReportBugPage() {
               {/* Category & Severity */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  <label htmlFor="bug-category" className="block text-xs font-bold text-foreground uppercase tracking-wider mb-2">
                     Category
                   </label>
                   <select
+                    id="bug-category"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-space-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                    className="w-full px-4 py-2.5 rounded-xl bg-background border border-input text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c.value} value={c.value}>
@@ -193,19 +195,20 @@ export default function ReportBugPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  <span id="severity-label" className="block text-xs font-bold text-foreground uppercase tracking-wider mb-2">
                     Severity
-                  </label>
-                  <div className="grid grid-cols-4 gap-2">
+                  </span>
+                  <div className="grid grid-cols-4 gap-2" role="group" aria-labelledby="severity-label">
                     {SEVERITIES.map((s) => (
                       <button
                         key={s.value}
                         type="button"
+                        aria-pressed={severity === s.value}
                         onClick={() => setSeverity(s.value)}
-                        className={`px-2 py-2.5 rounded-xl text-xs font-semibold border transition-all text-center ${
+                        className={`px-2 py-2.5 rounded-xl text-xs font-bold border transition-all text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                           severity === s.value
-                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500'
-                            : 'bg-space-950 text-slate-400 border-slate-800 hover:border-slate-700'
+                            ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                            : 'bg-muted/40 text-muted-foreground border-border hover:bg-muted hover:text-foreground'
                         }`}
                       >
                         {s.label}
@@ -217,92 +220,98 @@ export default function ReportBugPage() {
 
               {/* Route */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                <label htmlFor="bug-route" className="block text-xs font-bold text-foreground uppercase tracking-wider mb-2">
                   Affected URL / Route
                 </label>
                 <input
+                  id="bug-route"
                   type="text"
                   value={route}
                   onChange={(e) => setRoute(e.target.value)}
                   placeholder="e.g. /dashboard/faculty/submit"
-                  className="w-full px-4 py-2.5 rounded-xl bg-space-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                  className="w-full px-4 py-2.5 rounded-xl bg-background border border-input text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
-                  Detailed Description <span className="text-rose-500">*</span>
+                <label htmlFor="bug-description" className="block text-xs font-bold text-foreground uppercase tracking-wider mb-2">
+                  Detailed Description <span className="text-destructive">*</span>
                 </label>
                 <textarea
+                  id="bug-description"
                   rows={4}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Provide full context on what occurred, what was expected, and any error message displayed..."
-                  className="w-full px-4 py-2.5 rounded-xl bg-space-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors resize-none"
+                  className="w-full px-4 py-2.5 rounded-xl bg-background border border-input text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors resize-none"
                   required
                 />
               </div>
 
               {/* Steps to Reproduce */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                <label htmlFor="bug-steps" className="block text-xs font-bold text-foreground uppercase tracking-wider mb-2">
                   Steps to Reproduce (Optional)
                 </label>
                 <textarea
+                  id="bug-steps"
                   rows={3}
                   value={stepsToReproduce}
                   onChange={(e) => setStepsToReproduce(e.target.value)}
                   placeholder="1. Step one&#10;2. Step two&#10;3. See error"
-                  className="w-full px-4 py-2.5 rounded-xl bg-space-950 border border-slate-800 text-sm text-white font-mono text-xs focus:outline-none focus:border-cyan-500 transition-colors resize-none"
+                  className="w-full px-4 py-2.5 rounded-xl bg-background border border-input text-sm text-foreground font-mono placeholder:text-muted-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors resize-none"
                 />
               </div>
 
               {/* Expected vs Actual */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  <label htmlFor="bug-expected" className="block text-xs font-bold text-foreground uppercase tracking-wider mb-2">
                     Expected Behavior
                   </label>
                   <input
+                    id="bug-expected"
                     type="text"
                     value={expectedBehavior}
                     onChange={(e) => setExpectedBehavior(e.target.value)}
                     placeholder="e.g. Submit button processes achievement"
-                    className="w-full px-4 py-2.5 rounded-xl bg-space-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                    className="w-full px-4 py-2.5 rounded-xl bg-background border border-input text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                  <label htmlFor="bug-actual" className="block text-xs font-bold text-foreground uppercase tracking-wider mb-2">
                     Actual Behavior
                   </label>
                   <input
+                    id="bug-actual"
                     type="text"
                     value={actualBehavior}
                     onChange={(e) => setActualBehavior(e.target.value)}
                     placeholder="e.g. Nothing happens or 500 error"
-                    className="w-full px-4 py-2.5 rounded-xl bg-space-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                    className="w-full px-4 py-2.5 rounded-xl bg-background border border-input text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                   />
                 </div>
               </div>
 
               {/* Screenshot URL */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
+                <label htmlFor="bug-screenshot" className="block text-xs font-bold text-foreground uppercase tracking-wider mb-2">
                   Screenshot / Evidence URL (Optional)
                 </label>
                 <input
+                  id="bug-screenshot"
                   type="url"
                   value={screenshotUrl}
                   onChange={(e) => setScreenshotUrl(e.target.value)}
                   placeholder="https://drive.google.com/... or image link"
-                  className="w-full px-4 py-2.5 rounded-xl bg-space-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                  className="w-full px-4 py-2.5 rounded-xl bg-background border border-input text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                 />
               </div>
 
-              <div className="p-4 rounded-xl bg-space-950/80 border border-slate-800 text-xs text-slate-400 flex items-start gap-2">
-                <Info className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
-                <span>
+              <div className="p-4 rounded-xl bg-muted/50 border border-border text-xs text-foreground/80 flex items-start gap-2.5">
+                <Info className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                <span className="leading-relaxed">
                   SREC CONNECT maintains strict privacy standards. No passwords, tokens, or confidential student records are ever collected.
                 </span>
               </div>
@@ -312,7 +321,7 @@ export default function ReportBugPage() {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="btn-cyan w-full py-3 text-sm font-semibold flex items-center justify-center gap-2"
+                  className="btn-cyan w-full py-3 text-sm font-bold flex items-center justify-center gap-2 shadow-lg"
                 >
                   {isSubmitting ? (
                     <>

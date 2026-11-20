@@ -210,14 +210,37 @@ function HomePageContent() {
               <FeedCardSkeleton />
             </div>
           ) : filteredPosts.length === 0 ? (
-            <div className="social-card p-10 text-center space-y-3 bg-card border border-border rounded-2xl">
-              <div className="w-12 h-12 rounded-2xl bg-muted/80 flex items-center justify-center mx-auto text-muted-foreground">
-                <Sparkles className="w-6 h-6" />
+            <div className="social-card p-8 sm:p-12 text-center space-y-5 bg-card border border-border rounded-2xl shadow-sm">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto text-primary">
+                <Sparkles className="w-7 h-7" />
               </div>
-              <h3 className="text-base font-semibold text-foreground">No posts found</h3>
-              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                No active posts match the selected filter. Share an achievement or research milestone with the department!
-              </p>
+              <div className="space-y-2 max-w-md mx-auto">
+                <h3 className="text-lg font-bold text-foreground">No posts yet in this feed</h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  Be the first to share an academic achievement, research milestone, hackathon win, or department announcement.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+                <Link
+                  href="/achievements/submit"
+                  className="px-4 py-2 rounded-xl bg-primary text-primary-foreground font-semibold text-xs hover:bg-primary/90 transition-colors shadow-xs"
+                >
+                  Share an Achievement
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('PORTFOLIOS')}
+                  className="px-4 py-2 rounded-xl bg-secondary text-foreground font-semibold text-xs border border-border hover:bg-secondary/80 transition-colors"
+                >
+                  Explore Verified Scholars
+                </button>
+                <Link
+                  href="/events"
+                  className="px-4 py-2 rounded-xl bg-secondary text-foreground font-semibold text-xs border border-border hover:bg-secondary/80 transition-colors"
+                >
+                  View Campus Events
+                </Link>
+              </div>
             </div>
           ) : (
             filteredPosts.map((post) => (
