@@ -105,7 +105,25 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { email, name, role, departmentId, rollNumber, designation, batch, section } = body;
+    const {
+      email,
+      name,
+      role,
+      departmentId,
+      rollNumber,
+      designation,
+      batch,
+      section,
+      phone,
+      status,
+      headline,
+      bio,
+      roleCategory,
+      degrees,
+      experience,
+      cabin,
+      specialization,
+    } = body;
 
     if (!email || !name || !role) {
       return NextResponse.json({ error: 'Email, Name, and Role are mandatory' }, { status: 400 });
@@ -163,6 +181,9 @@ export async function POST(req: NextRequest) {
           departmentName: deptName,
           batch: batch || '2022-2026',
           section: section || 'A',
+          phone: phone || null,
+          headline: headline || null,
+          bio: bio || null,
         },
       });
     }
@@ -175,9 +196,14 @@ export async function POST(req: NextRequest) {
           name,
           email: normalizedEmail,
           designation: designation || (role === 'HOD' ? 'Professor & Head of Department' : 'Assistant Professor'),
-          roleCategory: role === 'HOD' ? 'HOD' : 'ASSISTANT_PROFESSOR',
+          roleCategory: roleCategory || (role === 'HOD' ? 'HOD' : 'ASSISTANT_PROFESSOR'),
           departmentId: targetDeptId || null,
           departmentName: deptName,
+          degrees: degrees || null,
+          experience: experience || null,
+          cabin: cabin || null,
+          specialization: specialization || null,
+          bio: bio || null,
         },
       });
     }
@@ -188,9 +214,12 @@ export async function POST(req: NextRequest) {
         email: normalizedEmail,
         name,
         role: role as Role,
-        status: 'ACTIVE',
+        status: (status as UserStatus) || 'ACTIVE',
         departmentId: targetDeptId || null,
         departmentName: deptName,
+        phone: phone || null,
+        headline: headline || null,
+        bio: bio || null,
         studentId: studentRecord?.id || null,
         facultyId: facultyRecord?.id || null,
       },

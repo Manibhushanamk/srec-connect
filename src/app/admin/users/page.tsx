@@ -93,11 +93,20 @@ export default function AdminUsersPage() {
     name: '',
     email: '',
     role: 'STUDENT',
-    rollNumber: '',
     departmentId: '',
+    status: 'ACTIVE',
+    rollNumber: '',
     designation: '',
-    batch: '2022-2026',
+    batch: '2024-2028',
     section: 'A',
+    phone: '',
+    headline: '',
+    bio: '',
+    roleCategory: 'ASSISTANT_PROFESSOR',
+    degrees: '',
+    experience: '',
+    cabin: '',
+    specialization: '',
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -288,11 +297,20 @@ export default function AdminUsersPage() {
           name: '',
           email: '',
           role: 'STUDENT',
-          rollNumber: '',
           departmentId: '',
+          status: 'ACTIVE',
+          rollNumber: '',
           designation: '',
-          batch: '2022-2026',
+          batch: '2024-2028',
           section: 'A',
+          phone: '',
+          headline: '',
+          bio: '',
+          roleCategory: 'ASSISTANT_PROFESSOR',
+          degrees: '',
+          experience: '',
+          cabin: '',
+          specialization: '',
         });
         fetchUsers();
       }
@@ -1082,86 +1100,286 @@ export default function AdminUsersPage() {
       {/* Pre-Provision User Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <Card className="w-full max-w-lg border-border shadow-2xl bg-card">
-            <CardHeader className="border-b border-border pb-4">
+          <Card className="w-full max-w-2xl border-border shadow-2xl bg-card max-h-[90vh] flex flex-col">
+            <CardHeader className="border-b border-border pb-4 shrink-0">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-primary" />
                 Pre-Provision Institutional Account
               </CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Pre-create verified institutional profiles for students, faculty, and campus administrators.
+              </p>
             </CardHeader>
-            <CardContent className="pt-6">
+            <CardContent className="pt-6 overflow-y-auto space-y-4">
               {formError && (
-                <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-xs text-destructive">
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-xs text-destructive">
                   {formError}
                 </div>
               )}
-              <form onSubmit={handleCreateUser} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-foreground">Full Name *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. John Doe"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-foreground">Institutional Email *</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="user@srecnandyal.edu.in"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold mb-1 text-foreground">Role *</label>
-                    <select
-                      value={formData.role}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                      className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    >
-                      <option value="STUDENT">Student</option>
-                      <option value="FACULTY">Faculty</option>
-                      <option value="HOD">HOD</option>
-                      <option value="WEB_MANAGER">Web Manager</option>
-                      <option value="SUPER_ADMIN">Super Admin</option>
-                    </select>
-                  </div>
-
-                  {formData.role === 'STUDENT' ? (
+              <form onSubmit={handleCreateUser} className="space-y-4 text-xs">
+                {/* Basic Account Information */}
+                <div className="space-y-3">
+                  <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider text-muted-foreground">
+                    1. Account Credentials & Basics
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-semibold mb-1 text-foreground">SREC Roll Number *</label>
+                      <label className="block text-xs font-semibold mb-1 text-foreground">
+                        Full Name <span className="text-destructive">*</span>
+                      </label>
                       <input
                         type="text"
                         required
-                        placeholder="e.g. 22091A3205"
-                        value={formData.rollNumber}
-                        onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value.toUpperCase() })}
-                        className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm font-mono uppercase text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="block text-xs font-semibold mb-1 text-foreground">Designation</label>
-                      <input
-                        type="text"
-                        placeholder="Assistant Professor"
-                        value={formData.designation}
-                        onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                        placeholder="e.g. Mani Bhushanam K"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                       />
                     </div>
-                  )}
+                    <div>
+                      <label className="block text-xs font-semibold mb-1 text-foreground">
+                        Institutional Email <span className="text-destructive">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="user@srecnandyal.edu.in"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold mb-1 text-foreground">
+                        Campus Role <span className="text-destructive">*</span>
+                      </label>
+                      <select
+                        value={formData.role}
+                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="STUDENT">Student</option>
+                        <option value="FACULTY">Faculty</option>
+                        <option value="HOD">Head of Department (HOD)</option>
+                        <option value="WEB_MANAGER">Web Manager</option>
+                        <option value="SUPER_ADMIN">Super Administrator</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold mb-1 text-foreground">
+                        Department
+                      </label>
+                      <select
+                        value={formData.departmentId}
+                        onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="">Default (CSE - AI & ML)</option>
+                        {departmentsList.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.code} — {d.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold mb-1 text-foreground">
+                        Account Status
+                      </label>
+                      <select
+                        value={formData.status}
+                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      >
+                        <option value="ACTIVE">ACTIVE (Authorized & Verified)</option>
+                        <option value="SUSPENDED">SUSPENDED (Access Restricted)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold mb-1 text-foreground">
+                        Phone / Contact Number
+                      </label>
+                      <input
+                        type="tel"
+                        placeholder="e.g. +91 9876543210"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold mb-1 text-foreground">
+                      Profile Headline / Tagline
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. B.Tech AIML Scholar | Competitive Programmer | Hackathon Winner"
+                      value={formData.headline}
+                      onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
+                      className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
                 </div>
+
+                {/* Role Specific Section */}
+                {formData.role === 'STUDENT' ? (
+                  <div className="p-3.5 rounded-xl border border-border/80 bg-secondary/20 space-y-3">
+                    <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider text-primary">
+                      2. Student Enrollment Details
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold mb-1 text-foreground">
+                          SREC Roll Number <span className="text-destructive">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. 22091A3205"
+                          value={formData.rollNumber}
+                          onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value.toUpperCase() })}
+                          className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm font-mono uppercase text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold mb-1 text-foreground">
+                          Academic Batch
+                        </label>
+                        <select
+                          value={formData.batch}
+                          onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          <option value="2025-2029">2025-2029</option>
+                          <option value="2024-2028">2024-2028</option>
+                          <option value="2023-2027">2023-2027</option>
+                          <option value="2022-2026">2022-2026</option>
+                          <option value="2021-2025">2021-2025</option>
+                          <option value="2026-2030">2026-2030</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold mb-1 text-foreground">
+                          Section
+                        </label>
+                        <select
+                          value={formData.section}
+                          onChange={(e) => setFormData({ ...formData, section: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          <option value="A">Section A</option>
+                          <option value="B">Section B</option>
+                          <option value="C">Section C</option>
+                          <option value="D">Section D</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3.5 rounded-xl border border-border/80 bg-secondary/20 space-y-3">
+                    <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider text-primary">
+                      2. Faculty Academic & Departmental Profile
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold mb-1 text-foreground">
+                          Designation
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Assistant Professor"
+                          value={formData.designation}
+                          onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold mb-1 text-foreground">
+                          Academic Category
+                        </label>
+                        <select
+                          value={formData.roleCategory}
+                          onChange={(e) => setFormData({ ...formData, roleCategory: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        >
+                          <option value="ASSISTANT_PROFESSOR">Assistant Professor</option>
+                          <option value="ASSOCIATE_PROFESSOR">Associate Professor</option>
+                          <option value="PROFESSOR">Professor</option>
+                          <option value="HOD">Head of Department (HOD)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold mb-1 text-foreground">
+                          Highest Qualifications / Degrees
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. M.Tech, Ph.D. in Computer Science"
+                          value={formData.degrees}
+                          onChange={(e) => setFormData({ ...formData, degrees: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold mb-1 text-foreground">
+                          Experience
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 10+ Years"
+                          value={formData.experience}
+                          onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold mb-1 text-foreground">
+                          Cabin / Office Room
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. CSE Block Room 204"
+                          value={formData.cabin}
+                          onChange={(e) => setFormData({ ...formData, cabin: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold mb-1 text-foreground">
+                          Research Specialization
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Deep Learning, NLP & Computer Vision"
+                          value={formData.specialization}
+                          onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
                   <Button type="button" variant="secondary" onClick={() => setShowAddModal(false)}>

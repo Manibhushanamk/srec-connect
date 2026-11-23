@@ -34,6 +34,20 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
       include: {
         category: true,
+        teamMembers: {
+          select: {
+            id: true,
+            rollNumber: true,
+            studentName: true,
+            studentId: true,
+            isLeader: true,
+          },
+        },
+        posts: {
+          include: {
+            media: true,
+          },
+        },
         primaryStudent: {
           select: {
             id: true,
@@ -87,13 +101,38 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { id, status, rejectionReason, title, description, categoryId, level } = body;
+    const {
+      id,
+      status,
+      rejectionReason,
+      title,
+      description,
+      categoryId,
+      level,
+      positionRank,
+      organizationEventName,
+      personName,
+      primaryStudentRoll,
+      academicYear,
+      achievementDate,
+      participationType,
+      teamName,
+      googleDriveUrl,
+      certificateUrl,
+      teamMembers,
+      postToFeed,
+      feedCaption,
+      feedImageUrl,
+    } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'Achievement ID is required' }, { status: 400 });
     }
 
-    const existing = await prisma.achievement.findUnique({ where: { id } });
+    const existing = await prisma.achievement.findUnique({
+      where: { id },
+      include: { teamMembers: true, posts: { include: { media: true } } },
+    });
     if (!existing) {
       return NextResponse.json({ error: 'Achievement not found' }, { status: 404 });
     }
@@ -113,15 +152,127 @@ export async function PATCH(req: NextRequest) {
     if (description !== undefined) updateData.description = description;
     if (categoryId) updateData.categoryId = categoryId;
     if (level) updateData.level = level;
+    if (positionRank !== undefined) updateData.positionRank = positionRank;
+    if (organizationEventName) updateData.organizationEventName = organizationEventName;
+    if (personName) updateData.personName = personName;
+    if (academicYear) updateData.academicYear = academicYear;
+    if (achievementDate) updateData.achievementDate = new Date(achievementDate);
+    if (googleDriveUrl !== undefined) updateData.googleDriveUrl = googleDriveUrl;
+    if (certificateUrl !== undefined) updateData.certificateUrl = certificateUrl;
+    if (participationType) updateData.participationType = participationType;
+    if (teamName !== undefined) updateData.teamName = teamName;
+
+    // Anchor student identity if roll number is modified
+    if (primaryStudentRoll !== undefined) {
+      const cleanRoll = primaryStudentRoll.trim().toUpperCase();
+      updateData.primaryStudentRoll = cleanRoll;
+      if (cleanRoll) {
+        const student = await prisma.student.findUnique({ where: { rollNumber: cleanRoll } });
+        if (student) {
+          updateData.primaryStudentId = student.id;
+          if (!personName) updateData.personName = student.name;
+        }
+      } else {
+        updateData.primaryStudentId = null;
+      }
+    }
 
     const updated = await prisma.$transaction(async (tx) => {
+      // 1. Sync team members if provided
+      if (Array.isArray(teamMembers)) {
+        await tx.achievementTeamMember.deleteMany({
+          where: { achievementId: id },
+        });
+
+        for (const member of teamMembers) {
+          if (member.rollNumber?.trim()) {
+            const cleanRoll = member.rollNumber.trim().toUpperCase();
+            let studentRecord = member.studentId
+              ? await tx.student.findUnique({ where: { id: member.studentId } })
+              : null;
+            if (!studentRecord) {
+              studentRecord = await tx.student.findUnique({ where: { rollNumber: cleanRoll } });
+            }
+
+            await tx.achievementTeamMember.create({
+              data: {
+                achievementId: id,
+                studentId: studentRecord?.id || member.studentId || null,
+                rollNumber: cleanRoll,
+                studentName: member.studentName || studentRecord?.name || cleanRoll,
+                isLeader: member.isLeader || false,
+              },
+            });
+          }
+        }
+        updateData.participationType = teamMembers.length > 0 ? 'TEAM' : 'SOLO';
+      }
+
+      // 2. Update achievement core record
       const ach = await tx.achievement.update({
         where: { id },
         data: updateData,
-        include: { category: true, primaryStudent: true, faculty: true },
+        include: {
+          category: true,
+          primaryStudent: true,
+          faculty: true,
+          teamMembers: true,
+          posts: { include: { media: true } },
+        },
       });
 
-      // Record audit log
+      // 3. Sync or create linked Feed Post if requested
+      if (postToFeed || feedCaption || feedImageUrl) {
+        const existingPost = await tx.post.findFirst({
+          where: { achievementId: id },
+          include: { media: true },
+        });
+
+        const postText =
+          (feedCaption && feedCaption.trim()) ||
+          `🎉 Proud to announce our verified achievement: "${ach.title}" recognized by ${ach.organizationEventName}!`;
+
+        if (existingPost) {
+          await tx.post.update({
+            where: { id: existingPost.id },
+            data: { content: postText },
+          });
+
+          if (feedImageUrl !== undefined) {
+            await tx.postMedia.deleteMany({ where: { postId: existingPost.id } });
+            if (feedImageUrl) {
+              await tx.postMedia.create({
+                data: {
+                  postId: existingPost.id,
+                  url: feedImageUrl,
+                  order: 0,
+                },
+              });
+            }
+          }
+        } else if (postToFeed) {
+          await tx.post.create({
+            data: {
+              authorId: existing.createdById || user.id,
+              content: postText,
+              achievementId: id,
+              visibility: 'PUBLIC',
+              media: feedImageUrl
+                ? {
+                    create: [
+                      {
+                        url: feedImageUrl,
+                        order: 0,
+                      },
+                    ],
+                  }
+                : undefined,
+            },
+          });
+        }
+      }
+
+      // 4. Record audit log
       await tx.auditLog.create({
         data: {
           actorId: user.id,
@@ -134,21 +285,22 @@ export async function PATCH(req: NextRequest) {
             previousStatus: existing.status,
             newStatus: status || existing.status,
             rejectionReason,
+            fieldsUpdated: Object.keys(updateData),
           }),
         },
       });
 
-      // Dispatch in-app notification to the submitter on verification state change
+      // 5. Dispatch in-app notification to the submitter on verification state change
       if (existing.createdById && status && ['APPROVED', 'PUBLISHED', 'REJECTED', 'RESUBMISSION_REQUIRED'].includes(status)) {
         const notifTitle = status === 'REJECTED' || status === 'RESUBMISSION_REQUIRED'
           ? '⚠️ Achievement Status Update'
           : '🏆 Honor Verified & Published!';
 
         const notifMsg = status === 'REJECTED'
-          ? `Your submission "${existing.title}" was rejected: ${rejectionReason || 'Requirements not met.'}`
+          ? `Your submission "${ach.title}" was rejected: ${rejectionReason || 'Requirements not met.'}`
           : status === 'RESUBMISSION_REQUIRED'
-          ? `Your submission "${existing.title}" requires revisions: ${rejectionReason || 'Please review and resubmit.'}`
-          : `Congratulations! Your achievement "${existing.title}" has been verified and published!`;
+          ? `Your submission "${ach.title}" requires revisions: ${rejectionReason || 'Please review and resubmit.'}`
+          : `Congratulations! Your achievement "${ach.title}" has been verified and published!`;
 
         await tx.notification.create({
           data: {
