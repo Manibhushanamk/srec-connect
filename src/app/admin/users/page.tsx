@@ -87,6 +87,19 @@ export default function AdminUsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [departmentsList, setDepartmentsList] = useState<Array<{ id: string; name: string; code: string }>>([]);
+  const [currentActor, setCurrentActor] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    departmentId?: string | null;
+    departmentName?: string | null;
+    departmentCode?: string | null;
+    allowedAssignableRoles: string[];
+    isSuperAdmin: boolean;
+    isHOD: boolean;
+    isWebManager: boolean;
+  } | null>(null);
 
   // Form state for creating a user
   const [formData, setFormData] = useState({
@@ -169,6 +182,16 @@ export default function AdminUsersPage() {
         setTotalPages(data.totalPages);
         if (data.departments) {
           setDepartmentsList(data.departments);
+        }
+        if (data.currentActor) {
+          setCurrentActor(data.currentActor);
+          if (!data.currentActor.isSuperAdmin && data.currentActor.departmentId) {
+            setFormData((prev) => ({
+              ...prev,
+              departmentId: data.currentActor.departmentId,
+              role: data.currentActor.allowedAssignableRoles[0] || 'STUDENT',
+            }));
+          }
         }
       }
     } catch (err) {
@@ -321,22 +344,45 @@ export default function AdminUsersPage() {
     }
   };
 
+  const canManageThisUser = (u: UserItem) => {
+    if (!currentActor) return true;
+    if (currentActor.isSuperAdmin) return true;
+    if (u.id === currentActor.id) return true;
+    if (currentActor.isHOD) {
+      if (u.role === 'SUPER_ADMIN' || u.role === 'ADMIN' || u.role === 'HOD') return false;
+      return !u.departmentId || u.departmentId === currentActor.departmentId;
+    }
+    if (currentActor.isWebManager) {
+      if (u.role !== 'FACULTY' && u.role !== 'STUDENT') return false;
+      return !u.departmentId || u.departmentId === currentActor.departmentId;
+    }
+    return false;
+  };
+
   const handleTrashUser = async (u: UserItem) => {
-    if (!confirm(`Are you sure you want to move user "${u.name || u.email}" to Trash? Their account will be deactivated and hidden from directories.`)) return;
+    if (!confirm(`Are you sure you want to deactivate user "${u.name || u.email}"? Their account will be deactivated and hidden from directories.`)) return;
     try {
-      const res = await fetch('/api/admin/trash', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'TRASH', type: 'USER', id: u.id }),
-      });
+      const endpoint = currentActor?.isSuperAdmin
+        ? '/api/admin/trash'
+        : `/api/admin/users?userId=${encodeURIComponent(u.id)}`;
+      const options = currentActor?.isSuperAdmin
+        ? {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'TRASH', type: 'USER', id: u.id }),
+          }
+        : {
+            method: 'DELETE',
+          };
+      const res = await fetch(endpoint, options);
       if (res.ok) {
         fetchUsers();
       } else {
         const err = await res.json();
-        alert(err.error || 'Failed to move user to trash');
+        alert(err.error || 'Failed to deactivate user');
       }
     } catch (err: any) {
-      alert(err.message || 'Error trashing user');
+      alert(err.message || 'Error deactivating user');
     }
   };
 
@@ -372,6 +418,43 @@ export default function AdminUsersPage() {
           </Button>
         </div>
       </div>
+
+      {/* Authority & Department Scope Banner */}
+      {currentActor && (
+        <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center shrink-0">
+              <Building2 className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-white">
+                  {currentActor.isSuperAdmin
+                    ? 'Global Institutional Oversight — Sovereign College Directory'
+                    : `Department Scoped — ${currentActor.departmentName || currentActor.departmentCode}`}
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-bold uppercase">
+                  {currentActor.role}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                {currentActor.isSuperAdmin
+                  ? 'Sovereign authority across all 11 departments. Can create, edit, and assign any campus role.'
+                  : currentActor.isHOD
+                  ? `Department Head authority. Can manage Web Managers, Faculty, and Students in ${currentActor.departmentName || currentActor.departmentCode}.`
+                  : `Web Manager authority. Can manage Faculty and Students in ${currentActor.departmentName || currentActor.departmentCode}.`}
+              </p>
+            </div>
+          </div>
+
+          <div className="text-[11px] text-slate-400 flex items-center gap-2">
+            <span>Authorized Creation:</span>
+            <span className="font-mono text-cyan-400 font-semibold">
+              {(currentActor.allowedAssignableRoles || []).join(', ')}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Filter & Search Bar */}
       <Card className="border-border bg-card/60 backdrop-blur-md">
@@ -518,34 +601,42 @@ export default function AdminUsersPage() {
 
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenEdit(u)}
-                          className="text-xs py-1 px-2.5 h-auto flex items-center gap-1 border-primary/30 text-primary hover:bg-primary/10"
-                          title="Super Admin: Edit Any Details of this User"
-                        >
-                          <Edit className="w-3.5 h-3.5" />
-                          <span>Edit</span>
-                        </Button>
+                        {canManageThisUser(u) ? (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenEdit(u)}
+                              className="text-xs py-1 px-2.5 h-auto flex items-center gap-1 border-primary/30 text-primary hover:bg-primary/10"
+                              title="Edit user details"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                              <span>Edit</span>
+                            </Button>
 
-                        <Button
-                          variant={u.status === 'ACTIVE' ? 'danger' : 'primary'}
-                          size="sm"
-                          onClick={() => handleToggleStatus(u)}
-                          className="text-xs py-1 px-2.5 h-auto"
-                        >
-                          {u.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
-                        </Button>
+                            <Button
+                              variant={u.status === 'ACTIVE' ? 'danger' : 'primary'}
+                              size="sm"
+                              onClick={() => handleToggleStatus(u)}
+                              className="text-xs py-1 px-2.5 h-auto"
+                            >
+                              {u.status === 'ACTIVE' ? 'Suspend' : 'Activate'}
+                            </Button>
 
-                        <button
-                          type="button"
-                          onClick={() => handleTrashUser(u)}
-                          className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                          title="Move to Trash"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                            <button
+                              type="button"
+                              onClick={() => handleTrashUser(u)}
+                              className="p-1.5 rounded-lg border border-border text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                              title="Deactivate / Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-lg bg-slate-800/80 text-slate-400 border border-slate-700 font-semibold">
+                            Protected
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -665,12 +756,22 @@ export default function AdminUsersPage() {
                         onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
                         className="w-full px-3 py-2 rounded-xl border border-input bg-secondary/40 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                       >
-                        <option value="STUDENT">STUDENT</option>
-                        <option value="FACULTY">FACULTY</option>
-                        <option value="HOD">HOD</option>
-                        <option value="WEB_MANAGER">WEB_MANAGER</option>
-                        <option value="ADMIN">ADMIN</option>
-                        <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                        {Array.from(
+                          new Set([
+                            ...(currentActor?.allowedAssignableRoles || [
+                              'STUDENT',
+                              'FACULTY',
+                              'HOD',
+                              'WEB_MANAGER',
+                              'SUPER_ADMIN',
+                            ]),
+                            editFormData.role,
+                          ])
+                        ).map((r) => (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
@@ -688,11 +789,16 @@ export default function AdminUsersPage() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold mb-1 text-foreground">Department</label>
+                      <label className="block text-xs font-semibold mb-1 text-foreground">
+                        Department {!currentActor?.isSuperAdmin && <span className="text-[10px] text-cyan-400 font-normal">(Locked)</span>}
+                      </label>
                       <select
                         value={editFormData.departmentId}
+                        disabled={!currentActor?.isSuperAdmin}
                         onChange={(e) => setEditFormData({ ...editFormData, departmentId: e.target.value })}
-                        className="w-full px-3 py-2 rounded-xl border border-input bg-secondary/40 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        className={`w-full px-3 py-2 rounded-xl border border-input text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary ${
+                          !currentActor?.isSuperAdmin ? 'bg-slate-900 cursor-not-allowed opacity-80' : 'bg-secondary/40'
+                        }`}
                       >
                         <option value="">No Department Assigned</option>
                         {departmentsList.map((dept) => (
@@ -1161,24 +1267,44 @@ export default function AdminUsersPage() {
                         onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                         className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                       >
-                        <option value="STUDENT">Student</option>
-                        <option value="FACULTY">Faculty</option>
-                        <option value="HOD">Head of Department (HOD)</option>
-                        <option value="WEB_MANAGER">Web Manager</option>
-                        <option value="SUPER_ADMIN">Super Administrator</option>
+                        {(
+                          currentActor?.allowedAssignableRoles || [
+                            'STUDENT',
+                            'FACULTY',
+                            'HOD',
+                            'WEB_MANAGER',
+                            'SUPER_ADMIN',
+                          ]
+                        ).map((r) => {
+                          const labels: Record<string, string> = {
+                            STUDENT: 'Student',
+                            FACULTY: 'Faculty Member',
+                            HOD: 'Head of Department (HOD)',
+                            WEB_MANAGER: 'Web Manager',
+                            SUPER_ADMIN: 'Super Administrator',
+                          };
+                          return (
+                            <option key={r} value={r}>
+                              {labels[r] || r}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold mb-1 text-foreground">
-                        Department
+                        Department {!currentActor?.isSuperAdmin && <span className="text-[10px] text-cyan-400 font-normal">(Locked to your department)</span>}
                       </label>
                       <select
                         value={formData.departmentId}
+                        disabled={!currentActor?.isSuperAdmin}
                         onChange={(e) => setFormData({ ...formData, departmentId: e.target.value })}
-                        className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                        className={`w-full px-3 py-2 rounded-lg border border-input text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary ${
+                          !currentActor?.isSuperAdmin ? 'bg-slate-900 cursor-not-allowed opacity-80' : 'bg-background'
+                        }`}
                       >
-                        <option value="">Default (CSE - AI & ML)</option>
+                        {currentActor?.isSuperAdmin && <option value="">Default (CSE - AI & ML)</option>}
                         {departmentsList.map((d) => (
                           <option key={d.id} value={d.id}>
                             {d.code} — {d.name}

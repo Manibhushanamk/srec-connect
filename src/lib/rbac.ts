@@ -62,6 +62,11 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, PermissionKey[]> = {
   SUPER_ADMIN: Object.values(PERMISSIONS),
   ADMIN: Object.values(PERMISSIONS), // legacy alias
   HOD: [
+    PERMISSIONS.USERS_STUDENT_CREATE,
+    PERMISSIONS.USERS_STUDENT_IMPORT,
+    PERMISSIONS.USERS_FACULTY_CREATE,
+    PERMISSIONS.USERS_MANAGE_ROLES,
+    PERMISSIONS.USERS_SUSPEND,
     PERMISSIONS.ACHIEVEMENTS_SUBMIT,
     PERMISSIONS.ACHIEVEMENTS_REVIEW,
     PERMISSIONS.ACHIEVEMENTS_ESCALATE,
@@ -113,6 +118,153 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, PermissionKey[]> = {
     PERMISSIONS.DOCUMENTS_UPLOAD_CERTIFICATE,
   ],
 };
+
+/**
+ * Institutional Role Hierarchy Ranking
+ * Super Admin (100) > HOD (70) > Web Manager (50) > Faculty (30) > Student (10)
+ */
+export const ROLE_HIERARCHY: Record<Role, number> = {
+  SUPER_ADMIN: 100,
+  ADMIN: 100,
+  HOD: 70,
+  WEB_MANAGER: 50,
+  FACULTY: 30,
+  STUDENT: 10,
+};
+
+export function isSuperAdmin(role?: Role | string | null): boolean {
+  return role === 'SUPER_ADMIN' || role === 'ADMIN';
+}
+
+export function isHOD(role?: Role | string | null): boolean {
+  return role === 'HOD';
+}
+
+export function isWebManager(role?: Role | string | null): boolean {
+  return role === 'WEB_MANAGER';
+}
+
+/**
+ * Returns roles an actor is authorized to assign or provision
+ */
+export function getAllowedAssignableRoles(actorRole?: Role | string | null): Role[] {
+  if (isSuperAdmin(actorRole)) {
+    return [Role.SUPER_ADMIN, Role.HOD, Role.WEB_MANAGER, Role.FACULTY, Role.STUDENT];
+  }
+  if (isHOD(actorRole)) {
+    // HODs have authority over Web Managers, Faculty, and Students in their department
+    return [Role.WEB_MANAGER, Role.FACULTY, Role.STUDENT];
+  }
+  if (isWebManager(actorRole)) {
+    // Web Managers have authority over Faculty and Students in their department
+    return [Role.FACULTY, Role.STUDENT];
+  }
+  return [];
+}
+
+/**
+ * Validates whether an actor can modify, suspend, or delete a target user
+ */
+export function canManageTargetUser(
+  actor: { role?: Role | string | null; departmentId?: string | null; id?: string },
+  targetUser: { id?: string; role: Role | string; departmentId?: string | null }
+): { allowed: boolean; reason?: string } {
+  if (isSuperAdmin(actor.role)) {
+    return { allowed: true };
+  }
+
+  // Cannot manage self via administrative override actions if it degrades account
+  if (actor.id && targetUser.id && actor.id === targetUser.id) {
+    return { allowed: true };
+  }
+
+  if (isHOD(actor.role)) {
+    if (!actor.departmentId) {
+      return { allowed: false, reason: 'Your HOD account is not bound to an academic department.' };
+    }
+    // HOD cannot manage Super Admin or other HODs
+    if (isSuperAdmin(targetUser.role) || isHOD(targetUser.role)) {
+      return { allowed: false, reason: 'Department HODs cannot modify Super Admins or fellow HODs.' };
+    }
+    // Target must belong to HOD's department
+    if (targetUser.departmentId && targetUser.departmentId !== actor.departmentId) {
+      return { allowed: false, reason: 'Unauthorized: Target user belongs to a different academic department.' };
+    }
+    return { allowed: true };
+  }
+
+  if (isWebManager(actor.role)) {
+    if (!actor.departmentId) {
+      return { allowed: false, reason: 'Your Web Manager account is not bound to an academic department.' };
+    }
+    // Web Manager can only manage Faculty and Students
+    if (targetUser.role !== Role.FACULTY && targetUser.role !== Role.STUDENT) {
+      return { allowed: false, reason: 'Web Managers can only manage Faculty and Student accounts.' };
+    }
+    // Target must belong to Web Manager's department
+    if (targetUser.departmentId && targetUser.departmentId !== actor.departmentId) {
+      return { allowed: false, reason: 'Unauthorized: Target user belongs to a different academic department.' };
+    }
+    return { allowed: true };
+  }
+
+  return { allowed: false, reason: 'Forbidden: Insufficient administrative privileges.' };
+}
+
+/**
+ * Builds Prisma query `where` filter for listing users respecting department & hierarchy boundaries
+ */
+export function buildUserQueryScope(actor: {
+  role?: Role | string | null;
+  departmentId?: string | null;
+}): { whereScope: any; departmentIdFilter?: string | null; isDepartmentScoped: boolean } {
+  if (isSuperAdmin(actor.role)) {
+    return { whereScope: {}, isDepartmentScoped: false };
+  }
+
+  if (isHOD(actor.role)) {
+    return {
+      whereScope: {
+        departmentId: actor.departmentId || 'no_department_bound',
+        role: { in: [Role.HOD, Role.WEB_MANAGER, Role.FACULTY, Role.STUDENT] },
+      },
+      departmentIdFilter: actor.departmentId,
+      isDepartmentScoped: true,
+    };
+  }
+
+  if (isWebManager(actor.role)) {
+    return {
+      whereScope: {
+        departmentId: actor.departmentId || 'no_department_bound',
+        role: { in: [Role.FACULTY, Role.STUDENT] },
+      },
+      departmentIdFilter: actor.departmentId,
+      isDepartmentScoped: true,
+    };
+  }
+
+  return {
+    whereScope: { id: 'impossible_auth_fallback' },
+    isDepartmentScoped: true,
+  };
+}
+
+/**
+ * Builds Prisma query `where` filter for departmental entities (Achievements, Events, etc.)
+ */
+export function buildDepartmentScope(actor: {
+  role?: Role | string | null;
+  departmentId?: string | null;
+}): { departmentId?: string; isScoped: boolean } {
+  if (isSuperAdmin(actor.role)) {
+    return { isScoped: false };
+  }
+  return {
+    departmentId: actor.departmentId || 'no_department_bound',
+    isScoped: true,
+  };
+}
 
 /**
  * Checks if a given user has a specific granular permission

@@ -2,36 +2,67 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from '@/lib/auth';
-import { canAccessAdmin } from '@/lib/rbac';
+import {
+  canAccessAdmin,
+  buildUserQueryScope,
+  getAllowedAssignableRoles,
+  canManageTargetUser,
+  isSuperAdmin,
+  isHOD,
+  isWebManager,
+} from '@/lib/rbac';
 import { Role, UserStatus } from '@prisma/client';
 
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession();
-    if (!session?.user || !canAccessAdmin(session.user as any)) {
+    if (!session?.user?.email || !canAccessAdmin(session.user as any)) {
+      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
+    }
+
+    // Resolve authoritative live actor from database
+    const actor = await prisma.user.findUnique({
+      where: { email: session.user.email.toLowerCase().trim() },
+      include: { department: true },
+    });
+
+    if (!actor || !canAccessAdmin(actor as any)) {
       return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
-    const role = searchParams.get('role');
-    const status = searchParams.get('status');
+    const roleParam = searchParams.get('role');
+    const statusParam = searchParams.get('status');
     const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1', 10);
     const limit = parseInt(searchParams.get('limit') || '20', 10);
     const skip = (page - 1) * limit;
 
-    const where: any = { deletedAt: null };
-    if (role && role !== 'ALL') {
-      where.role = role as Role;
+    // Apply strict institutional role & department query scoping
+    const actorScope = buildUserQueryScope(actor);
+    const where: any = { deletedAt: null, ...actorScope.whereScope };
+
+    if (roleParam && roleParam !== 'ALL') {
+      if (actorScope.whereScope.role?.in) {
+        if (actorScope.whereScope.role.in.includes(roleParam as Role)) {
+          where.role = roleParam as Role;
+        }
+      } else {
+        where.role = roleParam as Role;
+      }
     }
-    if (status && status !== 'ALL') {
-      where.status = status as UserStatus;
+    if (statusParam && statusParam !== 'ALL') {
+      where.status = statusParam as UserStatus;
     }
     if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
-        { student: { rollNumber: { contains: search, mode: 'insensitive' } } },
+      where.AND = [
+        {
+          OR: [
+            { name: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+            { student: { rollNumber: { contains: search, mode: 'insensitive' } } },
+          ],
+        },
       ];
     }
 
@@ -78,10 +109,14 @@ export async function GET(req: NextRequest) {
         take: limit,
       }),
       prisma.user.count({ where }),
-      prisma.department.findMany({
-        select: { id: true, name: true, code: true },
-        orderBy: { code: 'asc' },
-      }),
+      isSuperAdmin(actor.role)
+        ? prisma.department.findMany({
+            select: { id: true, name: true, code: true },
+            orderBy: { code: 'asc' },
+          })
+        : actor.department
+        ? [{ id: actor.department.id, name: actor.department.name, code: actor.department.code }]
+        : [],
     ]);
 
     return NextResponse.json({
@@ -90,6 +125,19 @@ export async function GET(req: NextRequest) {
       page,
       totalPages: Math.ceil(total / limit),
       departments,
+      currentActor: {
+        id: actor.id,
+        name: actor.name,
+        email: actor.email,
+        role: actor.role,
+        departmentId: actor.departmentId,
+        departmentName: actor.department?.name || actor.departmentName,
+        departmentCode: actor.department?.code,
+        allowedAssignableRoles: getAllowedAssignableRoles(actor.role),
+        isSuperAdmin: isSuperAdmin(actor.role),
+        isHOD: isHOD(actor.role),
+        isWebManager: isWebManager(actor.role),
+      },
     });
   } catch (error: any) {
     console.error('[API Users GET] Error:', error);
@@ -100,7 +148,16 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession();
-    if (!session?.user || !canAccessAdmin(session.user as any)) {
+    if (!session?.user?.email || !canAccessAdmin(session.user as any)) {
+      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
+    }
+
+    const actor = await prisma.user.findUnique({
+      where: { email: session.user.email.toLowerCase().trim() },
+      include: { department: true },
+    });
+
+    if (!actor || !canAccessAdmin(actor as any)) {
       return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
     }
 
@@ -129,6 +186,46 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email, Name, and Role are mandatory' }, { status: 400 });
     }
 
+    // Role hierarchy verification
+    const allowedRoles = getAllowedAssignableRoles(actor.role);
+    if (!allowedRoles.includes(role as Role)) {
+      return NextResponse.json(
+        { error: `Forbidden: As ${actor.role}, you can only provision users with roles: ${allowedRoles.join(', ')}.` },
+        { status: 403 }
+      );
+    }
+
+    // Department boundary verification
+    let targetDeptId = departmentId;
+    let deptName: string | null = null;
+
+    if (!isSuperAdmin(actor.role)) {
+      if (!actor.departmentId) {
+        return NextResponse.json({ error: 'Your account is not bound to an academic department.' }, { status: 403 });
+      }
+      if (targetDeptId && targetDeptId !== actor.departmentId) {
+        return NextResponse.json(
+          { error: `Forbidden: You are only authorized to add users to your own department (${actor.department?.name || actor.departmentName}).` },
+          { status: 403 }
+        );
+      }
+      targetDeptId = actor.departmentId;
+      deptName = actor.department?.name || actor.departmentName || null;
+    } else {
+      if (targetDeptId) {
+        const d = await prisma.department.findUnique({ where: { id: targetDeptId } });
+        if (d) deptName = d.name;
+      } else {
+        const aimlDept = await prisma.department.findFirst({
+          where: { OR: [{ code: 'AIML' }, { code: 'CSE(AI&ML)' }] },
+        });
+        if (aimlDept) {
+          targetDeptId = aimlDept.id;
+          deptName = aimlDept.name;
+        }
+      }
+    }
+
     const normalizedEmail = email.toLowerCase().trim();
 
     // Check existing email
@@ -137,22 +234,6 @@ export async function POST(req: NextRequest) {
     });
     if (existingUser) {
       return NextResponse.json({ error: 'A user with this email already exists' }, { status: 409 });
-    }
-
-    // Ensure default department if missing
-    let targetDeptId = departmentId;
-    let deptName: string | null = null;
-    if (targetDeptId) {
-      const d = await prisma.department.findUnique({ where: { id: targetDeptId } });
-      if (d) deptName = d.name;
-    } else {
-      const aimlDept = await prisma.department.findFirst({
-        where: { OR: [{ code: 'AIML' }, { code: 'CSE(AI&ML)' }] },
-      });
-      if (aimlDept) {
-        targetDeptId = aimlDept.id;
-        deptName = aimlDept.name;
-      }
     }
 
     // Roll number uniqueness check for student
@@ -240,7 +321,16 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const session = await getServerSession();
-    if (!session?.user || !canAccessAdmin(session.user as any)) {
+    if (!session?.user?.email || !canAccessAdmin(session.user as any)) {
+      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
+    }
+
+    const actor = await prisma.user.findUnique({
+      where: { email: session.user.email.toLowerCase().trim() },
+      include: { department: true },
+    });
+
+    if (!actor || !canAccessAdmin(actor as any)) {
       return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
     }
 
@@ -274,6 +364,28 @@ export async function PATCH(req: NextRequest) {
 
     if (!targetUser) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Institutional RBAC and Department Boundary Check
+    const manageCheck = canManageTargetUser(actor, targetUser);
+    if (!manageCheck.allowed) {
+      return NextResponse.json({ error: manageCheck.reason || 'Forbidden: Insufficient privileges to modify this user' }, { status: 403 });
+    }
+
+    // Non-super admins cannot transfer users across departments
+    if (!isSuperAdmin(actor.role) && departmentId !== undefined && departmentId !== targetUser.departmentId) {
+      return NextResponse.json({ error: 'Forbidden: Cross-department user transfers require Super Administrator privileges.' }, { status: 403 });
+    }
+
+    // Role elevation guard: actor can only set roles they are authorized to assign
+    if (!isSuperAdmin(actor.role) && role !== undefined && role !== targetUser.role) {
+      const allowed = getAllowedAssignableRoles(actor.role);
+      if (!allowed.includes(role as Role)) {
+        return NextResponse.json(
+          { error: `Forbidden: As ${actor.role}, you cannot assign role ${role}. Allowed roles: ${allowed.join(', ')}.` },
+          { status: 403 }
+        );
+      }
     }
 
     const userUpdateData: any = {};
@@ -564,5 +676,97 @@ export async function PATCH(req: NextRequest) {
   } catch (error: any) {
     console.error('[API Users PATCH] Error:', error);
     return NextResponse.json({ error: error.message || 'Failed to update user' }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await getServerSession();
+    if (!session?.user?.email || !canAccessAdmin(session.user as any)) {
+      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
+    }
+
+    const actor = await prisma.user.findUnique({
+      where: { email: session.user.email.toLowerCase().trim() },
+      include: { department: true },
+    });
+    if (!actor || !canAccessAdmin(actor as any)) {
+      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId');
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+    }
+
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { student: true, faculty: true },
+    });
+    if (!targetUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Role hierarchy & department permission check
+    const manageCheck = canManageTargetUser(actor, targetUser);
+    if (!manageCheck.allowed) {
+      return NextResponse.json({ error: manageCheck.reason || 'Forbidden: Cannot delete this user' }, { status: 403 });
+    }
+
+    const now = new Date();
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { deletedAt: now, status: 'SUSPENDED' },
+      });
+      if (targetUser.studentId) {
+        await tx.student.update({
+          where: { id: targetUser.studentId },
+          data: { deletedAt: now, isActive: false },
+        });
+      }
+      if (targetUser.facultyId) {
+        await tx.faculty.update({
+          where: { id: targetUser.facultyId },
+          data: { deletedAt: now, isActive: false },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          actorEmail: actor.email,
+          actorRole: actor.role,
+          action: 'USER_DELETED',
+          entityType: 'User',
+          entityId: userId,
+          metadata: JSON.stringify({
+            targetUserId: userId,
+            targetEmail: targetUser.email,
+            targetName: targetUser.name,
+            targetRole: targetUser.role,
+            department: targetUser.departmentName,
+          }),
+        },
+      });
+    });
+
+    try {
+      revalidatePath('/students');
+      revalidatePath('/faculty');
+      revalidatePath('/admin/users');
+      revalidatePath('/');
+    } catch (e) {
+      console.warn('[API Users DELETE] revalidatePath warning:', e);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `User ${targetUser.name || targetUser.email} deactivated successfully.`,
+    });
+  } catch (error: any) {
+    console.error('[API Users DELETE] Error:', error);
+    return NextResponse.json({ error: error.message || 'Failed to delete user' }, { status: 500 });
   }
 }

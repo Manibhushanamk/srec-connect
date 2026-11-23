@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { canAccessAdmin } from '@/lib/rbac';
+import { canAccessAdmin, isSuperAdmin } from '@/lib/rbac';
 import { SubmissionStatus } from '@prisma/client';
 
 export async function GET(req: NextRequest) {
@@ -27,6 +27,11 @@ export async function GET(req: NextRequest) {
     const where: any = { deletedAt: null };
     if (statusParam && statusParam !== 'ALL') {
       where.status = statusParam as SubmissionStatus;
+    }
+
+    // Enforce department boundary: HOD and Web Manager can only view their own department honors
+    if (!isSuperAdmin(user.role)) {
+      where.departmentId = user.departmentId || 'no_department_bound';
     }
 
     const achievements = await prisma.achievement.findMany({
@@ -135,6 +140,14 @@ export async function PATCH(req: NextRequest) {
     });
     if (!existing) {
       return NextResponse.json({ error: 'Achievement not found' }, { status: 404 });
+    }
+
+    // Department boundary check: HOD and Web Manager can only modify achievements in their own department
+    if (!isSuperAdmin(user.role) && existing.departmentId && existing.departmentId !== user.departmentId) {
+      return NextResponse.json(
+        { error: 'Forbidden: You can only modify honors belonging to your own department.' },
+        { status: 403 }
+      );
     }
 
     const updateData: any = {};
@@ -333,8 +346,8 @@ export async function DELETE(req: NextRequest) {
       where: { email: session.user.email.toLowerCase().trim() },
     });
 
-    if (!user || !canAccessAdmin(user)) {
-      return NextResponse.json({ error: 'Forbidden: Super Admin or HOD required to delete records' }, { status: 403 });
+    if (!user || (!isSuperAdmin(user.role) && user.role !== 'HOD')) {
+      return NextResponse.json({ error: 'Forbidden: Super Admin or HOD authority required to delete records' }, { status: 403 });
     }
 
     const body = await req.json();
@@ -342,6 +355,18 @@ export async function DELETE(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ error: 'Achievement ID required' }, { status: 400 });
+    }
+
+    const existing = await prisma.achievement.findUnique({
+      where: { id },
+      select: { id: true, departmentId: true, title: true },
+    });
+    if (!existing) {
+      return NextResponse.json({ error: 'Achievement not found' }, { status: 404 });
+    }
+
+    if (!isSuperAdmin(user.role) && existing.departmentId && existing.departmentId !== user.departmentId) {
+      return NextResponse.json({ error: 'Forbidden: You can only delete honors belonging to your own department.' }, { status: 403 });
     }
 
     await prisma.$transaction(async (tx) => {

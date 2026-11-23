@@ -5,7 +5,32 @@
 - **Department:** Computer Science & Engineering (Artificial Intelligence & Machine Learning)
 - **Current Version:** v3.0.0 (Production Certified & Live Deployed)
 - **Stack:** Next.js 15.5.25 (App Router), React 19, TypeScript, Tailwind CSS, Prisma ORM 6.19.3, Neon Serverless PostgreSQL (`v3_production` schema), NextAuth v4 (Google Workspace SSO), Sharp (adaptive WebP compression).
-- **Latest Deployed Commit:** `02ce285` (feat(admin): implement full-field honor editor and enhanced user creation).
+- **Latest Deployed Commit:** `360012e` (feat(drive): implement sandboxed user folder upload and direct cdn streaming).
+- **Institutional Role Hierarchy & Department Boundary Access Control (RBAC):**
+  - **Super Administrator (Head / Sovereign)**: Unrestricted global oversight across all 11 college departments. Can create, edit, suspend, or trash any account (Super Admin, HOD, Web Manager, Faculty, Student) and manage cross-department transfers and institutional settings.
+  - **Head of Department (HOD)**: Subordinate to Super Admin. Strictly scoped to their own academic department (`departmentId`). Authorized to manage and provision:
+    - Department Web Managers
+    - Department Faculty members
+    - Department Students
+    - Forbidden from modifying Super Admins or fellow HODs. Can only add and modify records bound to their own department (`departmentId`).
+  - **Web Manager**: Subordinate to HOD. Strictly scoped to their own department. Authorized to manage:
+    - Department Faculty members
+    - Department Students
+    - Forbidden from modifying or creating HODs, Web Managers, or Super Admins. Cannot alter other departments' data.
+  - **Strong Database Query Instructions (`src/lib/rbac.ts`)**:
+    - Centralized query builders: `buildUserQueryScope(actor)`, `buildDepartmentScope(actor)`, `canManageTargetUser(actor, targetUser)`, and `getAllowedAssignableRoles(actorRole)`.
+    - Integrated across `GET /api/admin/users`, `POST /api/admin/users`, `PATCH /api/admin/users`, `DELETE /api/admin/users`, and `GET /api/admin/achievements`.
+  - **Bulk Ingestion Engine & Dynamic Templates (`/admin/bulk-upload` & `/api/admin/users/bulk-import`)**:
+    - Added first-class support for `STUDENT`, `FACULTY`, and `WEB_MANAGER` bulk provisioning.
+    - One-click template downloads in both Universal UTF-8 CSV (`.csv`) and Microsoft Excel (`.xlsx`) formats.
+    - Templates automatically inject the user's active department code (e.g. `AIML` or `CSE`) into sample rows.
+    - Real-time row-level validation: checks institutional email formats, SREC roll numbers (`^\d{2}09(1A|5A)\d{2}[0-9A-Z]{2}$`), duplicate detection in-file and in-database, and flags unauthorized cross-department attempts with explicit error messages.
+    - Transactional commit with full `AuditLog` generation and automatic cache invalidation.
+- **Google Drive Sandboxed Storage & Direct Streaming Engine:**
+  - **Dedicated User Account Folder (`SREC CONNECT`)**: Automatic find/create of the dedicated `SREC CONNECT` folder in the user's account using `https://www.googleapis.com/auth/drive.file`. The web application only accesses files and folders created by SREC CONNECT, maintaining full privacy and isolation.
+  - **Direct CDN-Style Display (`/api/drive/file/[id]`)**: High-performance streaming proxy route that streams Google Drive files directly with proper `Content-Type`, `Content-Disposition: inline`, and `Cache-Control: public, max-age=31536000, immutable`. Images and PDFs display directly on the website without opening Google Drive or triggering external login prompts.
+  - **Unified Upload Pipeline (`/api/upload` & `/api/drive/upload`)**: Replaced local-only disk writes with the unified Google Drive uploader, with automatic Cloudflare R2 CDN fallback if Google Drive API is pending activation. Zero failed uploads.
+  - **Google Cloud Console Action Required**: Project `127891787958` requires clicking "Enable" for Google Drive API at `https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=127891787958`.
 - **In-Review Honor Editor & Pre-Provisioning Overhaul:**
   - **In-Review Honor Editor (`/admin/achievements`)**: Integrated all student submission fields directly into the admin modal. Admin can edit title, recipient, student roll number, category, award/rank, host org, competition level, achievement date, academic year, description/abstract, certificate proof document via direct `DriveFileUploader` with link preview, team members with autocomplete lookup from `/api/members/search` and chip removal, and broadcast to community feed with post caption and ceremony picture upload.
   - **Pre-Provision Institutional Account (`/admin/users`)**: Enhanced modal to accept Full Name, Institutional Email, Role, Department selection from list, Account Status (Active/Suspended), Phone Number, Headline, Student Enrollment fields (SREC Roll, Batch, Section), and Faculty Profile fields (Designation, Academic Category, Degrees, Experience, Cabin, Specialization).
