@@ -34,6 +34,7 @@ function AdminAchievementsContent() {
   const initialStatus = (searchParams.get('status')?.toUpperCase() as any) || 'PENDING';
   const [achievements, setAchievements] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'PUBLISHED' | 'REJECTED'>(
     ['ALL', 'PENDING', 'PUBLISHED', 'REJECTED'].includes(initialStatus) ? initialStatus : 'PENDING'
@@ -89,6 +90,9 @@ function AdminAchievementsContent() {
     const postMedia = existingPost?.media?.[0]?.url;
     setEditingItem({
       ...ach,
+      departmentId: ach.departmentId || ach.department?.id || '',
+      status: ach.status || 'PENDING',
+      rejectionReason: ach.rejectionReason || '',
       title: ach.title || '',
       personName: ach.personName || ach.student?.user?.name || '',
       primaryStudentRoll: ach.primaryStudentRoll || ach.student?.rollNumber || '',
@@ -192,6 +196,9 @@ function AdminAchievementsContent() {
     fetch('/api/categories')
       .then((res) => res.json())
       .then((d) => setCategories(d.categories || []));
+    fetch('/api/departments?all=true')
+      .then((res) => res.json())
+      .then((d) => setDepartments(d.departments || []));
   }, [statusFilter]);
 
   const handleStatusChange = async (id: string, status: string, rejectionReason?: string) => {
@@ -445,6 +452,77 @@ function AdminAchievementsContent() {
             }}
             className="space-y-5 text-xs max-h-[75vh] overflow-y-auto pr-1"
           >
+            {/* Verification Status & Department Scope */}
+            <div className="p-3.5 rounded-xl border border-slate-800 bg-slate-900/80 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <Award className="w-3.5 h-3.5 text-cyan-400" />
+                  <span>Institutional Verification & Governance</span>
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase border ${
+                    editingItem.status === 'PUBLISHED'
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                      : editingItem.status === 'REJECTED'
+                      ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                      : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                  }`}
+                >
+                  {editingItem.status || 'PENDING'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">
+                    Review Status <span className="text-rose-400">*</span>
+                  </label>
+                  <select
+                    value={editingItem.status || 'PENDING'}
+                    onChange={(e) => setEditingItem({ ...editingItem, status: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-medium focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="PENDING">⏳ In-Review / Pending Department Verification</option>
+                    <option value="PUBLISHED">✅ Approved & Published to Campus Wall</option>
+                    <option value="REJECTED">❌ Rejected / Evidence Incomplete</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">
+                    Assigned Academic Department
+                  </label>
+                  <select
+                    value={editingItem.departmentId || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, departmentId: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="">Default (CSE - AI & ML)</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.code} — {dept.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {editingItem.status === 'REJECTED' && (
+                <div className="pt-2 border-t border-slate-800/80">
+                  <label className="block text-rose-400 mb-1 font-medium">
+                    Rejection Feedback / Deficiency Notice
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Certificate missing participant name or verification QR link."
+                    value={editingItem.rejectionReason || ''}
+                    onChange={(e) => setEditingItem({ ...editingItem, rejectionReason: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-rose-500/40 rounded-xl text-white focus:outline-none focus:border-rose-400"
+                  />
+                </div>
+              )}
+            </div>
+
             {/* Primary Achievement Details */}
             <div className="space-y-4">
               <div>
@@ -599,7 +677,7 @@ function AdminAchievementsContent() {
             </div>
 
             {/* Certificate Proof Document */}
-            <div className="pt-2 border-t border-slate-800">
+            <div className="pt-2 border-t border-slate-800 space-y-3">
               <DriveFileUploader
                 value={editingItem.googleDriveUrl || editingItem.certificateUrl || ''}
                 onChange={(url) =>
@@ -613,6 +691,41 @@ function AdminAchievementsContent() {
                 documentType="STUDENT_CERTIFICATE"
                 helpText="Upload certificate directly to Google Drive, or paste existing Drive link. Shared automatically with view access for verification."
               />
+
+              {(editingItem.googleDriveUrl || editingItem.certificateUrl) && (
+                <div className="p-3 rounded-xl border border-cyan-500/30 bg-cyan-500/5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-cyan-400 flex items-center gap-1.5">
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Attached Certificate Document
+                    </span>
+                    <a
+                      href={editingItem.googleDriveUrl || editingItem.certificateUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 text-[11px] font-medium bg-slate-800 hover:bg-slate-700 text-white rounded-lg border border-slate-700 flex items-center gap-1 transition-colors"
+                    >
+                      <span>Open Document ↗</span>
+                    </a>
+                  </div>
+                  {/* Visual Preview if direct image or streaming URL */}
+                  {((editingItem.googleDriveUrl || editingItem.certificateUrl).match(/\.(png|jpe?g|webp|gif)$/i) ||
+                    (editingItem.googleDriveUrl || editingItem.certificateUrl).includes('googleusercontent') ||
+                    (editingItem.googleDriveUrl || editingItem.certificateUrl).startsWith('/api/drive/file/') ||
+                    (editingItem.googleDriveUrl || editingItem.certificateUrl).startsWith('/uploads/')) && (
+                    <div className="rounded-lg overflow-hidden border border-slate-800 bg-black/40 max-h-52 flex items-center justify-center p-1">
+                      <img
+                        src={editingItem.googleDriveUrl || editingItem.certificateUrl}
+                        alt="Attached Certificate"
+                        className="max-h-48 object-contain rounded"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Team Members & Collaborators */}
@@ -833,35 +946,55 @@ function AdminAchievementsContent() {
               )}
             </div>
 
-            <div className="flex justify-end gap-2 pt-4 border-t border-slate-800">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setEditingItem(null)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                loading={savingEdit}
-                onClick={() => handleSaveEdit(false)}
-                leftIcon={<Save className="w-4 h-4" />}
-              >
-                Save Changes
-              </Button>
-              <Button
-                type="button"
-                variant="success"
-                size="sm"
-                loading={savingEdit}
-                onClick={() => handleSaveEdit(true)}
-                leftIcon={<Check className="w-4 h-4" />}
-              >
-                Save & Publish Immediately
-              </Button>
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-4 border-t border-slate-800">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => {
+                    if (confirm('Mark this achievement as REJECTED?')) {
+                      setEditingItem({ ...editingItem, status: 'REJECTED' });
+                      handleStatusChange(editingItem.id, 'REJECTED', editingItem.rejectionReason || 'Requirements not met.');
+                      setEditingItem(null);
+                    }
+                  }}
+                  leftIcon={<XCircle className="w-4 h-4" />}
+                >
+                  Reject Honor
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditingItem(null)}
+                >
+                  Cancel
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  loading={savingEdit}
+                  onClick={() => handleSaveEdit(false)}
+                  leftIcon={<Save className="w-4 h-4" />}
+                >
+                  Save Changes
+                </Button>
+                <Button
+                  type="button"
+                  variant="success"
+                  size="sm"
+                  loading={savingEdit}
+                  onClick={() => handleSaveEdit(true)}
+                  leftIcon={<Check className="w-4 h-4" />}
+                >
+                  Save & Publish Immediately
+                </Button>
+              </div>
             </div>
           </form>
         )}

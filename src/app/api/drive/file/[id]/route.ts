@@ -40,7 +40,8 @@ export async function GET(
   try {
     const drive = await getAuthenticatedDriveClient();
     if (!drive) {
-      return new NextResponse('Drive storage client unauthenticated', { status: 503 });
+      // Direct redirect fallback to Google Drive public web link
+      return NextResponse.redirect(`https://drive.google.com/file/d/${fileId}/view`);
     }
 
     // Fetch file metadata
@@ -89,6 +90,7 @@ export async function GET(
         return NextResponse.redirect(new URL(`/uploads/${match}`, req.url));
       }
     }
-    return new NextResponse('File not found or inaccessible in Google Drive', { status: 404 });
+    // Final fallback: redirect directly to Google Drive file view
+    return NextResponse.redirect(`https://drive.google.com/file/d/${fileId}/view`);
   }
 }

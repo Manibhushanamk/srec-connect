@@ -33,9 +33,17 @@
   - **Google Cloud Console Action Required**: Project `127891787958` requires clicking "Enable" for Google Drive API at `https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=127891787958`.
 - **In-Review Honor Editor & Pre-Provisioning Overhaul:**
   - **In-Review Honor Editor (`/admin/achievements`)**: Integrated all student submission fields directly into the admin modal. Admin can edit title, recipient, student roll number, category, award/rank, host org, competition level, achievement date, academic year, description/abstract, certificate proof document via direct `DriveFileUploader` with link preview, team members with autocomplete lookup from `/api/members/search` and chip removal, and broadcast to community feed with post caption and ceremony picture upload.
+  - **Institutional Verification & Department Scope Panel**: Added top-level Review Status dropdown (`PENDING`, `APPROVED`/`PUBLISHED`, `REJECTED`), rejection reason input, and Department Re-assignment across all 11 departments. Attached certificates feature direct preview thumbnail and live CDN display links.
   - **Pre-Provision Institutional Account (`/admin/users`)**: Enhanced modal to accept Full Name, Institutional Email, Role, Department selection from list, Account Status (Active/Suspended), Phone Number, Headline, Student Enrollment fields (SREC Roll, Batch, Section), and Faculty Profile fields (Designation, Academic Category, Degrees, Experience, Cabin, Specialization).
-  - **Backend API Synchronization**: Updated `PATCH /api/admin/achievements` to handle all fields, transactional team member re-sync, and linked feed post synchronization. Updated `POST /api/admin/users` to populate complete student and faculty records.
-  - **Local Dev Server Verified**: Running on `http://localhost:3000` with HTTP 200 OK verified via Playwright screenshot.
+  - **Backend API Synchronization**: Updated `PATCH /api/admin/achievements` to handle all fields, transactional team member re-sync, department reassignment, and linked feed post synchronization. Updated `POST /api/admin/users` to populate complete student and faculty records.
+  - **Local Dev Server Verified**: Running on `http://localhost:3000` with HTTP 200 OK verified via Playwright screenshots (`verify_admin_departments.png`, `verify_admin_command_center.png`, `verify_admin_achievements.png`).
+
+- **College-Wide Department Management Registry (`/admin/departments` & `/api/departments`):**
+  - **11 Canonical Departments Full Control**: `AIML`, `CSE`, `CSD`, `CSG`, `CSIT`, `ECE`, `EEE`, `MECH`, `CIVIL`, `MBA`, `MCA`.
+  - **Super Administrator Sovereign Oversight**: Can create new departments, edit any department parameters (code, name, HOD details, vision/mission, intake, display order), toggle active/inactive status, and execute safe removal.
+  - **Relational Preservation on Removal**: Safe soft-deactivation (`isActive: false`, `deletedAt: new Date()`) preserves historical student records, transcripts, and faculty portfolios; permanent hard purge is allowed only if 0 linked records exist.
+  - **HOD Self-Service Scope**: HOD can update their own department's vision, mission, intake, and contact info, but cannot alter other departments.
+  - **Navigation Integration**: Linked in Admin Command Center bento cards, executive modules, and AdminSidebar under "Academic Registry".
 - **Profile Skills Data Integrity:** Resolved counter mismatch (`skillsList.length || 5` -> `skillsList.length`), eliminated fake hardcoded fallback arrays across directory cards/headers, enabled bidirectional DB sync, verified via `tests/portfolios.test.ts` (5/5) and 5 Playwright screenshots.
 
 ### G. Data Relationships Strengthening & Relational Integrity

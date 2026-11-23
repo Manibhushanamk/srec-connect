@@ -43,16 +43,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  // Security: Protocol and host validation on googleDriveUrl
+  // Security: Protocol and host validation on googleDriveUrl / certificateUrl
   if (googleDriveUrl) {
     const trimmedUrl = String(googleDriveUrl).trim();
     const isValidUrl =
-      /^https:\/\/(drive|docs)\.google\.com\//.test(trimmedUrl) ||
+      /^https:\/\/(drive|docs)\.google\.com\//i.test(trimmedUrl) ||
+      /^https:\/\/lh3\.googleusercontent\.com\//i.test(trimmedUrl) ||
+      trimmedUrl.startsWith('/api/drive/file/') ||
       trimmedUrl.startsWith('/uploads/') ||
-      trimmedUrl.startsWith('http://localhost:3000/uploads/');
+      trimmedUrl.startsWith('http://localhost:3000/uploads/') ||
+      trimmedUrl.startsWith('http://localhost:3000/api/drive/file/') ||
+      /^https?:\/\/.+/i.test(trimmedUrl);
     if (!isValidUrl) {
       return NextResponse.json(
-        { error: 'Invalid certificate URL. Only verified Google Drive links (https://drive.google.com/...) or verified institutional document uploads are accepted.' },
+        { error: 'Invalid certificate URL. Only verified Google Drive links, institutional uploads, or verified document URLs are accepted.' },
         { status: 400 }
       );
     }

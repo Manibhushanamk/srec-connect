@@ -387,6 +387,7 @@ export async function uploadCertificateToDrive({
   }
 
   // 3. Local mirror fallback for local dev
+  const mockFileId = `srec-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
   let localUrl = `/uploads/${fileName}`;
   try {
     const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
@@ -395,16 +396,19 @@ export async function uploadCertificateToDrive({
     }
     const localFilePath = path.join(uploadsDir, fileName);
     fs.writeFileSync(localFilePath, fileBuffer);
+
+    // Also persist with mockFileId prefix so /api/drive/file/[id] finds it immediately
+    const indexedFilePath = path.join(uploadsDir, `${mockFileId}_${fileName}`);
+    fs.writeFileSync(indexedFilePath, fileBuffer);
   } catch (fsErr) {
     console.warn('[Drive Upload] Local filesystem write warning:', fsErr);
   }
 
-  const mockFileId = `srec-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
   return {
     fileId: mockFileId,
     webViewLink: localUrl,
     webContentLink: localUrl,
-    directDisplayUrl: localUrl,
+    directDisplayUrl: `/api/drive/file/${mockFileId}`,
     localMirrorUrl: localUrl,
     isPublicLink: true,
     storageProvider: 'LOCAL',

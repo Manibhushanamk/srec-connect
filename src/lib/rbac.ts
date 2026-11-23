@@ -330,6 +330,7 @@ export function getVisibleMenuGroups(context: PermissionContext): string[] {
   if (context.isRoot || context.role === 'SUPER_ADMIN' || context.role === 'ADMIN') {
     return [
       'overview',
+      'departments',
       'users',
       'achievements',
       'events',
@@ -344,6 +345,7 @@ export function getVisibleMenuGroups(context: PermissionContext): string[] {
   if (context.role === 'HOD') {
     return [
       'overview',
+      'departments',
       'users',
       'achievements',
       'events',

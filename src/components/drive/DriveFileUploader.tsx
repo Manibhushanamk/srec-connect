@@ -172,6 +172,23 @@ export function DriveFileUploader({
               </button>
             </div>
           </div>
+          {value && (
+            <div className="mt-3 pt-3 border-t border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-[11px] text-muted-foreground min-w-0">
+                <span className="font-semibold text-emerald-400">Direct CDN Display:</span>
+                <span className="font-mono text-[10px] truncate max-w-xs">{value}</span>
+              </div>
+              <a
+                href={value}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-medium"
+              >
+                <span>Direct View</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+          )}
         </div>
       ) : (
         /* Drag & Drop Upload Zone */

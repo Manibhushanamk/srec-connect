@@ -47,6 +47,13 @@ const MENU_GROUPS = {
       { href: '/admin/bugs', label: 'Bug Reports Desk', icon: Bug },
     ],
   },
+  departments: {
+    label: 'Academic Registry',
+    icon: Building2,
+    items: [
+      { href: '/admin/departments', label: '11 Departments', icon: Building2 },
+    ],
+  },
   users: {
     label: 'User Management',
     icon: Users,

@@ -110,6 +110,7 @@ export async function PATCH(req: NextRequest) {
       id,
       status,
       rejectionReason,
+      departmentId,
       title,
       description,
       categoryId,
@@ -174,6 +175,9 @@ export async function PATCH(req: NextRequest) {
     if (certificateUrl !== undefined) updateData.certificateUrl = certificateUrl;
     if (participationType) updateData.participationType = participationType;
     if (teamName !== undefined) updateData.teamName = teamName;
+    if (departmentId !== undefined && isSuperAdmin(user.role)) {
+      updateData.departmentId = departmentId || null;
+    }
 
     // Anchor student identity if roll number is modified
     if (primaryStudentRoll !== undefined) {

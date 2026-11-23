@@ -53,13 +53,14 @@ export const metadata: Metadata = {
 };
 
 const QUICK_STATS = [
-  { label: 'Total Users', icon: Users, color: 'brand', getValue: (stats: any) => stats.users },
-  { label: 'Departments', icon: Building2, color: 'cyan', getValue: (stats: any) => stats.departments },
-  { label: 'Published Achievements', icon: Award, color: 'emerald', getValue: (stats: any) => stats.achievements },
-  { label: 'Upcoming Events', icon: Calendar, color: 'amber', getValue: (stats: any) => stats.events },
+  { label: 'Total Users', icon: Users, color: 'brand', href: '/admin/users', getValue: (stats: any) => stats.users },
+  { label: '11 Departments', icon: Building2, color: 'cyan', href: '/admin/departments', getValue: (stats: any) => stats.departments },
+  { label: 'Published Achievements', icon: Award, color: 'emerald', href: '/admin/achievements', getValue: (stats: any) => stats.achievements },
+  { label: 'Upcoming Events', icon: Calendar, color: 'amber', href: '/admin/events', getValue: (stats: any) => stats.events },
 ];
 
 const MODULES = [
+  { key: 'departments', label: '11 Departments Registry', icon: Building2, href: '/admin/departments', description: 'College-wide control across all 11 departments, add, configure or remove', roles: ['ROOT', 'DEPARTMENT'] },
   { key: 'users', label: 'User Management', icon: Users, href: '/admin/users', description: 'Manage admins, faculty & students', roles: ['ROOT'] },
   { key: 'bulk-upload', label: 'Bulk Ingestion', icon: Upload, href: '/admin/bulk-upload', description: 'Excel/CSV student provisioning', roles: ['ROOT', 'DEPARTMENT'] },
   { key: 'achievements', label: 'Achievements Desk', icon: Award, href: '/admin/achievements', description: 'Multi-tier verification & moderation', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
@@ -160,20 +161,25 @@ export default async function AdminPage() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {QUICK_STATS.map((stat) => (
-          <Card key={stat.label} variant="bento" hover>
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between">
-                <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center', `bg-${stat.color}-500/20 text-${stat.color}-400`)}>
-                  <stat.icon className="w-5 h-5" />
+          <Link key={stat.label} href={stat.href} className="block group">
+            <Card variant="bento" hover className="h-full group-hover:border-slate-600 transition-all">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105', `bg-${stat.color}-500/20 text-${stat.color}-400`)}>
+                    <stat.icon className="w-5 h-5" />
+                  </div>
+                  <Badge variant={stat.color as any} size="sm" glow>{stat.getValue(stats)}</Badge>
                 </div>
-                <Badge variant={stat.color as any} size="sm" glow>{stat.getValue(stats)}</Badge>
-              </div>
-              <div className="mt-4">
-                <div className="text-2xl font-bold text-slate-100">{stat.getValue(stats)}</div>
-                <div className="text-sm text-slate-400">{stat.label}</div>
-              </div>
-            </CardContent>
-          </Card>
+                <div className="mt-4">
+                  <div className="text-2xl font-bold text-slate-100">{stat.getValue(stats)}</div>
+                  <div className="text-sm text-slate-400 group-hover:text-cyan-400 transition-colors flex items-center justify-between">
+                    <span>{stat.label}</span>
+                    <span className="text-xs opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
