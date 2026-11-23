@@ -74,8 +74,28 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
     setMounted(true);
   }, []);
 
-  const proofUrl = googleDriveUrl || certificateUrl || `/achievements/${id}`;
+  const rawProof = googleDriveUrl || certificateUrl;
+  const hasProof = !!rawProof;
+  const proofUrl = rawProof || `/achievements/${id}`;
   const detailHref = href || `/achievements/${id}`;
+
+  const isImageMedia = (url?: string | null): boolean => {
+    if (!url) return false;
+    if (url.startsWith('data:image/')) return true;
+    if (url.startsWith('/api/drive/file/')) return true;
+    if (url.startsWith('/uploads/')) return true;
+    if (url.includes('googleusercontent.com')) return true;
+    return /\.(png|jpe?g|webp|gif|svg)$/i.test(url);
+  };
+
+  const getDriveEmbedUrl = (url?: string | null): string => {
+    if (!url) return '';
+    const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (match && match[1]) {
+      return `https://drive.google.com/file/d/${match[1]}/preview`;
+    }
+    return url;
+  };
 
   const formatLevel = (lvl: string) => {
     const map: Record<string, string> = {
@@ -180,6 +200,33 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
             </div>
           </div>
         </div>
+
+        {/* Certificate Proof Visual Preview Frame (Same style as post media) */}
+        {hasProof && (
+          <div className="relative w-full aspect-[16/9] max-h-48 overflow-hidden bg-slate-950/20 border-b border-border group-hover:border-primary/40 transition-colors">
+            {isImageMedia(proofUrl) ? (
+              <img
+                src={proofUrl}
+                alt={`Proof for ${title}`}
+                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-900 to-slate-950 text-center">
+                <FileText className="w-8 h-8 text-cyan-400 mb-1" />
+                <span className="text-xs font-bold text-white">Verified Academic Proof Attached</span>
+                <span className="text-[10px] text-slate-400">Google Drive Document • Click to preview</span>
+              </div>
+            )}
+            <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-xs text-[10px] font-mono text-white border border-white/20 flex items-center gap-1 shadow-sm">
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+              <span>Verified Proof</span>
+            </div>
+          </div>
+        )}
 
         {/* 2. Card Body */}
         <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
@@ -450,6 +497,46 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
                 </div>
               )}
 
+              {/* Full Card Certificate & Document Proof Display */}
+              {hasProof && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-primary" />
+                      <span>Official Certificate Proof Preview</span>
+                    </h5>
+                    <a
+                      href={proofUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+                    >
+                      <span>Open Original on Google Drive</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+
+                  <div className="relative w-full rounded-2xl overflow-hidden border border-border bg-slate-950/60 flex items-center justify-center min-h-[260px] max-h-[500px] shadow-inner">
+                    {isImageMedia(proofUrl) ? (
+                      <div className="w-full h-full flex items-center justify-center p-2">
+                        <img
+                          src={proofUrl}
+                          alt={`Certificate for ${title}`}
+                          className="max-h-[460px] w-auto max-w-full object-contain rounded-xl shadow-md"
+                        />
+                      </div>
+                    ) : (
+                      <iframe
+                        src={getDriveEmbedUrl(proofUrl)}
+                        title={`Proof Document for ${title}`}
+                        className="w-full h-[420px] rounded-xl border-none"
+                        allow="autoplay"
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Official Proof Certificate Access */}
               <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="space-y-0.5">
@@ -458,7 +545,7 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
                     <span>Official Google Drive Verification Record</span>
                   </p>
                   <p className="text-[11px] text-muted-foreground">
-                    Institutional certificate, paper manuscript, or award citation securely archived on Google Drive.
+                    Institutional certificate, paper manuscript, or award citation securely archived in SREC CONNECT folder.
                   </p>
                 </div>
 

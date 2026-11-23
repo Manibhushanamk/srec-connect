@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { getAuthenticatedDriveClient } from '@/lib/drive';
 import { Readable } from 'stream';
 import path from 'path';
@@ -38,7 +40,11 @@ export async function GET(
 
   // 3. Google Drive Direct Streaming
   try {
-    const drive = await getAuthenticatedDriveClient();
+    const session = await getServerSession(authOptions).catch(() => null);
+    const drive = await getAuthenticatedDriveClient(
+      (session as any)?.accessToken,
+      (session as any)?.refreshToken
+    );
     if (!drive) {
       // Direct redirect fallback to Google Drive public web link
       return NextResponse.redirect(`https://drive.google.com/file/d/${fileId}/view`);

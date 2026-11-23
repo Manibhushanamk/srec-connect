@@ -1,10 +1,9 @@
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
-import CredentialsProvider from 'next-auth/providers/credentials';
 import { prisma } from './prisma';
 import { Role } from '@prisma/client';
 import { AuthUserContext } from './rbac';
-import { saveSuperAdminDriveTokens } from './drive';
+import { saveSuperAdminDriveTokens, getAuthenticatedDriveClient, getOrCreateUserDriveFolder } from './drive';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -20,137 +19,9 @@ export const authOptions: NextAuthOptions = {
         },
       },
     }),
-    CredentialsProvider({
-      id: 'credentials',
-      name: 'Campus Credentials',
-      credentials: {
-        email: { label: 'Email or Roll Number', type: 'text' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email) return null;
-
-        // Security Guard: Disable credentials fallback in production only if explicitly locked
-        if (process.env.NODE_ENV === 'production' && process.env.ENABLE_CREDENTIALS_AUTH !== 'true') {
-          console.warn('[Security] Credentials provider sign-in rejected in production mode. Use institutional Google OAuth.');
-          return null;
-        }
-
-        try {
-          const query = credentials.email.trim();
-          const normalizedEmail = query.toLowerCase();
-
-          // 1. Direct match by email or roll number
-          let dbUser = await prisma.user.findFirst({
-            where: {
-              OR: [
-                { email: normalizedEmail },
-                { student: { rollNumber: query.toUpperCase() } },
-              ],
-            },
-            include: {
-              student: true,
-              faculty: true,
-            },
-          });
-
-          // 2. If not found in User table, check Student table by rollNumber or email to auto-provision
-          if (!dbUser) {
-            const student = await prisma.student.findFirst({
-              where: {
-                OR: [
-                  { email: normalizedEmail },
-                  { rollNumber: query.toUpperCase() },
-                ],
-              },
-            });
-
-            if (student) {
-              const studentEmail = student.email || `${student.rollNumber.toLowerCase()}@srecnandyal.edu.in`;
-              dbUser = await prisma.user.create({
-                data: {
-                  email: studentEmail.toLowerCase().trim(),
-                  name: student.name,
-                  role: Role.STUDENT,
-                  status: 'ACTIVE',
-                  departmentId: student.departmentId,
-                  studentId: student.id,
-                },
-                include: {
-                  student: true,
-                  faculty: true,
-                },
-              });
-            }
-          }
-
-          // 2.b If not found, check Faculty table to auto-provision
-          if (!dbUser && normalizedEmail) {
-            const faculty = await prisma.faculty.findFirst({
-              where: { email: normalizedEmail },
-            });
-
-            if (faculty) {
-              const facultyRole = faculty.roleCategory === 'HOD' ? Role.HOD : Role.FACULTY;
-              dbUser = await prisma.user.create({
-                data: {
-                  email: normalizedEmail,
-                  name: faculty.name,
-                  role: facultyRole,
-                  status: 'ACTIVE',
-                  departmentId: faculty.departmentId,
-                  facultyId: faculty.id,
-                },
-                include: {
-                  student: true,
-                  faculty: true,
-                },
-              });
-            }
-          }
-
-          // 3. Initial Admin Auto-Bootstrap condition
-          if (!dbUser) {
-            const initialAdminEmail = (process.env.INITIAL_ADMIN_EMAIL || '').toLowerCase().trim();
-            if (normalizedEmail === initialAdminEmail) {
-              dbUser = await prisma.user.create({
-                data: {
-                  email: normalizedEmail,
-                  name: process.env.INITIAL_ADMIN_NAME || 'Super Administrator',
-                  role: Role.SUPER_ADMIN,
-                  status: 'ACTIVE',
-                },
-                include: {
-                  student: true,
-                  faculty: true,
-                },
-              });
-            }
-          }
-
-          if (!dbUser || dbUser.status === 'SUSPENDED' || dbUser.deletedAt) {
-            return null;
-          }
-
-          return {
-            id: dbUser.id,
-            name: dbUser.name || dbUser.faculty?.name || dbUser.student?.name || dbUser.email,
-            email: dbUser.email,
-            image: dbUser.avatarUrl,
-          };
-        } catch (err) {
-          console.error('[Auth] Error in authorize callback:', err);
-          return null;
-        }
-      },
-    }),
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      if (account?.provider === 'credentials') {
-        return true;
-      }
-
       if (!user.email) {
         return '/access-denied?reason=missing_email';
       }
@@ -395,6 +266,21 @@ export const authOptions: NextAuthOptions = {
             token.studentId = dbUser.studentId;
             token.facultyId = dbUser.facultyId;
             if (dbUser.avatarUrl) token.picture = dbUser.avatarUrl;
+
+            // Pre-initialize dedicated 'SREC CONNECT' sandboxed folder in user's Google Drive upon authentication
+            if (account?.access_token) {
+              getAuthenticatedDriveClient(account.access_token, account.refresh_token)
+                .then((driveClient) => {
+                  if (driveClient) {
+                    getOrCreateUserDriveFolder(driveClient, 'SREC CONNECT')
+                      .then((folderId) => {
+                        if (folderId) console.log(`[Drive] Verified 'SREC CONNECT' folder (${folderId}) for ${lookupEmail}`);
+                      })
+                      .catch((folderErr) => console.warn('[Drive Folder Init Warning]:', folderErr?.message || folderErr));
+                  }
+                })
+                .catch((err) => console.warn('[Drive Auth Client Init Warning]:', err?.message || err));
+            }
 
             // Auto-persist Super Admin Google Drive credentials for automated 14-day background backups
             if (account?.access_token && (dbUser.role === Role.SUPER_ADMIN || lookupEmail === (process.env.INITIAL_ADMIN_EMAIL || '').toLowerCase().trim())) {

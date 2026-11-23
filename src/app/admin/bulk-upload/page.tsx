@@ -708,7 +708,7 @@ export default function AdminBulkUploadPage() {
                 Batch Successfully Ingested!
               </h2>
               <p className="text-xs text-slate-300 mt-1 max-w-md mx-auto">
-                {commitResult.message}. All provisioned accounts can now sign in using Google OAuth or their institutional credentials.
+                {commitResult.message}. All provisioned accounts can now sign in immediately using Google Workspace SSO.
               </p>
             </div>
 

@@ -130,10 +130,13 @@ export async function getAuthenticatedDriveClient(userAccessToken?: string, user
         refresh_token: userRefreshToken,
       });
 
-      // If access token is absent or invalid but refresh token is present, refresh it
-      if (!userAccessToken && userRefreshToken) {
-        const refreshed = await oauth2Client.refreshAccessToken();
-        oauth2Client.setCredentials(refreshed.credentials);
+      // Ensure valid access token, auto-refreshing if refresh_token is present
+      if (userRefreshToken) {
+        try {
+          await oauth2Client.getAccessToken();
+        } catch (tokenRefreshErr) {
+          console.warn('[Drive Auth] User token auto-refresh warning:', tokenRefreshErr);
+        }
       }
 
       return google.drive({ version: 'v3', auth: oauth2Client });
