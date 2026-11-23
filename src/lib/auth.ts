@@ -30,58 +30,93 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.email) return null;
 
-        // Security Guard: Disable credentials fallback in production
+        // Security Guard: Disable credentials fallback in production only if explicitly locked
         if (process.env.NODE_ENV === 'production' && process.env.ENABLE_CREDENTIALS_AUTH !== 'true') {
           console.warn('[Security] Credentials provider sign-in rejected in production mode. Use institutional Google OAuth.');
           return null;
         }
 
-        const query = credentials.email.trim();
-        const normalizedEmail = query.toLowerCase();
+        try {
+          const query = credentials.email.trim();
+          const normalizedEmail = query.toLowerCase();
 
-        // 1. Direct match by email or roll number
-        let dbUser = await prisma.user.findFirst({
-          where: {
-            OR: [
-              { email: normalizedEmail },
-              { student: { rollNumber: query.toUpperCase() } },
-            ],
-          },
-          include: {
-            student: true,
-            faculty: true,
-          },
-        });
+          // 1. Direct match by email or roll number
+          let dbUser = await prisma.user.findFirst({
+            where: {
+              OR: [
+                { email: normalizedEmail },
+                { student: { rollNumber: query.toUpperCase() } },
+              ],
+            },
+            include: {
+              student: true,
+              faculty: true,
+            },
+          });
 
-        // 2. Initial Admin Auto-Bootstrap condition in dev
-        if (!dbUser) {
-          const initialAdminEmail = (process.env.INITIAL_ADMIN_EMAIL || '').toLowerCase().trim();
-          if (normalizedEmail === initialAdminEmail) {
-            dbUser = await prisma.user.create({
-              data: {
-                email: normalizedEmail,
-                name: process.env.INITIAL_ADMIN_NAME || 'Super Administrator',
-                role: Role.SUPER_ADMIN,
-                status: 'ACTIVE',
-              },
-              include: {
-                student: true,
-                faculty: true,
+          // 2. If not found in User table, check Student table by rollNumber or email to auto-provision
+          if (!dbUser) {
+            const student = await prisma.student.findFirst({
+              where: {
+                OR: [
+                  { email: normalizedEmail },
+                  { rollNumber: query.toUpperCase() },
+                ],
               },
             });
-          }
-        }
 
-        if (!dbUser || dbUser.status === 'SUSPENDED') {
+            if (student) {
+              const studentEmail = student.email || `${student.rollNumber.toLowerCase()}@srecnandyal.edu.in`;
+              dbUser = await prisma.user.create({
+                data: {
+                  email: studentEmail.toLowerCase().trim(),
+                  name: student.name,
+                  role: Role.STUDENT,
+                  status: 'ACTIVE',
+                  departmentId: student.departmentId,
+                  studentId: student.id,
+                },
+                include: {
+                  student: true,
+                  faculty: true,
+                },
+              });
+            }
+          }
+
+          // 3. Initial Admin Auto-Bootstrap condition
+          if (!dbUser) {
+            const initialAdminEmail = (process.env.INITIAL_ADMIN_EMAIL || '').toLowerCase().trim();
+            if (normalizedEmail === initialAdminEmail) {
+              dbUser = await prisma.user.create({
+                data: {
+                  email: normalizedEmail,
+                  name: process.env.INITIAL_ADMIN_NAME || 'Super Administrator',
+                  role: Role.SUPER_ADMIN,
+                  status: 'ACTIVE',
+                },
+                include: {
+                  student: true,
+                  faculty: true,
+                },
+              });
+            }
+          }
+
+          if (!dbUser || dbUser.status === 'SUSPENDED' || dbUser.deletedAt) {
+            return null;
+          }
+
+          return {
+            id: dbUser.id,
+            name: dbUser.name || dbUser.faculty?.name || dbUser.student?.name || dbUser.email,
+            email: dbUser.email,
+            image: dbUser.avatarUrl,
+          };
+        } catch (err) {
+          console.error('[Auth] Error in authorize callback:', err);
           return null;
         }
-
-        return {
-          id: dbUser.id,
-          name: dbUser.name,
-          email: dbUser.email,
-          image: dbUser.avatarUrl,
-        };
       },
     }),
   ],
@@ -98,41 +133,24 @@ export const authOptions: NextAuthOptions = {
       const normalizedEmail = user.email.toLowerCase().trim();
       const initialAdminEmail = (process.env.INITIAL_ADMIN_EMAIL || '').toLowerCase().trim();
 
-      // 1. Domain Check against ApprovedEmailDomain allowlist
-      const emailDomain = normalizedEmail.split('@')[1];
-      const isInitialAdmin = initialAdminEmail && normalizedEmail === initialAdminEmail;
-
-      if (!isInitialAdmin) {
-        const approvedDomain = await prisma.approvedEmailDomain.findUnique({
-          where: { domain: emailDomain },
+      try {
+        // 1. Direct match with existing pre-provisioned User
+        let dbUser = await prisma.user.findUnique({
+          where: { email: normalizedEmail },
+          select: {
+            id: true,
+            role: true,
+            status: true,
+            deletedAt: true,
+          },
         });
 
-        if (!approvedDomain || !approvedDomain.isActive) {
-          // If domain not yet configured in DB, allow institutional fallback or deny
-          const institutionalDomain = 'srecnandyal.edu.in';
-          if (emailDomain !== institutionalDomain) {
-            console.warn(`[Auth] Rejected email domain: ${emailDomain}`);
-            return '/access-denied?reason=domain_not_allowed';
-          }
-        }
-      }
+        const isInitialAdmin = initialAdminEmail && normalizedEmail === initialAdminEmail;
 
-      // 2. Pre-Provisioned User Match
-      const dbUser = await prisma.user.findUnique({
-        where: { email: normalizedEmail },
-        select: {
-          id: true,
-          role: true,
-          status: true,
-          deletedAt: true,
-        },
-      });
-
-      if (!dbUser) {
-        // First Super Admin Auto-Bootstrap condition
-        if (isInitialAdmin) {
+        // Auto-bootstrap Initial Super Admin if not yet created
+        if (!dbUser && isInitialAdmin) {
           console.log(`[Auth] Auto-bootstrapping Initial Super Admin: ${normalizedEmail}`);
-          await prisma.user.create({
+          dbUser = await prisma.user.create({
             data: {
               email: normalizedEmail,
               name: user.name || process.env.INITIAL_ADMIN_NAME || 'Super Administrator',
@@ -140,29 +158,105 @@ export const authOptions: NextAuthOptions = {
               status: 'ACTIVE',
               avatarUrl: user.image,
             },
+            select: {
+              id: true,
+              role: true,
+              status: true,
+              deletedAt: true,
+            },
           });
           return true;
         }
 
-        console.warn(`[Auth] Unprovisioned sign-in attempt: ${normalizedEmail}`);
+        // 2. Pre-Provisioned User Match (Admin, HOD, Web Manager, Faculty, or registered Student)
+        if (dbUser) {
+          if (dbUser.deletedAt || dbUser.status === 'SUSPENDED') {
+            console.warn(`[Auth] Inactive/Deleted user sign-in attempt: ${normalizedEmail}`);
+            return '/access-denied?reason=account_suspended';
+          }
+
+          // Keep avatar synced if provided
+          if (user.image) {
+            await prisma.user.update({
+              where: { id: dbUser.id },
+              data: { avatarUrl: user.image },
+            }).catch(() => null);
+          }
+
+          return true;
+        }
+
+        // 3. User record not yet created: Check if pre-registered in Student or Faculty roster
+        const emailDomain = normalizedEmail.split('@')[1];
+        const rollFromEmail = normalizedEmail.split('@')[0].toUpperCase();
+
+        const student = await prisma.student.findFirst({
+          where: {
+            OR: [
+              { email: normalizedEmail },
+              { rollNumber: rollFromEmail },
+            ],
+          },
+        });
+
+        if (student) {
+          console.log(`[Auth] Auto-provisioning User for student: ${student.rollNumber} (${normalizedEmail})`);
+          await prisma.user.create({
+            data: {
+              email: normalizedEmail,
+              name: user.name || student.name,
+              role: Role.STUDENT,
+              status: 'ACTIVE',
+              avatarUrl: user.image,
+              departmentId: student.departmentId,
+              studentId: student.id,
+            },
+          });
+          return true;
+        }
+
+        const faculty = await prisma.faculty.findFirst({
+          where: { email: normalizedEmail },
+        });
+
+        if (faculty) {
+          console.log(`[Auth] Auto-provisioning User for faculty: ${faculty.name} (${normalizedEmail})`);
+          const isHod = faculty.designation?.toLowerCase().includes('hod') || faculty.designation?.toLowerCase().includes('head');
+          await prisma.user.create({
+            data: {
+              email: normalizedEmail,
+              name: user.name || faculty.name,
+              role: isHod ? Role.HOD : Role.FACULTY,
+              status: 'ACTIVE',
+              avatarUrl: user.image,
+              departmentId: faculty.departmentId,
+              facultyId: faculty.id,
+            },
+          });
+          return true;
+        }
+
+        // 4. Domain Check against ApprovedEmailDomain allowlist
+        const approvedDomain = await prisma.approvedEmailDomain.findUnique({
+          where: { domain: emailDomain },
+        });
+
+        const isInstitutionalDomain = emailDomain === 'srecnandyal.edu.in' || (approvedDomain && approvedDomain.isActive);
+        if (!isInstitutionalDomain) {
+          console.warn(`[Auth] Rejected unprovisioned email domain: ${emailDomain}`);
+          return '/access-denied?reason=domain_not_allowed';
+        }
+
+        // If domain is valid institutional email, but neither student nor faculty record exists yet
+        console.warn(`[Auth] Unprovisioned sign-in attempt with approved domain: ${normalizedEmail}`);
         return '/access-denied?reason=not_provisioned';
+      } catch (err: any) {
+        console.error('[Auth] Error in signIn callback:', err);
+        const reason = (err?.code === 'P1001' || err?.message?.includes("Can't reach database"))
+          ? 'database_unavailable'
+          : 'auth_error';
+        return `/access-denied?reason=${reason}`;
       }
-
-      // 3. Account Suspension / Soft-Delete Guard
-      if (dbUser.deletedAt || dbUser.status === 'SUSPENDED') {
-        console.warn(`[Auth] Inactive/Deleted user sign-in attempt: ${normalizedEmail}`);
-        return '/access-denied?reason=account_suspended';
-      }
-
-      // Update avatar if provided
-      if (user.image) {
-        await prisma.user.update({
-          where: { id: dbUser.id },
-          data: { avatarUrl: user.image },
-        }).catch(() => null);
-      }
-
-      return true;
     },
 
     async jwt({ token, user, account, trigger, session }) {
@@ -180,111 +274,115 @@ export const authOptions: NextAuthOptions = {
       // Always resolve and synchronize with live database user
       const lookupEmail = (user?.email || token.email)?.toLowerCase().trim();
       if (lookupEmail) {
-        let dbUser = await prisma.user.findUnique({
-          where: { email: lookupEmail },
-          select: {
-            id: true,
-            name: true,
-            role: true,
-            status: true,
-            departmentId: true,
-            studentId: true,
-            facultyId: true,
-            avatarUrl: true,
-            faculty: { select: { name: true, designation: true } },
-            student: { select: { name: true } },
-          },
-        });
+        try {
+          let dbUser = await prisma.user.findUnique({
+            where: { email: lookupEmail },
+            select: {
+              id: true,
+              name: true,
+              role: true,
+              status: true,
+              departmentId: true,
+              studentId: true,
+              facultyId: true,
+              avatarUrl: true,
+              faculty: { select: { name: true, designation: true } },
+              student: { select: { name: true } },
+            },
+          });
 
-        // Relational Auto-Bond: Ensure student/faculty & department relations are never severed
-        if (dbUser && (!dbUser.studentId || !dbUser.facultyId || !dbUser.departmentId)) {
-          const updateData: any = {};
-          if (!dbUser.studentId && dbUser.role === 'STUDENT') {
-            const student = await prisma.student.findFirst({
-              where: {
-                OR: [
-                  { email: lookupEmail },
-                  { rollNumber: lookupEmail.split('@')[0].toUpperCase() },
-                ],
-              },
-            });
-            if (student) {
-              updateData.studentId = student.id;
-              if (!dbUser.name && student.name) updateData.name = student.name;
-              if (!dbUser.departmentId && student.departmentId) {
-                updateData.departmentId = student.departmentId;
+          // Relational Auto-Bond: Ensure student/faculty & department relations are never severed
+          if (dbUser && (!dbUser.studentId || !dbUser.facultyId || !dbUser.departmentId)) {
+            const updateData: any = {};
+            if (!dbUser.studentId && dbUser.role === 'STUDENT') {
+              const student = await prisma.student.findFirst({
+                where: {
+                  OR: [
+                    { email: lookupEmail },
+                    { rollNumber: lookupEmail.split('@')[0].toUpperCase() },
+                  ],
+                },
+              });
+              if (student) {
+                updateData.studentId = student.id;
+                if (!dbUser.name && student.name) updateData.name = student.name;
+                if (!dbUser.departmentId && student.departmentId) {
+                  updateData.departmentId = student.departmentId;
+                }
               }
+            }
+
+            if (!dbUser.facultyId && (dbUser.role === 'FACULTY' || dbUser.role === 'HOD')) {
+              const faculty = await prisma.faculty.findFirst({
+                where: { email: lookupEmail },
+              });
+              if (faculty) {
+                updateData.facultyId = faculty.id;
+                if (!dbUser.name && faculty.name) updateData.name = faculty.name;
+                if (!dbUser.departmentId && faculty.departmentId) {
+                  updateData.departmentId = faculty.departmentId;
+                }
+              }
+            }
+
+            if (!dbUser.departmentId && !updateData.departmentId) {
+              const defaultDept = await prisma.department.findFirst({
+                where: { OR: [{ code: 'AIML' }, { code: 'CSE(AI&ML)' }] },
+              });
+              if (defaultDept) updateData.departmentId = defaultDept.id;
+            }
+
+            if (Object.keys(updateData).length > 0) {
+              dbUser = await prisma.user.update({
+                where: { id: dbUser.id },
+                data: updateData,
+                select: {
+                  id: true,
+                  name: true,
+                  role: true,
+                  status: true,
+                  departmentId: true,
+                  studentId: true,
+                  facultyId: true,
+                  avatarUrl: true,
+                  faculty: { select: { name: true, designation: true } },
+                  student: { select: { name: true } },
+                },
+              });
             }
           }
 
-          if (!dbUser.facultyId && (dbUser.role === 'FACULTY' || dbUser.role === 'HOD')) {
-            const faculty = await prisma.faculty.findFirst({
-              where: { email: lookupEmail },
-            });
-            if (faculty) {
-              updateData.facultyId = faculty.id;
-              if (!dbUser.name && faculty.name) updateData.name = faculty.name;
-              if (!dbUser.departmentId && faculty.departmentId) {
-                updateData.departmentId = faculty.departmentId;
-              }
+          // Keep official verified academic name synchronized
+          const officialAcademicName = dbUser?.name || dbUser?.faculty?.name || dbUser?.student?.name;
+          if (dbUser && dbUser.facultyId && officialAcademicName && dbUser.faculty?.name !== officialAcademicName) {
+            await prisma.faculty.update({
+              where: { id: dbUser.facultyId },
+              data: { name: officialAcademicName },
+            }).catch(() => null);
+          }
+
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.name = officialAcademicName || dbUser.name;
+            token.role = dbUser.role;
+            token.status = dbUser.status;
+            token.departmentId = dbUser.departmentId;
+            token.studentId = dbUser.studentId;
+            token.facultyId = dbUser.facultyId;
+            if (dbUser.avatarUrl) token.picture = dbUser.avatarUrl;
+
+            // Auto-persist Super Admin Google Drive credentials for automated 14-day background backups
+            if (account?.access_token && (dbUser.role === Role.SUPER_ADMIN || lookupEmail === (process.env.INITIAL_ADMIN_EMAIL || '').toLowerCase().trim())) {
+              saveSuperAdminDriveTokens({
+                access_token: account.access_token,
+                refresh_token: account.refresh_token || (token.refreshToken as string | undefined),
+                expiry_date: account.expires_at ? account.expires_at * 1000 : undefined,
+                email: lookupEmail,
+              }).catch((err) => console.warn('[Auth] Failed to auto-persist Super Admin Drive tokens:', err));
             }
           }
-
-          if (!dbUser.departmentId && !updateData.departmentId) {
-            const defaultDept = await prisma.department.findFirst({
-              where: { OR: [{ code: 'AIML' }, { code: 'CSE(AI&ML)' }] },
-            });
-            if (defaultDept) updateData.departmentId = defaultDept.id;
-          }
-
-          if (Object.keys(updateData).length > 0) {
-            dbUser = await prisma.user.update({
-              where: { id: dbUser.id },
-              data: updateData,
-              select: {
-                id: true,
-                name: true,
-                role: true,
-                status: true,
-                departmentId: true,
-                studentId: true,
-                facultyId: true,
-                avatarUrl: true,
-                faculty: { select: { name: true, designation: true } },
-                student: { select: { name: true } },
-              },
-            });
-          }
-        }
-
-        // Keep official verified academic name synchronized
-        const officialAcademicName = dbUser?.name || dbUser?.faculty?.name || dbUser?.student?.name;
-        if (dbUser && dbUser.facultyId && officialAcademicName && dbUser.faculty?.name !== officialAcademicName) {
-          await prisma.faculty.update({
-            where: { id: dbUser.facultyId },
-            data: { name: officialAcademicName },
-          }).catch(() => null);
-        }
-
-        if (dbUser) {
-          token.id = dbUser.id;
-          token.name = officialAcademicName || dbUser.name;
-          token.role = dbUser.role;
-          token.status = dbUser.status;
-          token.departmentId = dbUser.departmentId;
-          token.studentId = dbUser.studentId;
-          token.facultyId = dbUser.facultyId;
-          if (dbUser.avatarUrl) token.picture = dbUser.avatarUrl;
-
-          // Auto-persist Super Admin Google Drive credentials for automated 14-day background backups
-          if (account?.access_token && (dbUser.role === Role.SUPER_ADMIN || lookupEmail === (process.env.INITIAL_ADMIN_EMAIL || '').toLowerCase().trim())) {
-            saveSuperAdminDriveTokens({
-              access_token: account.access_token,
-              refresh_token: account.refresh_token || (token.refreshToken as string | undefined),
-              expiry_date: account.expires_at ? account.expires_at * 1000 : undefined,
-              email: lookupEmail,
-            }).catch((err) => console.warn('[Auth] Failed to auto-persist Super Admin Drive tokens:', err));
-          }
+        } catch (jwtErr) {
+          console.warn('[Auth] Database sync warning in jwt callback:', jwtErr);
         }
       }
       return token;

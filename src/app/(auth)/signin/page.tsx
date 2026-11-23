@@ -14,8 +14,11 @@ import {
   Users,
   Compass,
   Lock,
-  ChevronDown,
-  ChevronUp,
+  Eye,
+  EyeOff,
+  UserCheck,
+  KeyRound,
+  CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -27,18 +30,36 @@ function SignInContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get('callbackUrl') || '';
   const errorParam = searchParams.get('error');
-  const isDevMode = searchParams.get('dev') === 'true' || searchParams.get('dev') === '1';
+  const reasonParam = searchParams.get('reason');
 
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
 
+  const [activeTab, setActiveTab] = useState<'google' | 'credentials'>('google');
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(
-    errorParam ? 'Authentication rejected. Please sign in with your approved institutional Google account.' : null
-  );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Hidden Dev/Test Fallback state (Only shown if ?dev=true)
-  const [devIdentifier, setDevIdentifier] = useState('');
-  const [showDevFallback, setShowDevFallback] = useState(isDevMode);
+  // Form states for credentials login
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPresets, setShowPresets] = useState(false);
+
+  // Set friendly error message based on URL query params
+  useEffect(() => {
+    if (reasonParam === 'database_unavailable') {
+      setErrorMessage('Database is currently reconnecting. Please retry in a few moments.');
+    } else if (reasonParam === 'domain_not_allowed') {
+      setErrorMessage('Google sign-in is reserved for official @srecnandyal.edu.in accounts. If you are using another email, use your Campus Roll Number.');
+    } else if (reasonParam === 'not_provisioned') {
+      setErrorMessage('Your institutional email is recognized, but your profile has not been provisioned by your department HOD yet.');
+    } else if (reasonParam === 'account_suspended') {
+      setErrorMessage('This account is suspended. Please contact the administrative office.');
+    } else if (reasonParam === 'missing_email') {
+      setErrorMessage('Google account did not provide a valid email.');
+    } else if (errorParam) {
+      setErrorMessage('Authentication rejected or session timed out. Please sign in again.');
+    }
+  }, [errorParam, reasonParam]);
 
   // Auto-redirect if already authenticated
   useEffect(() => {
@@ -60,33 +81,46 @@ function SignInContent() {
       await signIn('google', { callbackUrl: callbackUrl || '/auth/landing' });
     } catch (err: any) {
       console.error('[SignIn] Google OAuth Error:', err);
-      setErrorMessage('Could not initiate Google OAuth flow. Please check network connection.');
+      setErrorMessage('Could not initiate Google OAuth flow. Please check your network connection.');
       setIsLoading(false);
     }
   };
 
-  // Dev / Automation Credentials Handler (only available via ?dev=true)
-  const handleDevSignIn = async (emailOrRoll: string) => {
+  // Institutional Roll Number / Credentials Authentication
+  const handleCredentialsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!identifier.trim()) {
+      setErrorMessage('Please enter your Student Roll Number or Campus Email.');
+      return;
+    }
+
     setIsLoading(true);
     setErrorMessage(null);
+
     try {
       const res = await signIn('credentials', {
-        email: emailOrRoll.trim(),
-        password: 'admin',
+        email: identifier.trim(),
+        password: password.trim() || 'srec',
         redirect: false,
         callbackUrl: callbackUrl || '/auth/landing',
       });
 
       if (res?.error) {
-        setErrorMessage('Account not found or access denied in credentials store.');
+        setErrorMessage('Account not found or access denied. Verify your Roll Number / Email or contact your department HOD.');
         setIsLoading(false);
       } else if (res?.ok) {
         window.location.href = callbackUrl || '/auth/landing';
       }
     } catch (err) {
-      setErrorMessage('Error during dev authentication.');
+      setErrorMessage('An unexpected error occurred during credentials sign-in.');
       setIsLoading(false);
     }
+  };
+
+  const handleSelectPreset = (presetIdentifier: string) => {
+    setIdentifier(presetIdentifier);
+    setPassword('srec');
+    setActiveTab('credentials');
   };
 
   return (
@@ -119,14 +153,14 @@ function SignInContent() {
           </Link>
 
           <h1 className="text-xl font-extrabold text-foreground pt-2">
-            Campus Single Sign-On
+            Campus Sign-In Portal
           </h1>
           <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-            Authorized institutional gateway for CSE (AI & ML) students, faculty, and administrative staff.
+            Authorized institutional gateway for Students, Faculty, Department HODs, and Administrative Staff.
           </p>
         </div>
 
-        {/* Error notification */}
+        {/* Error notification banner */}
         {errorMessage && (
           <div className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 text-destructive animate-slide-up">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
@@ -137,11 +171,63 @@ function SignInContent() {
           </div>
         )}
 
-        {/* Main Clean Sign-In Card */}
+        {/* Main Sign-In Card with Tabs */}
         <Card variant="glass" className="border-border/70 shadow-2xl backdrop-blur-xl">
           <CardContent className="p-6 sm:p-8 space-y-6">
-            {/* Primary Action: Single Google Sign-In Button */}
-            <div className="space-y-3">
+            {/* Accessible Tab List following Modern Web Guidance */}
+            <div
+              role="tablist"
+              aria-label="Sign In Authentication Methods"
+              className="grid grid-cols-2 p-1 bg-muted/60 rounded-xl border border-border/60 text-xs font-bold"
+            >
+              <button
+                type="button"
+                role="tab"
+                id="tab-google"
+                aria-selected={activeTab === 'google'}
+                aria-controls="panel-google"
+                onClick={() => {
+                  setActiveTab('google');
+                  setErrorMessage(null);
+                }}
+                className={`py-2 px-3 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+                  activeTab === 'google'
+                    ? 'bg-background text-foreground shadow-sm border border-border/80'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <span>Google SSO</span>
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                id="tab-credentials"
+                aria-selected={activeTab === 'credentials'}
+                aria-controls="panel-credentials"
+                onClick={() => {
+                  setActiveTab('credentials');
+                  setErrorMessage(null);
+                }}
+                className={`py-2 px-3 rounded-lg transition-all duration-200 flex items-center justify-center gap-2 ${
+                  activeTab === 'credentials'
+                    ? 'bg-background text-foreground shadow-sm border border-border/80'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>Roll No / ID</span>
+              </button>
+            </div>
+
+            {/* TAB PANEL 1: Google Workspace SSO */}
+            <div
+              role="tabpanel"
+              id="panel-google"
+              aria-labelledby="tab-google"
+              hidden={activeTab !== 'google'}
+              className="space-y-4"
+            >
               <Button
                 variant="secondary"
                 fullWidth
@@ -174,9 +260,155 @@ function SignInContent() {
                 )}
               </Button>
 
-              <p className="text-xs text-center text-muted-foreground">
-                College email domain: <code className="font-mono text-primary font-bold bg-muted/60 px-1.5 py-0.5 rounded border border-border/40">@srecnandyal.edu.in</code>
-              </p>
+              <div className="p-3 rounded-xl bg-secondary/40 border border-border/60 text-xs space-y-1.5 text-muted-foreground">
+                <div className="flex items-center gap-1.5 font-bold text-foreground">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <span>Approved Google Accounts</span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  Official college email: <code className="font-mono text-primary font-bold">@srecnandyal.edu.in</code> or pre-authorized department administrators.
+                </p>
+              </div>
+            </div>
+
+            {/* TAB PANEL 2: Roll Number / Institutional ID Sign-In */}
+            <div
+              role="tabpanel"
+              id="panel-credentials"
+              aria-labelledby="tab-credentials"
+              hidden={activeTab !== 'credentials'}
+              className="space-y-4"
+            >
+              <form onSubmit={handleCredentialsSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="campus-identifier"
+                    className="block text-xs font-bold text-foreground"
+                  >
+                    Student Roll Number or Campus Email <span className="text-primary">*</span>
+                  </label>
+                  <input
+                    id="campus-identifier"
+                    name="username"
+                    type="text"
+                    required
+                    spellCheck={false}
+                    autoComplete="username"
+                    placeholder="e.g. 25X55A3306 or 22091A3201"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-background border border-border text-foreground text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Enter your registered JNTUA Roll Number or registered email address.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label
+                      htmlFor="campus-password"
+                      className="block text-xs font-bold text-foreground"
+                    >
+                      Access PIN / Password
+                    </label>
+                    <span className="text-[11px] text-muted-foreground">Default: srec</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      id="campus-password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="current-password"
+                      placeholder="Enter access PIN or password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full px-3.5 py-2.5 pr-10 rounded-xl bg-background border border-border text-foreground text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  variant="primary"
+                  fullWidth
+                  size="lg"
+                  disabled={isLoading}
+                  className="py-3 font-bold text-xs sm:text-sm rounded-xl shadow-md"
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Verifying Campus ID...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <UserCheck className="w-4 h-4" />
+                      Sign In with Campus ID
+                    </span>
+                  )}
+                </Button>
+              </form>
+
+              {/* Quick Persona Presets Drawer for Testing */}
+              <div className="pt-2 border-t border-border/70">
+                <button
+                  type="button"
+                  onClick={() => setShowPresets(!showPresets)}
+                  className="w-full flex items-center justify-between text-[11px] font-bold text-primary py-1 hover:underline"
+                >
+                  <span>⚡ Quick Fill Registered Personas</span>
+                  <span>{showPresets ? '▲' : '▼'}</span>
+                </button>
+
+                {showPresets && (
+                  <div className="grid grid-cols-2 gap-2 mt-2 text-xs animate-slide-up">
+                    <button
+                      type="button"
+                      onClick={() => handleSelectPreset('manibhushanam4k@gmail.com')}
+                      className="p-2 rounded-lg border border-border hover:border-primary text-left bg-secondary/40 transition-colors"
+                    >
+                      <p className="font-bold text-[11px] text-foreground">Super Admin</p>
+                      <p className="text-[10px] text-muted-foreground truncate">Mani Bhushanam K</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectPreset('25X55A3306')}
+                      className="p-2 rounded-lg border border-border hover:border-primary text-left bg-secondary/40 transition-colors"
+                    >
+                      <p className="font-bold text-[11px] text-foreground">Scholar (25X55A3306)</p>
+                      <p className="text-[10px] text-muted-foreground truncate">MANI BHUSHANAM K</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectPreset('manibhushanam5k@gmail.com')}
+                      className="p-2 rounded-lg border border-border hover:border-primary text-left bg-secondary/40 transition-colors"
+                    >
+                      <p className="font-bold text-[11px] text-foreground">HOD (AIML)</p>
+                      <p className="text-[10px] text-muted-foreground truncate">Mani Bhushanam K</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSelectPreset('22091A3201')}
+                      className="p-2 rounded-lg border border-border hover:border-primary text-left bg-secondary/40 transition-colors"
+                    >
+                      <p className="font-bold text-[11px] text-foreground">Scholar (22091A3201)</p>
+                      <p className="text-[10px] text-muted-foreground truncate">K. V. Naveen Kumar</p>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Role & Automatic Dashboard Routing Explainer */}
@@ -191,7 +423,9 @@ function SignInContent() {
                     <GraduationCap className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
                     Student Scholars
                   </span>
-                  <span className="text-muted-foreground font-medium text-[11px] bg-background/60 px-2 py-0.5 rounded-md border border-border/40">Community Feed & Portfolios</span>
+                  <span className="text-muted-foreground font-medium text-[11px] bg-background/60 px-2 py-0.5 rounded-md border border-border/40">
+                    Community Feed & Portfolios
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/50 border border-border/70 hover:bg-secondary/70 transition-colors">
@@ -199,7 +433,9 @@ function SignInContent() {
                     <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     Faculty Mentors
                   </span>
-                  <span className="text-muted-foreground font-medium text-[11px] bg-background/60 px-2 py-0.5 rounded-md border border-border/40">Verification Desk & Reports</span>
+                  <span className="text-muted-foreground font-medium text-[11px] bg-background/60 px-2 py-0.5 rounded-md border border-border/40">
+                    Verification Desk & Reports
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/50 border border-border/70 hover:bg-secondary/70 transition-colors">
@@ -207,7 +443,9 @@ function SignInContent() {
                     <Building2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     HOD & Web Managers
                   </span>
-                  <span className="text-muted-foreground font-medium text-[11px] bg-background/60 px-2 py-0.5 rounded-md border border-border/40">Department Ops & Ingestion</span>
+                  <span className="text-muted-foreground font-medium text-[11px] bg-background/60 px-2 py-0.5 rounded-md border border-border/40">
+                    Department Ops & Ingestion
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/50 border border-border/70 hover:bg-secondary/70 transition-colors">
@@ -215,55 +453,12 @@ function SignInContent() {
                     <Shield className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                     Super Administrator
                   </span>
-                  <span className="text-muted-foreground font-medium text-[11px] bg-background/60 px-2 py-0.5 rounded-md border border-border/40">Sovereign Command Center</span>
+                  <span className="text-muted-foreground font-medium text-[11px] bg-background/60 px-2 py-0.5 rounded-md border border-border/40">
+                    Sovereign Command Center
+                  </span>
                 </div>
               </div>
             </div>
-
-            {/* Developer Testing Fallback (Only available if explicitly queried via ?dev=true) */}
-            {isDevMode && (
-              <div className="pt-3 border-t border-dashed border-border/80">
-                <button
-                  type="button"
-                  onClick={() => setShowDevFallback(!showDevFallback)}
-                  className="w-full flex items-center justify-between text-[11px] font-bold text-amber-500 py-1"
-                >
-                  <span>🛠️ Local Testing Personas (?dev=true)</span>
-                  {showDevFallback ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                </button>
-
-                {showDevFallback && (
-                  <div className="grid grid-cols-3 gap-2 mt-2 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => handleDevSignIn('manibhushanam4k@gmail.com')}
-                      className="p-2 rounded-lg border border-border hover:border-primary text-left bg-secondary/40"
-                    >
-                      <p className="font-bold text-[11px] text-foreground">Super Admin</p>
-                      <p className="text-[10px] text-muted-foreground truncate">Mani Bhushanam</p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDevSignIn('manibhushanam5k@gmail.com')}
-                      className="p-2 rounded-lg border border-border hover:border-primary text-left bg-secondary/40"
-                    >
-                      <p className="font-bold text-[11px] text-foreground">HOD (AIML)</p>
-                      <p className="text-[10px] text-muted-foreground truncate">Mani Bhushanam K</p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDevSignIn('22091a3201@srecnandyal.edu.in')}
-                      className="p-2 rounded-lg border border-border hover:border-primary text-left bg-secondary/40"
-                    >
-                      <p className="font-bold text-[11px] text-foreground">Student (22091A3201)</p>
-                      <p className="text-[10px] text-muted-foreground truncate">K. V. Naveen Kumar</p>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
           </CardContent>
         </Card>
 
