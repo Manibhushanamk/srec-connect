@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit } from '@/lib/rate-limit';
+import { sanitizeText, sanitizeSafeUrl } from '@/lib/sanitize';
 import { BugCategory, BugSeverity, BugStatus, Role } from '@prisma/client';
 
 export const runtime = 'nodejs';
@@ -161,17 +162,17 @@ export async function POST(req: NextRequest) {
 
     const report = await prisma.bugReport.create({
       data: {
-        title: title.trim(),
-        description: description.trim(),
+        title: sanitizeText(title),
+        description: sanitizeText(description),
         category: validCategory,
         severity: validSeverity,
         status: BugStatus.NEW,
-        stepsToReproduce: stepsToReproduce?.trim() || null,
-        expectedBehavior: expectedBehavior?.trim() || null,
-        actualBehavior: actualBehavior?.trim() || null,
-        route: route?.trim() || null,
+        stepsToReproduce: stepsToReproduce ? sanitizeText(stepsToReproduce) : null,
+        expectedBehavior: expectedBehavior ? sanitizeText(expectedBehavior) : null,
+        actualBehavior: actualBehavior ? sanitizeText(actualBehavior) : null,
+        route: route ? sanitizeText(route) : null,
         deviceInfo: safeDiagnostics,
-        screenshotUrl: screenshotUrl?.trim() || null,
+        screenshotUrl: screenshotUrl ? sanitizeSafeUrl(screenshotUrl) : null,
         reporterId: currentUser?.id || null,
         reporterEmail: currentUser?.email || 'anonymous@srecnandyal.edu.in',
         reporterRole: currentUser?.role || 'GUEST',

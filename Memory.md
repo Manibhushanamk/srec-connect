@@ -5,7 +5,15 @@
 - **Department:** Computer Science & Engineering (Artificial Intelligence & Machine Learning)
 - **Current Version:** v3.0.0 (Production Certified & Live Deployed)
 - **Stack:** Next.js 15.5.25 (App Router), React 19, TypeScript, Tailwind CSS, Prisma ORM 6.19.3, Neon Serverless PostgreSQL (`v3_production` schema), NextAuth v4 (Google Workspace SSO), Sharp (adaptive WebP compression).
-- **Latest Deployed Commit:** `360012e` (feat(drive): implement sandboxed user folder upload and direct cdn streaming).
+- **Latest Deployed Commit:** `909c4e4` (docs(memory): log login root causes and dual-mode signin portal resolution).
+- **Hardening & Performance Optimization Highlights:**
+  - **Neon PgBouncer Pooling Optimization**: Configured `&pgbouncer=true&connection_limit=10&pool_timeout=15&connect_timeout=15` in `DATABASE_URL`. Streamlined `src/lib/prisma.ts` to disable heavy dev query logs and use minimal error formatting for low latency.
+  - **Composite PostgreSQL Indexes Applied**: Synchronized composite indexes on `User(role, departmentId)`, `User(status, deletedAt)`, `Achievement(departmentId, status)`, `Achievement(status, deletedAt)`, `Event(departmentId, status)`, and `Post(visibility, deletedAt, createdAt)` via `prisma db push` on Neon serverless PostgreSQL.
+  - **Injection Prevention & Security Engine (`src/lib/sanitize.ts`)**: Zero-dependency sanitization engine guarding against XSS (`sanitizeText`), SSRF/protocol injection (`sanitizeSafeUrl`), and null byte exploits across `/api/achievements/submit`, `/api/admin/achievements`, `/api/posts`, and `/api/bug-reports`.
+  - **College-Wide Security Headers**: Updated `next.config.mjs` to apply `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `Strict-Transport-Security: max-age=31536000` to all `/api/*` endpoints.
+  - **In-Review Honor Editor Polish**: Added dynamic Recipient Type toggle (Student Scholar vs Faculty Professor), auto-switching between Student Roll Number (`25X55A3306`) and Faculty Designation, with full backend persistence.
+  - **User Creation & Bulk CSV Enhancements**: Enabled automatic email suggestion from roll number in user provisioning modal, and updated bulk CSV/Excel templates to support both lateral entry and standard SREC roll formats.
+  - **Empirical Visual Verification**: Successfully captured Playwright proof screenshots (`verify_admin_honor_editor_modal.png`, `verify_admin_user_provision_modal.png`, `verify_admin_bulk_upload_console.png`, `verify_student_submit_portal.png`).
 - **Institutional Role Hierarchy & Department Boundary Access Control (RBAC):**
   - **Super Administrator (Head / Sovereign)**: Unrestricted global oversight across all 11 college departments. Can create, edit, suspend, or trash any account (Super Admin, HOD, Web Manager, Faculty, Student) and manage cross-department transfers and institutional settings.
   - **Head of Department (HOD)**: Subordinate to Super Admin. Strictly scoped to their own academic department (`departmentId`). Authorized to manage and provision:

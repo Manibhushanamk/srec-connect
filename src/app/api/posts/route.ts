@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { processPostImage, MAX_POST_IMAGES } from '@/lib/image-processor';
 import { uploadToR2, generateR2Key } from '@/lib/r2';
+import { sanitizeText, sanitizeSafeUrl } from '@/lib/sanitize';
+import { checkRateLimit } from '@/lib/rate-limit';
 
 export async function GET(req: NextRequest) {
   try {
@@ -190,8 +192,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 });
     }
 
+    const rateLimit = checkRateLimit(`post-create:${user.id}`, { limit: 10, windowMs: 60000 });
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please wait before creating another post.' },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
-    const content = typeof body.content === 'string' ? body.content.trim() : '';
+    const content = sanitizeText(body.content);
 
     if (!content) {
       return NextResponse.json({ error: 'Post content cannot be empty' }, { status: 400 });

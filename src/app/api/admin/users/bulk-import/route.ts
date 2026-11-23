@@ -9,6 +9,8 @@ import {
   isWebManager,
 } from '@/lib/rbac';
 import { Role } from '@prisma/client';
+import { parseRollNumber } from '@/lib/studentHelper';
+import { sanitizeText } from '@/lib/sanitize';
 
 export async function POST(req: NextRequest) {
   try {
@@ -137,12 +139,15 @@ export async function POST(req: NextRequest) {
         if (type === 'STUDENT') {
           if (!rollNumber) {
             errors.push('Missing roll number');
-          } else if (!/^\d{2}09(1A|5A)\d{2}[0-9A-Z]{2}$/.test(rollNumber)) {
-            errors.push(`Roll number ${rollNumber} does not match SREC format (e.g. 22091A3201)`);
-          } else if (existingRolls.has(rollNumber)) {
-            errors.push(`Roll number ${rollNumber} already exists in database`);
-          } else if (seenRollsInFile.has(rollNumber)) {
-            errors.push(`Duplicate roll number ${rollNumber} appears multiple times in file`);
+          } else {
+            const parsedRoll = parseRollNumber(rollNumber);
+            if (!parsedRoll.isValid) {
+              errors.push(`Roll number ${rollNumber} does not match valid SREC/JNTUA format (e.g. 22091A3201 or 25X55A3306)`);
+            } else if (existingRolls.has(parsedRoll.normalized)) {
+              errors.push(`Roll number ${parsedRoll.normalized} already exists in database`);
+            } else if (seenRollsInFile.has(parsedRoll.normalized)) {
+              errors.push(`Duplicate roll number ${parsedRoll.normalized} appears multiple times in file`);
+            }
           }
         }
 

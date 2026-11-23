@@ -1371,9 +1371,16 @@ export default function AdminUsersPage() {
                         <input
                           type="text"
                           required
-                          placeholder="e.g. 22091A3205"
+                          placeholder="e.g. 22091A3205 or 25X55A3306"
                           value={formData.rollNumber}
-                          onChange={(e) => setFormData({ ...formData, rollNumber: e.target.value.toUpperCase() })}
+                          onChange={(e) => {
+                            const newRoll = e.target.value.toUpperCase();
+                            const updates: any = { rollNumber: newRoll };
+                            if (!formData.email || formData.email.endsWith('@srecnandyal.edu.in')) {
+                              updates.email = `${newRoll.toLowerCase()}@srecnandyal.edu.in`;
+                            }
+                            setFormData({ ...formData, ...updates });
+                          }}
                           className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm font-mono uppercase text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                         />
                       </div>
@@ -1412,6 +1419,24 @@ export default function AdminUsersPage() {
                         </select>
                       </div>
                     </div>
+                  </div>
+                ) : formData.role === 'WEB_MANAGER' ? (
+                  <div className="p-3.5 rounded-xl border border-cyan-500/30 bg-cyan-500/5 space-y-2">
+                    <h4 className="font-semibold text-cyan-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                      <span>2. Department Web Manager Clearance</span>
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Web Managers have administrative privileges to manage faculty rosters, student directories, and publish department updates within their assigned department.
+                    </p>
+                  </div>
+                ) : formData.role === 'SUPER_ADMIN' ? (
+                  <div className="p-3.5 rounded-xl border border-purple-500/30 bg-purple-500/5 space-y-2">
+                    <h4 className="font-semibold text-purple-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                      <span>2. Super Administrator Clearance</span>
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                      Super Administrators have unrestricted college-wide authority across all 11 departments, user roles, governance settings, and audit logs.
+                    </p>
                   </div>
                 ) : (
                   <div className="p-3.5 rounded-xl border border-border/80 bg-secondary/20 space-y-3">

@@ -119,6 +119,8 @@ model User {
   @@index([email])
   @@index([role])
   @@index([status])
+  @@index([role, departmentId])
+  @@index([status, deletedAt])
 }
 
 model Department {
@@ -274,6 +276,7 @@ model Post {
   @@index([createdAt])
   @@index([visibility])
   @@index([deletedAt])
+  @@index([visibility, deletedAt, createdAt])
 }
 
 model PostMedia {
@@ -446,6 +449,9 @@ model Achievement {
   @@index([status])
   @@index([academicYear])
   @@index([primaryStudentRoll])
+  @@index([departmentId, status])
+  @@index([status, deletedAt])
+  @@index([createdAt])
 }
 
 model AchievementTeamMember {
@@ -521,6 +527,8 @@ model Event {
   @@index([departmentId])
   @@index([categoryId])
   @@index([status])
+  @@index([departmentId, status])
+  @@index([status, deletedAt])
 }
 
 model EventMedia {

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { PersonType, SubmissionStatus } from '@prisma/client';
 import { parseRollNumber } from '@/lib/studentHelper';
+import { sanitizeText } from '@/lib/sanitize';
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -39,7 +40,12 @@ export async function POST(req: NextRequest) {
     feedImageUrl,
   } = body;
 
-  if (!title || !categoryId || !organizationEventName) {
+  const cleanTitle = sanitizeText(title);
+  const cleanOrg = sanitizeText(organizationEventName);
+  const cleanDesc = description ? sanitizeText(description) : null;
+  const cleanRank = positionRank ? sanitizeText(positionRank) : null;
+
+  if (!cleanTitle || !categoryId || !cleanOrg) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
@@ -76,14 +82,14 @@ export async function POST(req: NextRequest) {
 
   const achievement = await prisma.achievement.create({
     data: {
-      title,
-      description,
+      title: cleanTitle,
+      description: cleanDesc,
       personName: dbUser.name || (isFacultyOrHOD ? 'Faculty Scholar' : 'Student Scholar'),
       personType,
       participationType: teamMembers && teamMembers.length > 0 ? 'TEAM' : 'SOLO',
       level: level || 'NATIONAL',
-      positionRank,
-      organizationEventName,
+      positionRank: cleanRank,
+      organizationEventName: cleanOrg,
       academicYear: academicYear || '2025-2026',
       achievementDate: new Date(achievementDate || Date.now()),
       departmentId: targetDepartmentId,

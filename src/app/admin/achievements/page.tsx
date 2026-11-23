@@ -94,8 +94,10 @@ function AdminAchievementsContent() {
       status: ach.status || 'PENDING',
       rejectionReason: ach.rejectionReason || '',
       title: ach.title || '',
-      personName: ach.personName || ach.student?.user?.name || '',
+      personType: ach.personType || 'STUDENT',
+      personName: ach.personName || ach.student?.user?.name || ach.faculty?.name || '',
       primaryStudentRoll: ach.primaryStudentRoll || ach.student?.rollNumber || '',
+      facultyDesignation: ach.facultyDesignation || ach.faculty?.designation || '',
       categoryId: ach.categoryId || (categories[0]?.id || ''),
       positionRank: ach.positionRank || '',
       organizationEventName: ach.organizationEventName || '',
@@ -539,10 +541,24 @@ function AdminAchievementsContent() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-slate-300 mb-1 font-medium">
-                    Recipient Name <span className="text-rose-400">*</span>
+                    Recipient Type <span className="text-rose-400">*</span>
+                  </label>
+                  <select
+                    value={editingItem.personType || 'STUDENT'}
+                    onChange={(e) => setEditingItem({ ...editingItem, personType: e.target.value })}
+                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-medium focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="STUDENT">Student Scholar</option>
+                    <option value="FACULTY">Faculty Member / Professor</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 mb-1 font-medium">
+                    Recipient Full Name <span className="text-rose-400">*</span>
                   </label>
                   <input
                     type="text"
@@ -554,16 +570,31 @@ function AdminAchievementsContent() {
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 mb-1 font-medium">Student Roll Number</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 22091A3205"
-                    value={editingItem.primaryStudentRoll || ''}
-                    onChange={(e) =>
-                      setEditingItem({ ...editingItem, primaryStudentRoll: e.target.value.toUpperCase() })
-                    }
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono uppercase focus:outline-none focus:border-cyan-500"
-                  />
+                  {editingItem.personType === 'FACULTY' ? (
+                    <>
+                      <label className="block text-slate-300 mb-1 font-medium">Faculty Designation</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Assistant Professor"
+                        value={editingItem.facultyDesignation || ''}
+                        onChange={(e) => setEditingItem({ ...editingItem, facultyDesignation: e.target.value })}
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <label className="block text-slate-300 mb-1 font-medium">Student Roll Number</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 22091A3205 or 25X55A3306"
+                        value={editingItem.primaryStudentRoll || ''}
+                        onChange={(e) =>
+                          setEditingItem({ ...editingItem, primaryStudentRoll: e.target.value.toUpperCase() })
+                        }
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono uppercase focus:outline-none focus:border-cyan-500"
+                      />
+                    </>
+                  )}
                 </div>
               </div>
 

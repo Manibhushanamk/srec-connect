@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { canAccessAdmin, isSuperAdmin } from '@/lib/rbac';
 import { SubmissionStatus } from '@prisma/client';
+import { sanitizeText, sanitizeSafeUrl } from '@/lib/sanitize';
 
 export async function GET(req: NextRequest) {
   try {
@@ -118,6 +119,8 @@ export async function PATCH(req: NextRequest) {
       positionRank,
       organizationEventName,
       personName,
+      personType,
+      facultyDesignation,
       primaryStudentRoll,
       academicYear,
       achievementDate,
@@ -156,27 +159,47 @@ export async function PATCH(req: NextRequest) {
       updateData.status = status as SubmissionStatus;
       if (status === 'PUBLISHED' || status === 'APPROVED') {
         updateData.publishedAt = new Date();
+        updateData.rejectionReason = null;
       }
       if (status === 'REJECTED') {
-        updateData.rejectionReason = rejectionReason || 'Requirements not met.';
+        updateData.rejectionReason = rejectionReason ? sanitizeText(rejectionReason) : 'Requirements not met.';
       }
+    } else if (rejectionReason !== undefined) {
+      updateData.rejectionReason = rejectionReason ? sanitizeText(rejectionReason) : null;
     }
 
-    if (title) updateData.title = title;
-    if (description !== undefined) updateData.description = description;
+    if (title) updateData.title = sanitizeText(title);
+    if (description !== undefined) updateData.description = sanitizeText(description);
     if (categoryId) updateData.categoryId = categoryId;
     if (level) updateData.level = level;
-    if (positionRank !== undefined) updateData.positionRank = positionRank;
-    if (organizationEventName) updateData.organizationEventName = organizationEventName;
-    if (personName) updateData.personName = personName;
+    if (positionRank !== undefined) updateData.positionRank = sanitizeText(positionRank);
+    if (organizationEventName) updateData.organizationEventName = sanitizeText(organizationEventName);
+    if (personName) updateData.personName = sanitizeText(personName);
+    if (personType) updateData.personType = personType;
+    if (facultyDesignation !== undefined) updateData.facultyDesignation = sanitizeText(facultyDesignation);
     if (academicYear) updateData.academicYear = academicYear;
-    if (achievementDate) updateData.achievementDate = new Date(achievementDate);
-    if (googleDriveUrl !== undefined) updateData.googleDriveUrl = googleDriveUrl;
-    if (certificateUrl !== undefined) updateData.certificateUrl = certificateUrl;
+    if (achievementDate) {
+      const parsedDate = new Date(achievementDate);
+      if (!isNaN(parsedDate.getTime())) {
+        updateData.achievementDate = parsedDate;
+      }
+    }
+    if (googleDriveUrl !== undefined) {
+      updateData.googleDriveUrl = googleDriveUrl ? (sanitizeSafeUrl(googleDriveUrl) || googleDriveUrl) : null;
+    }
+    if (certificateUrl !== undefined) {
+      updateData.certificateUrl = certificateUrl ? (sanitizeSafeUrl(certificateUrl) || certificateUrl) : null;
+    }
     if (participationType) updateData.participationType = participationType;
-    if (teamName !== undefined) updateData.teamName = teamName;
+    if (teamName !== undefined) updateData.teamName = sanitizeText(teamName);
     if (departmentId !== undefined && isSuperAdmin(user.role)) {
       updateData.departmentId = departmentId || null;
+      if (departmentId) {
+        const d = await prisma.department.findUnique({ where: { id: departmentId } });
+        if (d) updateData.departmentName = d.name;
+      } else {
+        updateData.departmentName = null;
+      }
     }
 
     // Anchor student identity if roll number is modified

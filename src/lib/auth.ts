@@ -84,6 +84,31 @@ export const authOptions: NextAuthOptions = {
             }
           }
 
+          // 2.b If not found, check Faculty table to auto-provision
+          if (!dbUser && normalizedEmail) {
+            const faculty = await prisma.faculty.findFirst({
+              where: { email: normalizedEmail },
+            });
+
+            if (faculty) {
+              const facultyRole = faculty.roleCategory === 'HOD' ? Role.HOD : Role.FACULTY;
+              dbUser = await prisma.user.create({
+                data: {
+                  email: normalizedEmail,
+                  name: faculty.name,
+                  role: facultyRole,
+                  status: 'ACTIVE',
+                  departmentId: faculty.departmentId,
+                  facultyId: faculty.id,
+                },
+                include: {
+                  student: true,
+                  faculty: true,
+                },
+              });
+            }
+          }
+
           // 3. Initial Admin Auto-Bootstrap condition
           if (!dbUser) {
             const initialAdminEmail = (process.env.INITIAL_ADMIN_EMAIL || '').toLowerCase().trim();
