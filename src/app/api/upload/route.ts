@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import fs from 'fs';
-import path from 'path';
+import { uploadCertificateToDrive } from '@/lib/drive';
 
 export const runtime = 'nodejs';
 
@@ -29,6 +28,7 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
+    const documentType = (formData.get('documentType') as string) || 'CAMPUS_MEDIA';
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -52,25 +52,30 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
     const sanitized = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const fileName = `${Date.now()}_${sanitized}`;
-    const filePath = path.join(uploadsDir, fileName);
 
-    fs.writeFileSync(filePath, buffer);
+    // Upload to Google Drive (sandboxed in 'SREC CONNECT' folder) with Cloudflare R2 fallback
+    const driveResult = await uploadCertificateToDrive({
+      fileBuffer: buffer,
+      fileName,
+      mimeType,
+      documentType,
+      accessToken: (session as any)?.accessToken,
+      refreshToken: (session as any)?.refreshToken,
+    });
 
-    const url = `/uploads/${fileName}`;
+    const url = driveResult.directDisplayUrl || driveResult.webViewLink;
 
     return NextResponse.json({
       success: true,
       url,
+      fileId: driveResult.fileId,
+      webViewLink: driveResult.webViewLink,
       fileName,
       fileSize: file.size,
       mimeType,
+      storageProvider: driveResult.storageProvider,
     });
   } catch (error: any) {
     console.error('[Upload API Error]', error);

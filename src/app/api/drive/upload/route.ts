@@ -84,12 +84,10 @@ export async function POST(req: NextRequest) {
       mimeType,
       documentType,
       accessToken: (session as any)?.accessToken,
+      refreshToken: (session as any)?.refreshToken,
     });
 
-    const isSimulated = driveResult.fileId.startsWith('drive-srec-');
-    const effectiveWebViewLink = isSimulated
-      ? `/uploads/${stampedFileName}`
-      : driveResult.webViewLink;
+    const directDisplayUrl = driveResult.directDisplayUrl || driveResult.webViewLink;
 
     // 6. Record in Audit Log
     try {
@@ -108,6 +106,8 @@ export async function POST(req: NextRequest) {
             mimeType,
             documentType,
             webViewLink: driveResult.webViewLink,
+            directDisplayUrl,
+            storageProvider: driveResult.storageProvider,
             isPublicLink: driveResult.isPublicLink,
           }),
         },
@@ -116,17 +116,19 @@ export async function POST(req: NextRequest) {
       console.warn('[Drive Upload] Audit log recording failed (non-blocking):', auditErr);
     }
 
-    // 7. Return shareable links
+    // 7. Return shareable & directly displayable links
     return NextResponse.json({
       success: true,
       fileId: driveResult.fileId,
       fileName: file.name,
       fileSize: file.size,
       mimeType,
-      webViewLink: effectiveWebViewLink,
-      webContentLink: effectiveWebViewLink,
+      webViewLink: directDisplayUrl,
+      googleDriveUrl: driveResult.webViewLink,
+      directDisplayUrl,
+      storageProvider: driveResult.storageProvider,
       isPublicLink: driveResult.isPublicLink,
-      message: 'File successfully uploaded and shared with public viewer permissions.',
+      message: 'File successfully uploaded to SREC CONNECT folder.',
     });
   } catch (error: any) {
     console.error('[Drive Upload Error] Failed to process file upload:', error);

@@ -3,6 +3,7 @@ import { Readable } from 'stream';
 import fs from 'fs';
 import path from 'path';
 import { prisma } from './prisma';
+import { uploadToR2, generateR2Key } from './r2';
 
 export class DriveSecurityError extends Error {
   constructor(message: string) {
@@ -36,8 +37,10 @@ export interface DriveUploadResult {
   fileId: string;
   webViewLink: string;
   webContentLink: string;
+  directDisplayUrl: string;
   localMirrorUrl?: string | null;
   isPublicLink: boolean;
+  storageProvider: 'GOOGLE_DRIVE' | 'CLOUDFLARE_R2' | 'LOCAL';
 }
 
 export interface StoredDriveTokens {
@@ -110,19 +113,33 @@ export async function disconnectSuperAdminDrive(): Promise<void> {
 
 /**
  * Obtains an authenticated Google Drive client:
- * 1. Super Admin OAuth with automatic background token refresh.
- * 2. Institutional Service Account JWT fallback.
- * 3. User session accessToken if provided.
+ * 1. User session tokens (accessToken / refreshToken) if provided.
+ * 2. Super Admin OAuth with automatic background token refresh.
+ * 3. Institutional Service Account JWT fallback.
  */
-export async function getAuthenticatedDriveClient(userAccessToken?: string) {
+export async function getAuthenticatedDriveClient(userAccessToken?: string, userRefreshToken?: string) {
   // Case A: User's session token passed directly
-  if (userAccessToken) {
-    const oauth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET
-    );
-    oauth2Client.setCredentials({ access_token: userAccessToken });
-    return google.drive({ version: 'v3', auth: oauth2Client });
+  if (userAccessToken || userRefreshToken) {
+    try {
+      const oauth2Client = new google.auth.OAuth2(
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET
+      );
+      oauth2Client.setCredentials({
+        access_token: userAccessToken,
+        refresh_token: userRefreshToken,
+      });
+
+      // If access token is absent or invalid but refresh token is present, refresh it
+      if (!userAccessToken && userRefreshToken) {
+        const refreshed = await oauth2Client.refreshAccessToken();
+        oauth2Client.setCredentials(refreshed.credentials);
+      }
+
+      return google.drive({ version: 'v3', auth: oauth2Client });
+    } catch (err) {
+      console.warn('[Drive Auth] User token client initialization failed, trying system stored tokens:', err);
+    }
   }
 
   // Case B: Persistent Super Admin OAuth credentials with automated refresh
@@ -145,7 +162,7 @@ export async function getAuthenticatedDriveClient(userAccessToken?: string) {
         ? Date.now() >= storedTokens.expiry_date - 300000
         : false;
 
-      if (isExpired && storedTokens.refresh_token) {
+      if ((isExpired || !storedTokens.access_token) && storedTokens.refresh_token) {
         console.log('[Drive Auth] Access token nearing expiration, executing automatic OAuth refresh...');
         const refreshed = await oauth2Client.refreshAccessToken();
         const newCredentials = refreshed.credentials;
@@ -215,6 +232,7 @@ export async function findOrCreateDriveFolder(
       requestBody: {
         name: folderName,
         mimeType: 'application/vnd.google-apps.folder',
+        description: 'SREC CONNECT Platform Dedicated Documents & Verified Certificates Folder',
         parents: parentFolderId ? [parentFolderId] : undefined,
       },
       fields: 'id, name, webViewLink',
@@ -224,6 +242,23 @@ export async function findOrCreateDriveFolder(
   } catch (err) {
     console.error(`[Drive Folder Error] Failed to find or create folder [${folderName}]:`, err);
     throw err;
+  }
+}
+
+/**
+ * Gets or creates the dedicated 'SREC CONNECT' sandboxed folder in the user's account.
+ * With the drive.file scope, the web application only accesses files inside this folder.
+ */
+export async function getOrCreateUserDriveFolder(
+  drive: any,
+  folderName: string = 'SREC CONNECT'
+): Promise<string> {
+  try {
+    const folder = await findOrCreateDriveFolder(drive, folderName);
+    return folder.id;
+  } catch (err: any) {
+    console.warn(`[Drive Folder] Could not initialize sandboxed folder [${folderName}]:`, err?.message || err);
+    return '';
   }
 }
 
@@ -249,7 +284,10 @@ export async function initializeDriveFolders(drive: any): Promise<{ rootFolderId
 }
 
 /**
- * Uploads verified student certificates or public event documents to Google Drive with public viewer permissions.
+ * Uploads verified student certificates or public event documents to Google Drive.
+ * Places file inside the dedicated 'SREC CONNECT' folder in user's account.
+ * Provides directDisplayUrl (/api/drive/file/[id]) so media can be rendered directly like Cloudflare.
+ * Automatically falls back to Cloudflare R2 if Google Drive API is unavailable.
  */
 export async function uploadCertificateToDrive({
   fileBuffer,
@@ -258,6 +296,7 @@ export async function uploadCertificateToDrive({
   documentType = 'VERIFIED_CERTIFICATE',
   folderId,
   accessToken,
+  refreshToken,
 }: {
   fileBuffer: Buffer;
   fileName: string;
@@ -265,27 +304,20 @@ export async function uploadCertificateToDrive({
   documentType?: string;
   folderId?: string;
   accessToken?: string;
+  refreshToken?: string;
 }): Promise<DriveUploadResult> {
   assertDriveAllowed(documentType);
 
-  // Local mirror for high-reliability immediate serving
-  let localUrl = '';
+  // 1. Primary: Attempt Google Drive upload into dedicated SREC CONNECT folder
   try {
-    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-    const localFilePath = path.join(uploadsDir, fileName);
-    fs.writeFileSync(localFilePath, fileBuffer);
-    localUrl = `/uploads/${fileName}`;
-  } catch (fsErr) {
-    console.warn('[Drive Local Mirror] Failed to write local upload mirror:', fsErr);
-  }
-
-  // Attempt upload using authenticated Drive client
-  try {
-    const drive = await getAuthenticatedDriveClient(accessToken);
+    const drive = await getAuthenticatedDriveClient(accessToken, refreshToken);
     if (drive) {
+      // Find or create dedicated 'SREC CONNECT' folder in user's Drive account
+      let targetFolderId = folderId;
+      if (!targetFolderId) {
+        targetFolderId = await getOrCreateUserDriveFolder(drive, 'SREC CONNECT');
+      }
+
       const readable = new Readable();
       readable.push(fileBuffer);
       readable.push(null);
@@ -293,18 +325,19 @@ export async function uploadCertificateToDrive({
       const response = await drive.files.create({
         requestBody: {
           name: fileName,
-          parents: folderId ? [folderId] : undefined,
+          parents: targetFolderId ? [targetFolderId] : undefined,
+          description: 'SREC CONNECT Verified Academic Document',
         },
         media: {
           mimeType,
           body: readable,
         },
-        fields: 'id, webViewLink, webContentLink',
+        fields: 'id, name, webViewLink, webContentLink',
       });
 
       const fileId = response.data.id!;
 
-      // Automatically share certificates with anyone with link (read-only)
+      // Automatically share certificates with public reader permissions
       try {
         await drive.permissions.create({
           fileId,
@@ -313,30 +346,68 @@ export async function uploadCertificateToDrive({
             type: 'anyone',
           },
         });
-      } catch (permErr) {
-        console.warn('[Drive Permissions] Public reader permission failed (non-fatal):', permErr);
+      } catch (permErr: any) {
+        console.warn('[Drive Permissions] Public reader permission warning (handled gracefully):', permErr?.message);
       }
+
+      const webViewLink = response.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`;
+      const webContentLink = response.data.webContentLink || `https://drive.google.com/uc?id=${fileId}&export=download`;
+      // Direct stream URL served like Cloudflare CDN
+      const directDisplayUrl = `/api/drive/file/${fileId}`;
 
       return {
         fileId,
-        webViewLink: response.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`,
-        webContentLink: response.data.webContentLink || `https://drive.google.com/uc?id=${fileId}&export=download`,
-        localMirrorUrl: localUrl,
+        webViewLink,
+        webContentLink,
+        directDisplayUrl,
         isPublicLink: true,
+        storageProvider: 'GOOGLE_DRIVE',
       };
     }
-  } catch (driveErr) {
-    console.warn('[Drive Upload] Cloud upload failed, falling back to local/mock mirror:', driveErr);
+  } catch (driveErr: any) {
+    console.warn('[Drive Upload] Google Drive API upload failed, falling back to Cloudflare R2 CDN:', driveErr?.message || driveErr);
   }
 
-  // Fallback: Mock / Local Mirror for simulated environments
-  const mockFileId = `drive-srec-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+  // 2. High-Performance Cloudflare R2 Fallback
+  try {
+    if (process.env.R2_ACCOUNT_ID && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY) {
+      const r2Key = generateR2Key('uploads', fileName);
+      const r2Url = await uploadToR2(r2Key, fileBuffer, mimeType);
+      return {
+        fileId: `r2-${r2Key}`,
+        webViewLink: r2Url,
+        webContentLink: r2Url,
+        directDisplayUrl: r2Url,
+        isPublicLink: true,
+        storageProvider: 'CLOUDFLARE_R2',
+      };
+    }
+  } catch (r2Err: any) {
+    console.warn('[Drive Upload] Cloudflare R2 fallback failed:', r2Err?.message || r2Err);
+  }
+
+  // 3. Local mirror fallback for local dev
+  let localUrl = `/uploads/${fileName}`;
+  try {
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    const localFilePath = path.join(uploadsDir, fileName);
+    fs.writeFileSync(localFilePath, fileBuffer);
+  } catch (fsErr) {
+    console.warn('[Drive Upload] Local filesystem write warning:', fsErr);
+  }
+
+  const mockFileId = `srec-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
   return {
     fileId: mockFileId,
-    webViewLink: `https://drive.google.com/file/d/${mockFileId}/view?usp=sharing`,
-    webContentLink: `https://drive.google.com/uc?id=${mockFileId}&export=download`,
+    webViewLink: localUrl,
+    webContentLink: localUrl,
+    directDisplayUrl: localUrl,
     localMirrorUrl: localUrl,
     isPublicLink: true,
+    storageProvider: 'LOCAL',
   };
 }
 
