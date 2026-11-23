@@ -976,3 +976,28 @@
   - Production URL live at `https://connect-srec.vercel.app` (HTTP 200).
 
 
+
+## Session Log: Login Issue Resolution & Portal Upgrade (Nov 24, 2026)
+
+### Root Causes Identified
+1. **Database Name Mismatch in Neon Connection String**:
+   - Connection strings were pointing to `/neondb`, whereas the live restored Postgres database was `srec_staging_recovery_db`.
+   - `channel_binding=require` was unsupported on Neon PgBouncer pooler.
+   - Resulted in Prisma initialization failure: `Can't reach database server` / `database "neondb" does not exist`.
+2. **NextAuth HTTP Header Crash**:
+   - When database failed, NextAuth attempted to redirect to `/access-denied?error=\nInvalid prisma.user.findUnique()...`.
+   - Node.js rejected raw newlines in the location header, throwing `TypeError: Headers.set: ... is an invalid header value` (HTTP 500).
+3. **Domain Pre-emption & Missing Roll Number Login**:
+   - Pre-provisioned administrative accounts or students without @srecnandyal.edu.in were blocked prior to database user lookup.
+   - Credentials sign-in was hidden behind `?dev=true`.
+
+### Solutions Implemented & Verified
+- **Database URL Alignment**: Updated local `.env` and Vercel environment variables (Production, Preview, Development) to point to `srec_staging_recovery_db`.
+- **NextAuth Resilience**: Wrapped `signIn`, `authorize`, and `jwt` callbacks in robust try-catch blocks with sanitized redirect reasons (no raw error newlines).
+- **Dual-Mode Sign-In Portal (Modern Web Guidance)**:
+  - Google Workspace SSO for one-click institutional access.
+  - Institutional Roll Number / Campus ID credentials tab with accessible form controls, autocomplete, and show/hide password toggle.
+- **Enhanced Access Denied Handler**: Informative reason mapping for suspended, unprovisioned, domain-restricted, or reconnecting accounts.
+- **Empirical Validation**: Playwright end-to-end automation verified:
+  - Super Admin login (`manibhushanam4k@gmail.com`) -> redirected to `/admin`.
+  - Student login (`25X55A3306`) -> redirected to `/dashboard/student`.
