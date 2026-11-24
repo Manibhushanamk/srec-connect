@@ -2,7 +2,8 @@
 
 import { ReactNode } from 'react';
 import Link from 'next/link';
-import { ChevronRight, LayoutDashboard } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { ChevronRight, LayoutDashboard, GraduationCap, BookOpen } from 'lucide-react';
 import { AdminSidebar } from './AdminSidebar';
 import { AppHeader } from './AppHeader';
 
@@ -12,9 +13,22 @@ interface AdminShellProps {
   description?: string;
   breadcrumbs?: Array<{ label: string; href?: string }>;
   actions?: ReactNode;
+  roleScope?: 'ADMIN' | 'STUDENT' | 'FACULTY';
 }
 
-export function AdminShell({ children, title, description, breadcrumbs, actions }: AdminShellProps) {
+export function AdminShell({ children, title, description, breadcrumbs, actions, roleScope }: AdminShellProps) {
+  const pathname = usePathname();
+  const isStudentScope = roleScope === 'STUDENT' || pathname?.startsWith('/dashboard/student');
+  const isFacultyScope = roleScope === 'FACULTY' || pathname?.startsWith('/dashboard/faculty');
+
+  const rootBreadcrumb = isStudentScope
+    ? { label: 'Student', href: '/dashboard/student', icon: GraduationCap }
+    : isFacultyScope
+    ? { label: 'Faculty', href: '/dashboard/faculty', icon: BookOpen }
+    : { label: 'Admin', href: '/admin', icon: LayoutDashboard };
+
+  const RootIcon = rootBreadcrumb.icon;
+
   return (
     <div className="min-h-screen bg-space-900 overflow-x-hidden w-full flex flex-col">
       {/* 1. Sticky Top Navigation with Universal Mobile Drawer */}
@@ -33,9 +47,9 @@ export function AdminShell({ children, title, description, breadcrumbs, actions 
                 <div>
                   {breadcrumbs && breadcrumbs.length > 0 && (
                     <nav className="flex items-center gap-1.5 text-xs text-slate-500 mb-1.5" aria-label="Breadcrumb">
-                      <Link href="/admin" className="hover:text-primary transition-colors flex items-center gap-1">
-                        <LayoutDashboard className="w-3.5 h-3.5" />
-                        Admin
+                      <Link href={rootBreadcrumb.href} className="hover:text-primary transition-colors flex items-center gap-1 font-medium text-slate-300">
+                        <RootIcon className="w-3.5 h-3.5 text-primary" />
+                        {rootBreadcrumb.label}
                       </Link>
                       {breadcrumbs.map((crumb) => (
                         <span key={crumb.label} className="flex items-center gap-1">

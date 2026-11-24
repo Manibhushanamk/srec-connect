@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
@@ -19,6 +19,7 @@ import {
   ShieldAlert,
   Info,
   ChevronRight,
+  ChevronDown,
   Upload,
   FileSpreadsheet,
   Bell,
@@ -34,14 +35,53 @@ import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 
 export const AppHeader: React.FC = () => {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const dropdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close drawer on route navigation
+  // Close drawer and dropdown on route navigation
   useEffect(() => {
     setIsMobileMenuOpen(false);
+    setIsProfileDropdownOpen(false);
   }, [pathname]);
+
+  // Click outside and escape key listener for profile dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+      if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
+    };
+  }, []);
+
+  const handleProfileMouseEnter = () => {
+    if (dropdownTimeoutRef.current) {
+      clearTimeout(dropdownTimeoutRef.current);
+      dropdownTimeoutRef.current = null;
+    }
+    setIsProfileDropdownOpen(true);
+  };
+
+  const handleProfileMouseLeave = () => {
+    dropdownTimeoutRef.current = setTimeout(() => {
+      setIsProfileDropdownOpen(false);
+    }, 200);
+  };
 
   // Prevent background scroll when mobile drawer is open
   useEffect(() => {
@@ -68,6 +108,16 @@ export const AppHeader: React.FC = () => {
     isFaculty ? '🎓 Faculty' :
     isStudent ? '🎒 Student Scholar' :
     userRole === 'WEB_MANAGER' ? '🌐 Web Ops' : 'Campus Member';
+
+  const dashboardHref =
+    isStudent ? '/dashboard/student' :
+    isFaculty ? '/dashboard/faculty' :
+    isAdmin ? '/admin' : '/dashboard/student';
+
+  const submitHref = isStudent ? '/dashboard/student/submit' : '/dashboard/faculty/submit';
+
+  const userRollNumber = (session?.user as any)?.rollNumber || (session?.user as any)?.student?.rollNumber;
+  const userDesignation = (session?.user as any)?.designation || (session?.user as any)?.faculty?.designation;
 
   const mainNavLinks = [
     { label: 'Community Feed', href: '/', icon: Home },
@@ -138,40 +188,23 @@ export const AppHeader: React.FC = () => {
             {/* Theme Toggle */}
             <ThemeToggle />
 
-            {/* User Profile Pill (Desktop direct link, Mobile drawer opener) */}
+            {/* User Profile Pill (Desktop with Hover Dropdown, Mobile drawer opener) */}
             {session?.user ? (
-              <>
-                {/* Desktop Link */}
-                <Link
-                  href="/profile"
-                  className="hidden md:flex items-center gap-2 p-1 pr-2.5 rounded-xl hover:bg-secondary/80 border border-transparent hover:border-border transition-colors"
-                  title="View Profile"
-                >
-                  <div className="w-8 h-8 rounded-full bg-primary/15 text-primary border border-primary/30 flex items-center justify-center font-bold text-xs overflow-hidden">
-                    {session.user.image ? (
-                      <img
-                        src={session.user.image}
-                        alt="User"
-                        className="w-full h-full object-cover"
-                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                      />
-                    ) : (
-                      (session.user.name || 'U').substring(0, 2).toUpperCase()
-                    )}
-                  </div>
-                  <span className="text-xs font-semibold text-foreground max-w-[110px] truncate">
-                    {session.user.name}
-                  </span>
-                </Link>
-
-                {/* Mobile Profile / Menu Button (Toggles Drawer) */}
+              <div
+                ref={dropdownRef}
+                className="relative hidden md:block"
+                onMouseEnter={handleProfileMouseEnter}
+                onMouseLeave={handleProfileMouseLeave}
+              >
+                {/* Desktop Trigger Button */}
                 <button
                   type="button"
-                  onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="md:hidden flex items-center gap-1.5 p-1 rounded-xl hover:bg-secondary/80 border border-border/60 transition-colors focus:outline-none"
-                  aria-label="Open navigation menu"
+                  onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
+                  className="flex items-center gap-2 p-1 pr-2.5 rounded-xl hover:bg-secondary/80 border border-transparent hover:border-border transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  aria-expanded={isProfileDropdownOpen}
+                  aria-haspopup="true"
                 >
-                  <div className="w-7 h-7 rounded-full bg-primary/15 text-primary border border-primary/30 flex items-center justify-center font-bold text-[11px] overflow-hidden">
+                  <div className="w-8 h-8 rounded-full bg-primary/15 text-primary border border-primary/30 flex items-center justify-center font-bold text-xs overflow-hidden shrink-0">
                     {session.user.image ? (
                       <img
                         src={session.user.image}
@@ -183,9 +216,116 @@ export const AppHeader: React.FC = () => {
                       (session.user.name || 'U').substring(0, 2).toUpperCase()
                     )}
                   </div>
-                  <Menu className="w-4 h-4 text-foreground" />
+                  <span className="text-xs font-semibold text-foreground max-w-[120px] truncate text-left">
+                    {session.user.name}
+                  </span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-muted-foreground transition-transform duration-200 ${
+                      isProfileDropdownOpen ? 'rotate-180 text-foreground' : ''
+                    }`}
+                  />
                 </button>
-              </>
+
+                {/* Profile Hover Dropdown Menu */}
+                {isProfileDropdownOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-2xl bg-card/95 backdrop-blur-2xl border border-border shadow-2xl z-50 p-3 space-y-2.5 animate-in fade-in zoom-in-95 duration-150"
+                    role="menu"
+                    aria-orientation="vertical"
+                  >
+                    {/* User Identity Info Card */}
+                    <div className="p-3 rounded-xl bg-secondary/50 border border-border flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/15 text-primary border border-primary/30 flex items-center justify-center font-bold text-sm overflow-hidden shrink-0">
+                        {session.user.image ? (
+                          <img
+                            src={session.user.image}
+                            alt="User"
+                            className="w-full h-full object-cover"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        ) : (
+                          (session.user.name || 'U').substring(0, 2).toUpperCase()
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="text-xs font-bold text-foreground truncate">
+                            {session.user.name || 'Campus Scholar'}
+                          </h4>
+                          {roleBadgeText && (
+                            <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-primary/10 text-primary border border-primary/20 shrink-0">
+                              {roleBadgeText}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {session.user.email}
+                        </p>
+                        {(userRollNumber || userDesignation) && (
+                          <p className="text-[10px] font-mono text-primary font-medium mt-0.5 truncate">
+                            {userRollNumber ? `Roll: ${userRollNumber}` : userDesignation}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Navigation Actions */}
+                    <div className="space-y-1">
+                      <Link
+                        href={dashboardHref}
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-foreground/80 hover:text-foreground hover:bg-secondary/70 transition-colors"
+                        role="menuitem"
+                      >
+                        <LayoutDashboard className="w-4 h-4 text-primary" />
+                        <span>My Dashboard</span>
+                      </Link>
+
+                      <Link
+                        href="/profile"
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-foreground/80 hover:text-foreground hover:bg-secondary/70 transition-colors"
+                        role="menuitem"
+                      >
+                        <User className="w-4 h-4 text-emerald-400" />
+                        <span>My Profile & Settings</span>
+                      </Link>
+
+                      <Link
+                        href={submitHref}
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium text-foreground/80 hover:text-foreground hover:bg-secondary/70 transition-colors"
+                        role="menuitem"
+                      >
+                        <PlusCircle className="w-4 h-4 text-cyan-400" />
+                        <span>Submit New Achievement</span>
+                      </Link>
+                    </div>
+
+                    {/* Divider & Logout Button */}
+                    <div className="pt-1.5 border-t border-border">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsProfileDropdownOpen(false);
+                          signOut({ callbackUrl: '/signin' });
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors text-left cursor-pointer"
+                        role="menuitem"
+                      >
+                        <LogOut className="w-4 h-4 text-rose-400 shrink-0" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : status === 'loading' ? (
+              /* Loading skeleton: NEVER flash Sign In while checking session */
+              <div className="flex items-center gap-2 p-1.5 px-3 rounded-xl bg-secondary/40 border border-border/40 animate-pulse">
+                <div className="w-7 h-7 rounded-full bg-muted/60" />
+                <div className="w-16 h-3 bg-muted/60 rounded hidden md:block" />
+              </div>
             ) : (
               <div className="flex items-center gap-1.5">
                 <Link
@@ -205,6 +345,30 @@ export const AppHeader: React.FC = () => {
                   <Menu className="w-5 h-5" />
                 </button>
               </div>
+            )}
+
+            {/* Mobile Profile / Menu Button (Toggles Drawer) */}
+            {session?.user && (
+              <button
+                type="button"
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden flex items-center gap-1.5 p-1 rounded-xl hover:bg-secondary/80 border border-border/60 transition-colors focus:outline-none"
+                aria-label="Open navigation menu"
+              >
+                <div className="w-7 h-7 rounded-full bg-primary/15 text-primary border border-primary/30 flex items-center justify-center font-bold text-[11px] overflow-hidden">
+                  {session.user.image ? (
+                    <img
+                      src={session.user.image}
+                      alt="User"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                    />
+                  ) : (
+                    (session.user.name || 'U').substring(0, 2).toUpperCase()
+                  )}
+                </div>
+                <Menu className="w-4 h-4 text-foreground" />
+              </button>
             )}
           </div>
         </div>

@@ -101,9 +101,10 @@ export const FeedCard: React.FC<FeedPostProps> = ({
   const [showOptions, setShowOptions] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [isTrashed, setIsTrashed] = useState(false);
-  const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
+  const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
 
-  const activeImages = images.filter((_, idx) => !failedImages[idx]);
+  const activeImages = images.filter((img) => !failedImages[img]);
 
   const currentUserRole = (session?.user as any)?.role;
   const isSuperAdmin = currentUserRole === 'SUPER_ADMIN';
@@ -448,12 +449,20 @@ export const FeedCard: React.FC<FeedPostProps> = ({
                 width={800}
                 height={600}
                 loading="lazy"
+                onLoad={() => {
+                  setLoadedImages((prev) => ({ ...prev, [activeImages[0]]: true }));
+                }}
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
-                  setFailedImages((prev) => ({ ...prev, [0]: true }));
+                  setFailedImages((prev) => ({ ...prev, [activeImages[0]]: true }));
                 }}
-                className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.01]"
+                className={`w-full h-full object-cover transition-all duration-300 hover:scale-[1.01] ${
+                  loadedImages[activeImages[0]] ? 'opacity-100' : 'opacity-0'
+                }`}
               />
+              {!loadedImages[activeImages[0]] && !failedImages[activeImages[0]] && (
+                <div className="absolute inset-0 bg-slate-800/30 animate-pulse flex items-center justify-center" />
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-1 max-h-[380px] overflow-hidden">
@@ -465,12 +474,20 @@ export const FeedCard: React.FC<FeedPostProps> = ({
                     width={400}
                     height={400}
                     loading="lazy"
+                    onLoad={() => {
+                      setLoadedImages((prev) => ({ ...prev, [img]: true }));
+                    }}
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
-                      setFailedImages((prev) => ({ ...prev, [idx]: true }));
+                      setFailedImages((prev) => ({ ...prev, [img]: true }));
                     }}
-                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.02]"
+                    className={`w-full h-full object-cover transition-all duration-300 hover:scale-[1.02] ${
+                      loadedImages[img] ? 'opacity-100' : 'opacity-0'
+                    }`}
                   />
+                  {!loadedImages[img] && !failedImages[img] && (
+                    <div className="absolute inset-0 bg-slate-800/30 animate-pulse flex items-center justify-center" />
+                  )}
                 </div>
               ))}
             </div>

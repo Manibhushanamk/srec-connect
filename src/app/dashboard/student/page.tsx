@@ -88,6 +88,7 @@ export default async function StudentDashboardPage() {
     <AdminShell
       title="Student Dashboard"
       description="Your personal achievement portfolio & submission center"
+      roleScope="STUDENT"
       breadcrumbs={[{ label: 'Dashboard', href: '/dashboard/student' }]}
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

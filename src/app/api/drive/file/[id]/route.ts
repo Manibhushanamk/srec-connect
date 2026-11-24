@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { getStoredDriveTokens, getUserDriveTokens } from '@/lib/drive';
+import { getStoredDriveTokens, getUserDriveTokens, saveUserDriveTokens } from '@/lib/drive';
 import { getCachedMedia, setCachedMedia } from '@/lib/media-cache';
+import { google } from 'googleapis';
 import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
@@ -121,6 +122,7 @@ export async function GET(
       if (!fetchedBuffer) {
         try {
           let systemToken = '';
+          let authorUserId = '';
           const sys = await getStoredDriveTokens();
           if (sys?.access_token) {
             systemToken = sys.access_token;
@@ -130,20 +132,94 @@ export async function GET(
               include: { post: { select: { authorId: true } } },
             });
             if (mediaRecord?.post?.authorId) {
-              const authorTokens = await getUserDriveTokens(mediaRecord.post.authorId);
+              authorUserId = mediaRecord.post.authorId;
+              const authorTokens = await getUserDriveTokens(authorUserId);
               if (authorTokens?.access_token) {
                 systemToken = authorTokens.access_token;
+              }
+              // Auto-refresh token if expired
+              if ((!systemToken || (authorTokens?.expiry_date && Date.now() >= authorTokens.expiry_date)) && authorTokens?.refresh_token) {
+                try {
+                  const oauth2Client = new google.auth.OAuth2(
+                    process.env.GOOGLE_CLIENT_ID,
+                    process.env.GOOGLE_CLIENT_SECRET
+                  );
+                  oauth2Client.setCredentials({ refresh_token: authorTokens.refresh_token });
+                  const { token } = await oauth2Client.getAccessToken();
+                  if (token) {
+                    systemToken = token;
+                    await saveUserDriveTokens(authorUserId, { access_token: token });
+                  }
+                } catch (rfErr) {
+                  console.warn(`[Drive Stream] Author token auto-refresh failed for ${authorUserId}:`, rfErr);
+                }
+              }
+            } else {
+              // Try finding certificate media
+              const achMedia = await prisma.achievementMedia.findFirst({
+                where: { url: { contains: fileId } },
+                include: { achievement: { select: { primaryStudent: { select: { user: { select: { id: true } } } } } } },
+              });
+              const studentUserId = achMedia?.achievement?.primaryStudent?.user?.id;
+              if (studentUserId) {
+                authorUserId = studentUserId;
+                const studentTokens = await getUserDriveTokens(studentUserId);
+                if (studentTokens?.access_token) systemToken = studentTokens.access_token;
+                if ((!systemToken || (studentTokens?.expiry_date && Date.now() >= studentTokens.expiry_date)) && studentTokens?.refresh_token) {
+                  try {
+                    const oauth2Client = new google.auth.OAuth2(
+                      process.env.GOOGLE_CLIENT_ID,
+                      process.env.GOOGLE_CLIENT_SECRET
+                    );
+                    oauth2Client.setCredentials({ refresh_token: studentTokens.refresh_token });
+                    const { token } = await oauth2Client.getAccessToken();
+                    if (token) {
+                      systemToken = token;
+                      await saveUserDriveTokens(studentUserId, { access_token: token });
+                    }
+                  } catch (rfErr) {
+                    console.warn(`[Drive Stream] Student token auto-refresh failed for ${studentUserId}:`, rfErr);
+                  }
+                }
               }
             }
           }
 
           if (systemToken) {
-            const mediaRes = await fetch(
+            let mediaRes = await fetch(
               `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`,
               {
                 headers: { Authorization: `Bearer ${systemToken}` },
               }
             );
+
+            // If 401 Unauthorized, attempt immediate refresh via author's refresh token
+            if (mediaRes.status === 401 && authorUserId) {
+              const freshTokens = await getUserDriveTokens(authorUserId);
+              if (freshTokens?.refresh_token) {
+                try {
+                  const oauth2Client = new google.auth.OAuth2(
+                    process.env.GOOGLE_CLIENT_ID,
+                    process.env.GOOGLE_CLIENT_SECRET
+                  );
+                  oauth2Client.setCredentials({ refresh_token: freshTokens.refresh_token });
+                  const { token } = await oauth2Client.getAccessToken();
+                  if (token) {
+                    systemToken = token;
+                    await saveUserDriveTokens(authorUserId, { access_token: token });
+                    mediaRes = await fetch(
+                      `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`,
+                      {
+                        headers: { Authorization: `Bearer ${systemToken}` },
+                      }
+                    );
+                  }
+                } catch (retryErr) {
+                  console.warn(`[Drive Stream] Token retry failed:`, retryErr);
+                }
+              }
+            }
+
             if (mediaRes.ok) {
               const arr = await mediaRes.arrayBuffer();
               fetchedBuffer = Buffer.from(arr);

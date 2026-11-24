@@ -224,6 +224,10 @@ export function AdminSidebar({ className }: { className?: string } = {}) {
   const isRoot = (session?.user as any)?.isRoot as boolean;
   const departmentId = (session?.user as any)?.departmentId as string | null;
 
+  const isAdminUser = userRole === 'SUPER_ADMIN' || userRole === 'ADMIN' || userRole === 'HOD' || isRoot;
+  const isStudent = userRole === 'STUDENT' || pathname.startsWith('/dashboard/student');
+  const isFaculty = userRole === 'FACULTY' || pathname.startsWith('/dashboard/faculty');
+
   const context: PermissionContext = {
     userId: (session?.user as any)?.id || '',
     role: userRole || Role.STUDENT,
@@ -235,6 +239,22 @@ export function AdminSidebar({ className }: { className?: string } = {}) {
   const visibleGroupsArray = getVisibleMenuGroups(context);
   const visibleGroups = new Set(visibleGroupsArray as MenuGroupKey[]);
 
+  // Dedicated Student navigation tree when browsing student workspace
+  const studentNavGroups = {
+    studentWorkspace: {
+      label: 'Student Workspace',
+      icon: GraduationCap,
+      items: [
+        { href: '/dashboard/student', label: 'My Dashboard & Honors', icon: LayoutDashboard },
+        { href: '/dashboard/student/submit', label: 'Submit Achievement', icon: Award },
+        { href: '/achievements', label: 'Campus Honors Wall', icon: Award },
+        { href: '/events', label: 'Campus Events', icon: Calendar },
+        { href: '/students', label: 'Student Directory', icon: Users },
+        { href: '/grievances', label: 'Grievance Portal', icon: ShieldAlert },
+      ],
+    },
+  };
+
   return (
     <aside
       className={cn(
@@ -244,73 +264,60 @@ export function AdminSidebar({ className }: { className?: string } = {}) {
       aria-label="Admin navigation"
     >
       <nav className="p-4 space-y-4" aria-label="Admin menu">
-        {(Object.entries(MENU_GROUPS) as [MenuGroupKey, (typeof MENU_GROUPS)[MenuGroupKey]][]).map(([key, group]) => (
-          <MenuGroup
-            key={key}
-            group={group}
-            pathname={pathname}
-            visibleGroups={visibleGroups}
-            isRoot={isRoot}
-            adminType={userAdminType || null}
-            departmentId={departmentId}
-            menuKey={key}
-          />
-        ))}
+        {isStudent ? (
+          /* Student specific navigation */
+          (Object.entries(studentNavGroups) as [string, (typeof studentNavGroups)['studentWorkspace']][]).map(([key, group]) => (
+            <div key={key} className="space-y-1">
+              <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+                <group.icon className="w-4 h-4 text-primary" />
+                <span>{group.label}</span>
+              </div>
+              <ul className="space-y-1">
+                {group.items.map((item) => {
+                  const isActive = pathname === item.href;
+                  return (
+                    <li key={item.href}>
+                      <Link
+                        href={item.href}
+                        className={cn(
+                          'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200',
+                          isActive
+                            ? 'text-brand-400 bg-brand-500/10 font-medium'
+                            : 'text-slate-400 hover:text-white hover:bg-space-700/30'
+                        )}
+                        aria-current={isActive ? 'page' : undefined}
+                      >
+                        <item.icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                        <span className="truncate">{item.label}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))
+        ) : (
+          /* Administrative navigation */
+          (Object.entries(MENU_GROUPS) as [MenuGroupKey, (typeof MENU_GROUPS)[MenuGroupKey]][]).map(([key, group]) => (
+            <MenuGroup
+              key={key}
+              group={group}
+              pathname={pathname}
+              visibleGroups={visibleGroups}
+              isRoot={isRoot}
+              adminType={userAdminType || null}
+              departmentId={departmentId}
+              menuKey={key}
+            />
+          ))
+        )}
 
         <div className="pt-5 border-t border-slate-800/50">
           <p className="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
             Quick Actions
           </p>
           <div className="space-y-1.5">
-            {userRole === 'STUDENT' ? (
-              <>
-                <Link
-                  href="/dashboard/student/submit"
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
-                >
-                  <Award className="w-4 h-4 text-cyan-400" />
-                  <span>Submit Achievement</span>
-                </Link>
-                <Link
-                  href="/dashboard/student"
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
-                >
-                  <LayoutDashboard className="w-4 h-4 text-brand-400" />
-                  <span>Student Dashboard</span>
-                </Link>
-                <Link
-                  href="/students"
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
-                >
-                  <GraduationCap className="w-4 h-4 text-emerald-400" />
-                  <span>Student Directory</span>
-                </Link>
-              </>
-            ) : userRole === 'FACULTY' ? (
-              <>
-                <Link
-                  href="/admin/achievements"
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
-                >
-                  <Award className="w-4 h-4 text-cyan-400" />
-                  <span>Verification Desk</span>
-                </Link>
-                <Link
-                  href="/dashboard/faculty/submit"
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
-                >
-                  <Upload className="w-4 h-4 text-emerald-400" />
-                  <span>Submit Record</span>
-                </Link>
-                <Link
-                  href="/dashboard/faculty"
-                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
-                >
-                  <LayoutDashboard className="w-4 h-4 text-brand-400" />
-                  <span>Faculty Dashboard</span>
-                </Link>
-              </>
-            ) : (
+            {isAdminUser ? (
               <>
                 <Link
                   href="/admin/achievements?status=PENDING"
@@ -339,6 +346,54 @@ export function AdminSidebar({ className }: { className?: string } = {}) {
                 >
                   <Trash2 className="w-4 h-4 text-rose-400" />
                   <span>Trash Recovery</span>
+                </Link>
+              </>
+            ) : isFaculty ? (
+              <>
+                <Link
+                  href="/admin/achievements"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <Award className="w-4 h-4 text-cyan-400" />
+                  <span>Verification Desk</span>
+                </Link>
+                <Link
+                  href="/dashboard/faculty/submit"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <Upload className="w-4 h-4 text-emerald-400" />
+                  <span>Submit Record</span>
+                </Link>
+                <Link
+                  href="/dashboard/faculty"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <LayoutDashboard className="w-4 h-4 text-brand-400" />
+                  <span>Faculty Dashboard</span>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/dashboard/student/submit"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <Award className="w-4 h-4 text-cyan-400" />
+                  <span>Submit Achievement</span>
+                </Link>
+                <Link
+                  href="/dashboard/student"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <LayoutDashboard className="w-4 h-4 text-brand-400" />
+                  <span>Student Dashboard</span>
+                </Link>
+                <Link
+                  href="/students"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <GraduationCap className="w-4 h-4 text-emerald-400" />
+                  <span>Student Directory</span>
                 </Link>
               </>
             )}
