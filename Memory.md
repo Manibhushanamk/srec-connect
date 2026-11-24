@@ -5,7 +5,25 @@
 - **Department:** Computer Science & Engineering (Artificial Intelligence & Machine Learning)
 - **Current Version:** v3.0.0 (Production Certified & Live Deployed)
 - **Stack:** Next.js 15.5.25 (App Router), React 19, TypeScript, Tailwind CSS, Prisma ORM 6.19.3, Neon Serverless PostgreSQL (`v3_production` schema), NextAuth v4 (Google Workspace SSO), Sharp (adaptive WebP compression).
-- **Latest Deployed Commit:** `fe52b9c` (fix(drive): eliminate drive 404 redirects, add resilient data-uri fallback, and externalize googleapis).
+- **Latest Deployed Commit:** `c12f640` (feat(drive): add dashboard drive connection card and enforce mandatory drive permission for post media).
+- **Dashboard Drive Connection & Mandatory Post Media Drive Permission (Nov 24, 2026):**
+  - **Dashboard Drive Integration Widget (`src/components/dashboard/GoogleDriveCard.tsx`)**: Created a dedicated, interactive Google Drive card component and embedded it across:
+    - Student Dashboard (`/dashboard/student`)
+    - Faculty Dashboard (`/dashboard/faculty`)
+    - Student Settings (`/dashboard/student/settings`)
+    - Faculty Settings (`/dashboard/faculty/settings`)
+    - Profile Workspace (`/profile`)
+    Users can inspect their Google Drive sync status, view their sandboxed `SREC CONNECT` folder, or connect their Google Drive with 1-click OAuth consent if permissions were not previously granted.
+  - **Mandatory Drive Permission for Media Posts (`src/components/social/PostComposer.tsx` & `/api/posts`)**:
+    - `PostComposer.tsx`: Proactively checks `/api/drive/init`. If Google Drive is not connected, displays an amber Drive required notice when photos are selected, shows a "Drive Required" tag next to "Add Images", and disables the "Publish" button with a lock badge until Drive permission is granted.
+    - `/api/posts`: Strictly validates that if `rawImages.length > 0`, the author MUST have an active Google Drive connection (`drive.file` scope). Rejects unpermitted attempts with HTTP 403 (`{ error: 'Google Drive permission has not been granted...', requiresDriveConnect: true }`). Never falls back to ephemeral local `srec-...` files for posts.
+  - **Broken Post Image Frame Elimination (`src/components/social/FeedCard.tsx`)**:
+    - Added `failedImages` state: if any image fails to load via `onError`, it is instantly filtered from `activeImages`.
+    - If all images fail (or `activeImages.length === 0`), the entire media frame unmounts completely, cleanly rendering the post as a standard text post rather than an empty 460px black box with broken browser alt text.
+  - **Optimized Google Drive Streaming Proxy (`/api/drive/file/[id]/route.ts`)**:
+    - Replaced heavy `googleapis` SDK import with direct native `fetch` calls to Google Drive REST API v3 (`https://www.googleapis.com/drive/v3/files/...`), completely eliminating the webpack vendor chunk resolution error (`./vendor-chunks/googleapis.js`).
+    - Added `export async function HEAD` to handle HEAD probes gracefully.
+  - **Verified & Live Deployed**: Passed TypeScript check (`tsc --noEmit`), production build (`npm run build`), unit test suite (`tests/user-admin-bulk.test.ts` 7/7 passed), captured live production Playwright screenshots (`live_prod_clean_feed_verified.png`, `live_prod_signin_oauth.png`), and deployed to Vercel production (`https://srecconnect.dpdns.org`).
 - **Google Drive Storage & Broken Media Elimination (Nov 24, 2026):**
   - **Root Cause of Drive 404 & Broken Images**: When Google Drive API was pending activation in Google Cloud project `127891787958`, local file mock IDs (`srec-...`) saved on ephemeral serverless lambdas were redirected to Google Drive by `/api/drive/file/[id]`, which returned an HTML 404 page ("Sorry, the file you have requested does not exist..."), causing the browser `<img>` tag in `FeedCard.tsx` to break.
   - **Resilient Serverless Media Pipeline (`src/lib/drive.ts`)**: For media under 5MB, if Google Drive API is temporarily pending or unavailable, files are instantly converted to high-efficiency WebP Data URIs (`data:${uploadMimeType};base64,...`). This guarantees 100% uptime, 0ms render latency, and zero broken image errors on serverless Vercel.
