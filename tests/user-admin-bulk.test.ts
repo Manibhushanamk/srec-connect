@@ -2,6 +2,7 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import { prisma } from '../src/lib/prisma';
 import { Role } from '@prisma/client';
+import { parseRollNumber, isLateralEntryRoll, getBatchLabel } from '../src/lib/studentHelper';
 
 describe('Phase 3: User & Academic Administration (Bulk CSV & Roll Numbers)', () => {
   const testStudentRoll = '22091A3299';
@@ -124,5 +125,57 @@ describe('Phase 3: User & Academic Administration (Bulk CSV & Roll Numbers)', ()
       where: { email: { in: batchRows.map((b) => b.email) } },
     });
     assert.strictEqual(insertedUsers.length, 2);
+  });
+
+  it('6. should correctly identify regular vs diploma lateral entry roll numbers', () => {
+    // Regular 4-year B.Tech students
+    const reg1 = parseRollNumber('22091A3205');
+    assert.strictEqual(reg1.isValid, true);
+    assert.strictEqual(reg1.isLateralEntry, false);
+    assert.strictEqual(reg1.admissionYear, 2022);
+    assert.strictEqual(reg1.graduationYear, 2026);
+    assert.strictEqual(reg1.batchYear, '2022-2026');
+    assert.strictEqual(isLateralEntryRoll('22091A3205'), false);
+
+    const reg2 = parseRollNumber('24091A0501');
+    assert.strictEqual(reg2.isValid, true);
+    assert.strictEqual(reg2.isLateralEntry, false);
+    assert.strictEqual(reg2.admissionYear, 2024);
+    assert.strictEqual(reg2.graduationYear, 2028);
+    assert.strictEqual(reg2.batchYear, '2024-2028');
+
+    // Diploma Lateral Entry (ECET) students admitted directly into 2nd year
+    // E.g. admitted in 2025 -> joins 2024-2028 batch!
+    const lat1 = parseRollNumber('25X55A3306');
+    assert.strictEqual(lat1.isValid, true);
+    assert.strictEqual(lat1.isLateralEntry, true);
+    assert.strictEqual(lat1.admissionYear, 2025);
+    assert.strictEqual(lat1.graduationYear, 2028);
+    assert.strictEqual(lat1.batchYear, '2024-2028');
+    assert.strictEqual(isLateralEntryRoll('25X55A3306'), true);
+
+    const lat2 = parseRollNumber('25095A3206');
+    assert.strictEqual(lat2.isValid, true);
+    assert.strictEqual(lat2.isLateralEntry, true);
+    assert.strictEqual(lat2.admissionYear, 2025);
+    assert.strictEqual(lat2.graduationYear, 2028);
+    assert.strictEqual(lat2.batchYear, '2024-2028');
+    assert.strictEqual(isLateralEntryRoll('25095A3206'), true);
+
+    const lat3 = parseRollNumber('24095A0101');
+    assert.strictEqual(lat3.isValid, true);
+    assert.strictEqual(lat3.isLateralEntry, true);
+    assert.strictEqual(lat3.admissionYear, 2024);
+    assert.strictEqual(lat3.graduationYear, 2027);
+    assert.strictEqual(lat3.batchYear, '2023-2027');
+  });
+
+  it('7. should format batch labels with both regular and lateral entry cohorts', () => {
+    const label2024_2028 = getBatchLabel('2024-2028');
+    assert.strictEqual(label2024_2028.includes('Lateral Entry 2025'), true);
+    assert.strictEqual(label2024_2028.includes('Regular 2024'), true);
+
+    const label2025_2029 = getBatchLabel('2025-2029');
+    assert.strictEqual(label2025_2029.includes('Lateral Entry 2026'), true);
   });
 });

@@ -19,6 +19,7 @@ import {
   Building2,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
+import { isLateralEntryRoll } from '@/lib/studentHelper';
 
 export interface ScholarDirectoryCardProps {
   type: 'STUDENT' | 'FACULTY' | 'ACHIEVEMENT';
@@ -235,9 +236,14 @@ export function ScholarDirectoryCard({
         {/* 4. Metadata Line */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground py-2 border-y border-border/60 mb-4">
           {rollNumber && (
-            <div className="flex items-center gap-1 font-mono font-medium text-foreground">
+            <div className="flex items-center gap-1.5 font-mono font-medium text-foreground">
               <Shield className="w-3.5 h-3.5 text-primary" />
               <span>Roll: {rollNumber}</span>
+              {isLateralEntryRoll(rollNumber) && (
+                <span className="text-[9px] font-bold tracking-wider uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500 border border-amber-500/30">
+                  Lateral Entry
+                </span>
+              )}
             </div>
           )}
 

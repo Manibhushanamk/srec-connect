@@ -25,10 +25,12 @@ import {
   Save,
   User,
   ExternalLink,
+  Sparkles,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { parseRollNumber, ACADEMIC_BATCH_OPTIONS } from '@/lib/studentHelper';
 
 interface UserItem {
   id: string;
@@ -574,9 +576,21 @@ export default function AdminUsersPage() {
 
                     <td className="py-3.5 px-4">
                       {u.student?.rollNumber ? (
-                        <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-secondary text-foreground border border-border">
-                          {u.student.rollNumber}
-                        </span>
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-secondary text-foreground border border-border inline-block">
+                              {u.student.rollNumber}
+                            </span>
+                            {parseRollNumber(u.student.rollNumber).isLateralEntry && (
+                              <span className="text-[9px] font-bold tracking-wider uppercase px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-500 border border-amber-500/30">
+                                LE
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            Batch {u.student.batch || '2024-2028'} • Sec {u.student.section || 'A'}
+                          </span>
+                        </div>
                       ) : u.faculty?.designation ? (
                         <span className="text-xs text-muted-foreground truncate max-w-[160px] block">
                           {u.faculty.designation}
@@ -933,48 +947,93 @@ export default function AdminUsersPage() {
                       Student Academic Credentials
                     </h4>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold mb-1 text-foreground">Roll Number *</label>
-                        <input
-                          type="text"
-                          required
-                          value={editFormData.student.rollNumber}
-                          onChange={(e) => setEditFormData({
-                            ...editFormData,
-                            student: { ...editFormData.student, rollNumber: e.target.value.toUpperCase() }
-                          })}
-                          className="w-full px-3 py-2 rounded-xl border border-input bg-background font-mono uppercase text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                          placeholder="e.g. 22091A3205"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold mb-1 text-foreground">Academic Batch</label>
-                        <input
-                          type="text"
-                          value={editFormData.student.batch}
-                          onChange={(e) => setEditFormData({
-                            ...editFormData,
-                            student: { ...editFormData.student, batch: e.target.value }
-                          })}
-                          className="w-full px-3 py-2 rounded-xl border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                          placeholder="2022-2026"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-semibold mb-1 text-foreground">Section</label>
-                        <input
-                          type="text"
-                          value={editFormData.student.section}
-                          onChange={(e) => setEditFormData({
-                            ...editFormData,
-                            student: { ...editFormData.student, section: e.target.value }
-                          })}
-                          className="w-full px-3 py-2 rounded-xl border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                          placeholder="A"
-                        />
-                      </div>
-                    </div>
+                    {(() => {
+                      const parsedEditRoll = parseRollNumber(editFormData.student.rollNumber);
+                      return (
+                        <>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-xs font-semibold mb-1 text-foreground">Roll Number *</label>
+                              <input
+                                type="text"
+                                required
+                                value={editFormData.student.rollNumber}
+                                onChange={(e) => {
+                                  const newRoll = e.target.value.toUpperCase();
+                                  const parsed = parseRollNumber(newRoll);
+                                  const autoBatch = (parsed.isValid && parsed.batchYear) ? parsed.batchYear : editFormData.student.batch;
+                                  setEditFormData({
+                                    ...editFormData,
+                                    student: {
+                                      ...editFormData.student,
+                                      rollNumber: newRoll,
+                                      batch: autoBatch,
+                                    }
+                                  });
+                                }}
+                                className="w-full px-3 py-2 rounded-xl border border-input bg-background font-mono uppercase text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                                placeholder="e.g. 22091A3205 or 25X55A3306"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold mb-1 text-foreground">Academic Batch</label>
+                              <select
+                                value={editFormData.student.batch}
+                                onChange={(e) => setEditFormData({
+                                  ...editFormData,
+                                  student: { ...editFormData.student, batch: e.target.value }
+                                })}
+                                className="w-full px-3 py-2 rounded-xl border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                              >
+                                {ACADEMIC_BATCH_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                                {!ACADEMIC_BATCH_OPTIONS.some((o) => o.value === editFormData.student.batch) && editFormData.student.batch && (
+                                  <option value={editFormData.student.batch}>{editFormData.student.batch}</option>
+                                )}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-semibold mb-1 text-foreground">Section</label>
+                              <input
+                                type="text"
+                                value={editFormData.student.section}
+                                onChange={(e) => setEditFormData({
+                                  ...editFormData,
+                                  student: { ...editFormData.student, section: e.target.value }
+                                })}
+                                className="w-full px-3 py-2 rounded-xl border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                                placeholder="A"
+                              />
+                            </div>
+                          </div>
+
+                          {parsedEditRoll.isValid && (
+                            <div className={`p-2 rounded-xl border text-[11px] flex items-center gap-2 ${
+                              parsedEditRoll.isLateralEntry 
+                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' 
+                                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
+                            }`}>
+                              {parsedEditRoll.isLateralEntry ? (
+                                <>
+                                  <Sparkles className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                                  <span>
+                                    <strong>Diploma Lateral Entry (Joined {parsedEditRoll.admissionYear} in 2nd year):</strong> Belongs to graduating batch <strong>{parsedEditRoll.batchYear}</strong>.
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
+                                  <span>
+                                    <strong>Regular 4-Year B.Tech (Admitted {parsedEditRoll.admissionYear}):</strong> Belongs to batch <strong>{parsedEditRoll.batchYear}</strong>.
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
@@ -1363,62 +1422,101 @@ export default function AdminUsersPage() {
                     <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider text-primary">
                       2. Student Enrollment Details
                     </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-xs font-semibold mb-1 text-foreground">
-                          SREC Roll Number <span className="text-destructive">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          placeholder="e.g. 22091A3205 or 25X55A3306"
-                          value={formData.rollNumber}
-                          onChange={(e) => {
-                            const newRoll = e.target.value.toUpperCase();
-                            const updates: any = { rollNumber: newRoll };
-                            if (!formData.email || formData.email.endsWith('@srecnandyal.edu.in')) {
-                              updates.email = `${newRoll.toLowerCase()}@srecnandyal.edu.in`;
-                            }
-                            setFormData({ ...formData, ...updates });
-                          }}
-                          className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm font-mono uppercase text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                        />
-                      </div>
+                    {(() => {
+                      const parsedAddRoll = parseRollNumber(formData.rollNumber);
+                      return (
+                        <>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <label className="block text-xs font-semibold mb-1 text-foreground">
+                                SREC Roll Number <span className="text-destructive">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                required
+                                placeholder="e.g. 22091A3205 or 25X55A3306"
+                                value={formData.rollNumber}
+                                onChange={(e) => {
+                                  const newRoll = e.target.value.toUpperCase();
+                                  const parsed = parseRollNumber(newRoll);
+                                  const updates: any = { rollNumber: newRoll };
+                                  if (parsed.isValid && parsed.batchYear) {
+                                    updates.batch = parsed.batchYear;
+                                  }
+                                  if (!formData.email || formData.email.endsWith('@srecnandyal.edu.in')) {
+                                    updates.email = `${newRoll.toLowerCase()}@srecnandyal.edu.in`;
+                                  }
+                                  setFormData({ ...formData, ...updates });
+                                }}
+                                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm font-mono uppercase text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                              />
+                            </div>
 
-                      <div>
-                        <label className="block text-xs font-semibold mb-1 text-foreground">
-                          Academic Batch
-                        </label>
-                        <select
-                          value={formData.batch}
-                          onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                        >
-                          <option value="2025-2029">2025-2029</option>
-                          <option value="2024-2028">2024-2028</option>
-                          <option value="2023-2027">2023-2027</option>
-                          <option value="2022-2026">2022-2026</option>
-                          <option value="2021-2025">2021-2025</option>
-                          <option value="2026-2030">2026-2030</option>
-                        </select>
-                      </div>
+                            <div>
+                              <label className="block text-xs font-semibold mb-1 text-foreground">
+                                Academic Batch
+                              </label>
+                              <select
+                                value={formData.batch}
+                                onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
+                                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                              >
+                                {ACADEMIC_BATCH_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                                {!ACADEMIC_BATCH_OPTIONS.some((o) => o.value === formData.batch) && formData.batch && (
+                                  <option value={formData.batch}>{formData.batch}</option>
+                                )}
+                              </select>
+                            </div>
 
-                      <div>
-                        <label className="block text-xs font-semibold mb-1 text-foreground">
-                          Section
-                        </label>
-                        <select
-                          value={formData.section}
-                          onChange={(e) => setFormData({ ...formData, section: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                        >
-                          <option value="A">Section A</option>
-                          <option value="B">Section B</option>
-                          <option value="C">Section C</option>
-                          <option value="D">Section D</option>
-                        </select>
-                      </div>
-                    </div>
+                            <div>
+                              <label className="block text-xs font-semibold mb-1 text-foreground">
+                                Section
+                              </label>
+                              <select
+                                value={formData.section}
+                                onChange={(e) => setFormData({ ...formData, section: e.target.value })}
+                                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                              >
+                                <option value="A">Section A</option>
+                                <option value="B">Section B</option>
+                                <option value="C">Section C</option>
+                                <option value="D">Section D</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {parsedAddRoll.isValid && (
+                            <div className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
+                              parsedAddRoll.isLateralEntry 
+                                ? 'bg-amber-500/10 border-amber-500/30 text-amber-500' 
+                                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
+                            }`}>
+                              {parsedAddRoll.isLateralEntry ? (
+                                <>
+                                  <Sparkles className="w-4 h-4 shrink-0 text-amber-500" />
+                                  <div>
+                                    <span className="font-semibold">Diploma Lateral Entry (Joined {parsedAddRoll.admissionYear} directly into 2nd Year):</span>{' '}
+                                    Auto-mapped to graduating cohort <span className="font-mono font-bold underline">{parsedAddRoll.batchYear}</span>.
+                                  </div>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="w-4 h-4 shrink-0 text-emerald-500" />
+                                  <div>
+                                    <span className="font-semibold">Regular 4-Year B.Tech (Admitted {parsedAddRoll.admissionYear}):</span>{' '}
+                                    Assigned to batch <span className="font-mono font-bold">{parsedAddRoll.batchYear}</span>.
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
                   </div>
                 ) : formData.role === 'WEB_MANAGER' ? (
                   <div className="p-3.5 rounded-xl border border-cyan-500/30 bg-cyan-500/5 space-y-2">

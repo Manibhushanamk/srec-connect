@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { CheckCircle2, Shield, Award, Calendar, ExternalLink, MapPin, Mail, Github, Linkedin, Plus, Share2 } from 'lucide-react';
+import { isLateralEntryRoll } from '@/lib/studentHelper';
 
 export interface ProfileHeaderProps {
   name: string;
@@ -155,9 +156,14 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
           <div className="flex items-center gap-y-1 gap-x-4 text-xs text-muted-foreground flex-wrap pt-1 font-mono">
             {rollNumber && (
-              <span className="flex items-center gap-1 font-bold text-foreground">
+              <span className="flex items-center gap-1.5 font-bold text-foreground">
                 <Shield className="w-3.5 h-3.5 text-primary" />
                 Roll: {rollNumber}
+                {isLateralEntryRoll(rollNumber) && (
+                  <span className="text-[10px] font-sans font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30">
+                    Lateral Entry
+                  </span>
+                )}
               </span>
             )}
             {batch && (

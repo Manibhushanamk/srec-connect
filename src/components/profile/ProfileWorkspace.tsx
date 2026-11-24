@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { AchievementCard } from '@/components/cards/AchievementCard';
 import { FeedCard } from '@/components/social/FeedCard';
+import { isLateralEntryRoll } from '@/lib/studentHelper';
 
 interface ProfileWorkspaceProps {
   initialUser: {
@@ -708,14 +709,21 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                       <>
                         <div>
                           <span className="text-muted-foreground block text-[11px] uppercase font-semibold">SREC Roll Number</span>
-                          <span className="font-mono font-bold text-foreground mt-0.5 block">
-                            {initialUser.student?.rollNumber || 'Not Linked'}
-                          </span>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="font-mono font-bold text-foreground">
+                              {initialUser.student?.rollNumber || 'Not Linked'}
+                            </span>
+                            {isLateralEntryRoll(initialUser.student?.rollNumber) && (
+                              <span className="text-[10px] font-sans font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30">
+                                Lateral Entry
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <div>
                           <span className="text-muted-foreground block text-[11px] uppercase font-semibold">Academic Batch</span>
                           <span className="font-medium text-foreground mt-0.5 block">
-                            {batch || '2022-2026'}
+                            {batch || '2024-2028'}
                           </span>
                         </div>
                         <div>

@@ -355,7 +355,7 @@ export default function AdminBulkUploadPage() {
                 </div>
                 <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
                   <span className="font-mono text-slate-300 font-bold">batch</span>
-                  <span className="block text-[11px] text-slate-400">e.g. 2024-2028 (Default: 2024-2028).</span>
+                  <span className="block text-[11px] text-slate-400">e.g. 2024-2028. For Diploma Lateral Entry (e.g. 25X55A... joining in 2025 into 2nd year), auto-maps to 2024-2028.</span>
                 </div>
                 <div className="p-2.5 rounded-xl bg-slate-900 border border-slate-800">
                   <span className="font-mono text-slate-300 font-bold">section / phone</span>

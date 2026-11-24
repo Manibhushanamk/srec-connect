@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
           deptCodeInput = 'AIML';
         }
 
-        const batch = row['batch'] || row['year'] || row['regulation'] || '2024-2028';
+        let batch = (row['batch'] || row['year'] || row['regulation'] || '').toString().trim();
         const section = row['section'] || row['sec'] || 'A';
         const phone = row['phone'] || row['mobile'] || row['contact'] || '';
         const designation = row['designation'] || (type === 'HOD' ? 'Professor & HOD' : 'Assistant Professor');
@@ -136,11 +136,12 @@ export async function POST(req: NextRequest) {
           errors.push(`Duplicate email ${email} appears multiple times in file`);
         }
 
+        let parsedRoll: any = null;
         if (type === 'STUDENT') {
           if (!rollNumber) {
             errors.push('Missing roll number');
           } else {
-            const parsedRoll = parseRollNumber(rollNumber);
+            parsedRoll = parseRollNumber(rollNumber);
             if (!parsedRoll.isValid) {
               errors.push(`Roll number ${rollNumber} does not match valid SREC/JNTUA format (e.g. 22091A3201 or 25X55A3306)`);
             } else if (existingRolls.has(parsedRoll.normalized)) {
@@ -148,8 +149,21 @@ export async function POST(req: NextRequest) {
             } else if (seenRollsInFile.has(parsedRoll.normalized)) {
               errors.push(`Duplicate roll number ${parsedRoll.normalized} appears multiple times in file`);
             }
+
+            // Auto-align Academic Batch for Regular vs Diploma Lateral Entry
+            if (parsedRoll.isValid && parsedRoll.batchYear) {
+              if (!batch) {
+                // If omitted in CSV, automatically assign the parsed batch (e.g. 2024-2028 for 25X55A3306)
+                batch = parsedRoll.batchYear;
+              } else if (parsedRoll.isLateralEntry && parsedRoll.admissionYear && batch === `${parsedRoll.admissionYear}-${parsedRoll.admissionYear + 4}`) {
+                // If uploader mistakenly entered 4-year span (e.g. 2025-2029) for a Diploma Lateral Entry student admitted in 2025 directly into 2nd year,
+                // auto-correct to their actual graduating batch (2024-2028).
+                batch = parsedRoll.batchYear;
+              }
+            }
           }
         }
+        if (!batch) batch = '2024-2028';
 
         const deptObj = deptMap.get(deptCodeInput);
         if (!deptObj) {

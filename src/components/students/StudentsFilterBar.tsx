@@ -3,6 +3,7 @@
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, Filter, RotateCcw } from 'lucide-react';
+import { getBatchLabel } from '@/lib/studentHelper';
 
 interface StudentsFilterBarProps {
   departments: { id: string; name: string }[];
@@ -119,7 +120,9 @@ export function StudentsFilterBar({
           >
             <option value="all" className="bg-card text-foreground">All Batches</option>
             {batches.map((batch) => (
-              <option key={batch} value={batch} className="bg-card text-foreground">{batch}</option>
+              <option key={batch} value={batch} className="bg-card text-foreground">
+                {getBatchLabel(batch)}
+              </option>
             ))}
           </select>
         </div>

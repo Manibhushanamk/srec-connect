@@ -12,6 +12,7 @@ import {
   isWebManager,
 } from '@/lib/rbac';
 import { Role, UserStatus } from '@prisma/client';
+import { parseRollNumber } from '@/lib/studentHelper';
 
 export async function GET(req: NextRequest) {
   try {
@@ -253,6 +254,16 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: `Roll number ${cleanedRoll} is already registered` }, { status: 409 });
       }
 
+      const parsedRoll = parseRollNumber(cleanedRoll);
+      let calculatedBatch = (batch || '').trim();
+      if (!calculatedBatch && parsedRoll.isValid && parsedRoll.batchYear) {
+        calculatedBatch = parsedRoll.batchYear;
+      } else if (parsedRoll.isValid && parsedRoll.isLateralEntry && parsedRoll.admissionYear && calculatedBatch === `${parsedRoll.admissionYear}-${parsedRoll.admissionYear + 4}`) {
+        // Correct accidentally assigned 4-year span for lateral entry student
+        calculatedBatch = parsedRoll.batchYear;
+      }
+      if (!calculatedBatch) calculatedBatch = '2024-2028';
+
       studentRecord = await prisma.student.create({
         data: {
           rollNumber: cleanedRoll,
@@ -260,7 +271,7 @@ export async function POST(req: NextRequest) {
           email: normalizedEmail,
           departmentId: targetDeptId || null,
           departmentName: deptName,
-          batch: batch || '2022-2026',
+          batch: calculatedBatch,
           section: section || 'A',
           phone: phone || null,
           headline: headline || null,
@@ -508,6 +519,15 @@ export async function PATCH(req: NextRequest) {
         }
       } else if (role === 'STUDENT' || student?.rollNumber) {
         const fallbackRoll = rollNumber || (cleanEmail.includes('@') ? cleanEmail.split('@')[0].toUpperCase() : '22091A3200');
+        const parsedFallback = parseRollNumber(fallbackRoll);
+        let studentBatch = (student?.batch || '').trim();
+        if (!studentBatch && parsedFallback.isValid && parsedFallback.batchYear) {
+          studentBatch = parsedFallback.batchYear;
+        } else if (parsedFallback.isValid && parsedFallback.isLateralEntry && parsedFallback.admissionYear && studentBatch === `${parsedFallback.admissionYear}-${parsedFallback.admissionYear + 4}`) {
+          studentBatch = parsedFallback.batchYear;
+        }
+        if (!studentBatch) studentBatch = '2024-2028';
+
         const newStudent = await prisma.student.create({
           data: {
             name: trimmedName || cleanEmail,
@@ -515,7 +535,7 @@ export async function PATCH(req: NextRequest) {
             rollNumber: fallbackRoll,
             departmentId: departmentId || targetUser.departmentId,
             departmentName: deptName,
-            batch: student?.batch || '2022-2026',
+            batch: studentBatch,
             section: student?.section || 'A',
             headline: student?.headline || '',
             bio: student?.bio || '',
