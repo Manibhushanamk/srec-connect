@@ -440,12 +440,13 @@ export const FeedCard: React.FC<FeedPostProps> = ({
 
       {/* 4. Instagram Media Frame (Max 2 images) */}
       {activeImages.length > 0 && (
-        <div className="w-full bg-slate-950/10 dark:bg-slate-950/40 border-y border-border">
+        <div className="w-full bg-slate-900/40 border-y border-border overflow-hidden">
           {activeImages.length === 1 ? (
-            <div className="relative aspect-[4/3] max-h-[460px] overflow-hidden bg-black/5 flex items-center justify-center">
+            <div className="relative aspect-[4/3] max-h-[460px] overflow-hidden bg-slate-900/50 flex items-center justify-center">
               <img
                 src={activeImages[0]}
-                alt="Post Media"
+                alt=""
+                aria-label="Post media attachment"
                 width={800}
                 height={600}
                 loading="lazy"
@@ -467,10 +468,11 @@ export const FeedCard: React.FC<FeedPostProps> = ({
           ) : (
             <div className="grid grid-cols-2 gap-1 max-h-[380px] overflow-hidden">
               {activeImages.slice(0, 2).map((img, idx) => (
-                <div key={idx} className="relative aspect-square overflow-hidden bg-black/5">
+                <div key={idx} className="relative aspect-square overflow-hidden bg-slate-900/50">
                   <img
                     src={img}
-                    alt={`Post Media ${idx + 1}`}
+                    alt=""
+                    aria-label={`Post media attachment ${idx + 1}`}
                     width={400}
                     height={400}
                     loading="lazy"

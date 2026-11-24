@@ -11,6 +11,7 @@ import { redirect } from 'next/navigation';
 import { Role } from '@prisma/client';
 import { formatDate } from '@/lib/utils';
 import { GoogleDriveCard } from '@/components/dashboard/GoogleDriveCard';
+import { StudentAchievementsList } from '@/components/dashboard/StudentAchievementsList';
 import {
   Award,
   Medal,
@@ -42,20 +43,31 @@ export const metadata: Metadata = {
 };
 
 async function getStudentData(studentId: string) {
-  const [student, achievements, pendingCount] = await Promise.all([
+  const [student, achievements, pendingCount, categories] = await Promise.all([
     prisma.student.findUnique({
       where: { id: studentId },
       include: { department: true, user: true },
     }),
     prisma.achievement.findMany({
       where: { primaryStudentId: studentId, deletedAt: null },
-      include: { category: true, department: true, media: { where: { isCover: true }, take: 1 } },
+      include: {
+        category: true,
+        department: true,
+        teamMembers: {
+          select: { id: true, rollNumber: true, studentName: true, isLeader: true },
+        },
+        media: { where: { isCover: true }, take: 1 },
+      },
       orderBy: { achievementDate: 'desc' },
     }),
     prisma.achievement.count({ where: { primaryStudentId: studentId, status: 'PENDING', deletedAt: null } }),
+    prisma.category.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
   ]);
 
-  return { student, achievements, pendingCount };
+  return { student, achievements, pendingCount, categories };
 }
 
 export default async function StudentDashboardPage() {
@@ -73,14 +85,14 @@ export default async function StudentDashboardPage() {
   }
 
   const data = await getStudentData(studentId);
-  const { student, achievements, pendingCount } = data;
+  const { student, achievements, pendingCount, categories } = data;
 
   if (!student) {
     redirect('/auth/access-denied');
   }
 
-  const publishedAchievements = achievements.filter(a => a.status === 'PUBLISHED');
-  const pendingAchievements = achievements.filter(a => a.status === 'PENDING');
+  const publishedAchievements = achievements.filter(a => a.status === 'PUBLISHED' || a.status === 'APPROVED');
+  const pendingAchievements = achievements.filter(a => a.status === 'PENDING' || a.status === 'UNDER_REVIEW');
   const rejectedAchievements = achievements.filter(a => a.status === 'REJECTED');
   const draftAchievements = achievements.filter(a => a.status === 'DRAFT');
 
@@ -160,51 +172,10 @@ export default async function StudentDashboardPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold text-slate-100">Your Achievements</h2>
-              <p className="text-sm text-slate-400">{achievements.length} total submissions</p>
-            </div>
-            <Link href="/dashboard/student/submit">
-              <Button variant="primary" size="sm" className="gap-2">
-                <Plus className="w-4 h-4" />
-                Submit New
-              </Button>
-            </Link>
-          </div>
-
-          {achievements.length === 0 ? (
-            <EmptyStatePreset 
-              type="achievements" 
-              action={{ label: 'Submit Your First Achievement', href: '/dashboard/student/submit', variant: 'primary' }}
-            />
-          ) : (
-            <div className="space-y-3">
-              {achievements.map((achievement) => (
-                <Link key={achievement.id} href={`/achievements/${achievement.id}`} className="group">
-                  <Card variant="glass" hover className="p-4 flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-cyan-500 flex items-center justify-center flex-shrink-0">
-                      <Award className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium text-slate-100 truncate">{achievement.title}</h3>
-                        <StatusBadge status={achievement.status} size="sm" />
-                      </div>
-                      <div className="flex flex-wrap gap-2 text-sm text-slate-400">
-                        <span>{achievement.category.name}</span>
-                        <span>•</span>
-                        <span>{achievement.level}</span>
-                        <span>•</span>
-                        <span>{formatDate(achievement.achievementDate)}</span>
-                      </div>
-                    </div>
-                    <ArrowRight className="w-5 h-5 text-slate-500 group-hover:text-brand-400 transition-colors" />
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          )}
+          <StudentAchievementsList
+            achievements={achievements as any}
+            categories={categories}
+          />
         </div>
 
         <div className="space-y-6">

@@ -143,7 +143,9 @@ export async function GET(req: NextRequest) {
           department: post.author.department?.name || post.author.student?.departmentName || post.author.faculty?.departmentName || 'CSE (AI & ML)',
           isVerified: post.author.student?.isActive || post.author.faculty?.isActive || true,
         },
-        images: post.media.map((m) => m.url),
+        images: post.media.map((m) =>
+          m.thumbnailUrl && m.thumbnailUrl.startsWith('data:image/') ? m.thumbnailUrl : m.url
+        ),
         likesCount: post.likes.length,
         commentsCount: post.comments.length,
         isLiked,
