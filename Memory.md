@@ -5,7 +5,26 @@
 - **Department:** Computer Science & Engineering (Artificial Intelligence & Machine Learning)
 - **Current Version:** v3.0.0 (Production Certified & Live Deployed)
 - **Stack:** Next.js 15.5.25 (App Router), React 19, TypeScript, Tailwind CSS, Prisma ORM 6.19.3, Neon Serverless PostgreSQL (`v3_production` schema), NextAuth v4 (Google Workspace SSO), Sharp (adaptive WebP compression).
-- **Latest Deployed Commit:** `fb09f25` -> `fix(navigation): add top profile hover dropdown with logout, fix student dashboard breadcrumb and role-gated sidebar`.
+- **Latest Deployed Commit:** `362f636` -> `feat(achievements): allow student pending edit/withdraw and enforce strict approved record lock`.
+- **Student Pending Achievement Editing & Permanent Approved Record Lockout (Nov 24, 2026):**
+  - **Core Business Logic Mandate ("Student can also edit their request while it is in pending. After approving, they cannot be edited and removed")**:
+    - **Editable in Review**: When an achievement submission is in `PENDING`, `UNDER_REVIEW`, `RESUBMISSION_REQUIRED`, or `DRAFT`, the student author can edit all details (title, description, category, level, position rank, event/organization, achievement date, academic year, certificate/Drive URL, team members) or withdraw the request.
+    - **Permanent Institutional Lockout**: Once an achievement has `status === 'APPROVED'` or `status === 'PUBLISHED'`, it is locked to preserve institutional audit integrity, NIRF/NAAC reporting compliance, and accredited college ranking records.
+      - **API Lock (`/api/achievements/submit` & `/api/achievements/[id]`)**: Attempting `PATCH` or `DELETE` on approved/published honors as a student returns HTTP 403 Forbidden with `{ error: 'Approved achievements are locked and cannot be edited or removed...', isLocked: true, code: 'ACHIEVEMENT_APPROVED_LOCKED' }`.
+      - **UI Lock**: Approved achievements display a verified lock badge (`🔒 Approved & Verified (Locked)`), and Edit / Withdraw action buttons are completely omitted.
+      - **Dedicated Edit Page Protection (`/dashboard/student/edit/[id]`)**: If a student accesses an approved achievement's edit URL, a dedicated Institutional Record Locked notice is rendered with a 1-click button back to the dashboard, and editing inputs are disabled.
+  - **Interactive Student Dashboard (`src/components/dashboard/StudentAchievementsList.tsx`)**:
+    - Built a rich, filterable tabbed interface: "All Submissions", "In Review (Pending)", "Approved & Locked", and "Needs Changes".
+    - Embedded an in-place **Edit Pending Achievement Modal** pre-populated with achievement data, integrated with `DriveFileUploader` for Google Drive certificates and team members tagging.
+    - Added an interactive **Withdraw Submission Dialog** for canceling pending requests before faculty review.
+  - **Resilient Feed Media & Thumbnail Delivery (`src/app/api/posts/route.ts` & `src/components/social/FeedCard.tsx`)**:
+    - Mapped post images to prefer stored WebP data URI thumbnails (`m.thumbnailUrl`) when available, providing 0ms instant loading with 0 network dependencies.
+    - Removed broken image alt text leak (`alt=""`) and added dark background framing so pending images never render as empty black voids.
+  - **Empirically Tested & Live Deployed**:
+    - Created and passed test suite [tests/student-achievement-pending-edit-locked.test.ts](file:///home/kmanib/Documents/srec-connect-final/tests/student-achievement-pending-edit-locked.test.ts) (6/6 tests passed).
+    - Passed [tests/drive-email-match-and-persistence.test.ts](file:///home/kmanib/Documents/srec-connect-final/tests/drive-email-match-and-persistence.test.ts) (5/5 tests passed).
+    - Passed production build (`npm run build`) with 70/70 static pages.
+    - Deployed to live production at `https://srecconnect.dpdns.org`.
 - **Top Profile Hover Dropdown, Logout Button, Student Breadcrumb & Role-Gated Sidebar (Nov 24, 2026):**
   - **Desktop Profile Hover Dropdown & Logout Button (`src/components/layout/AppHeader.tsx`)**:
     - Replaced static `/profile` link with an interactive Desktop Profile Dropdown that opens smoothly on hover (`onMouseEnter`/`onMouseLeave` with 200ms debounce) or on click.
