@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { processPostImage, MAX_POST_IMAGES } from '@/lib/image-processor';
-import { uploadToR2, generateR2Key } from '@/lib/r2';
 import { uploadCertificateToDrive } from '@/lib/drive';
 import { sanitizeText, sanitizeSafeUrl } from '@/lib/sanitize';
 import { checkRateLimit } from '@/lib/rate-limit';
@@ -242,11 +241,10 @@ export async function POST(req: NextRequest) {
 
       // Sharp WebP processing & compression
       const processed = await processPostImage(imgBuffer);
-      const r2Key = generateR2Key('posts', `img-${Date.now()}-${i}.webp`);
 
       let publicUrl = '';
 
-      // 1. Primary: Upload post image directly to user's Google Drive inside 'SREC CONNECT' folder
+      // Primary: Upload post image directly to user's Google Drive inside 'SREC CONNECT' folder
       try {
         const driveResult = await uploadCertificateToDrive({
           fileBuffer: processed.buffer,
@@ -258,14 +256,8 @@ export async function POST(req: NextRequest) {
         });
         publicUrl = driveResult.directDisplayUrl || driveResult.webViewLink;
       } catch (driveErr) {
-        console.warn('[Post Image Drive Upload] Drive upload fallback to R2/Local:', driveErr);
-        // 2. Secondary fallback: Cloudflare R2
-        try {
-          publicUrl = await uploadToR2(r2Key, processed.buffer, processed.contentType);
-        } catch (uploadErr) {
-          console.warn('[R2 Upload Warning] Could not push to remote R2 bucket; saving fallback URL:', uploadErr);
-          publicUrl = `data:image/webp;base64,${processed.buffer.toString('base64')}`;
-        }
+        console.warn('[Post Image Drive Upload] Drive upload fallback to local/data URI:', driveErr);
+        publicUrl = `data:image/webp;base64,${processed.buffer.toString('base64')}`;
       }
 
       processedMedia.push({

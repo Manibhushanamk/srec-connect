@@ -74,9 +74,23 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
     setMounted(true);
   }, []);
 
+  const getDirectMediaUrl = (url?: string | null): string => {
+    if (!url) return '';
+    if (url.startsWith('/api/drive/file/')) return url;
+    const driveMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (driveMatch && driveMatch[1]) {
+      return `/api/drive/file/${driveMatch[1]}`;
+    }
+    const idMatch = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+    if (idMatch && idMatch[1]) {
+      return `/api/drive/file/${idMatch[1]}`;
+    }
+    return url;
+  };
+
   const rawProof = googleDriveUrl || certificateUrl;
   const hasProof = !!rawProof;
-  const proofUrl = rawProof || `/achievements/${id}`;
+  const proofUrl = getDirectMediaUrl(rawProof) || `/achievements/${id}`;
   const detailHref = href || `/achievements/${id}`;
 
   const isImageMedia = (url?: string | null): boolean => {
@@ -85,6 +99,8 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
     if (url.startsWith('/api/drive/file/')) return true;
     if (url.startsWith('/uploads/')) return true;
     if (url.includes('googleusercontent.com')) return true;
+    if (url.includes('drive.google.com/file/d/')) return true;
+    if (url.includes('drive.google.com/uc?id=')) return true;
     return /\.(png|jpe?g|webp|gif|svg)$/i.test(url);
   };
 
@@ -93,6 +109,10 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
     const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (match && match[1]) {
       return `https://drive.google.com/file/d/${match[1]}/preview`;
+    }
+    const proxyMatch = url.match(/\/api\/drive\/file\/([a-zA-Z0-9_-]+)/);
+    if (proxyMatch && proxyMatch[1] && !proxyMatch[1].startsWith('srec-')) {
+      return `https://drive.google.com/file/d/${proxyMatch[1]}/preview`;
     }
     return url;
   };

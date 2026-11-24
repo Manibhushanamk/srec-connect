@@ -1,66 +1,38 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+/**
+ * Deprecated / Decommissioned Storage Module:
+ * Cloudflare R2 and AWS S3 have been superseded by Institutional Google Drive.
+ * All media, student proofs, and faculty records are stored exclusively in Google Drive.
+ */
 
-const r2Client = new S3Client({
-  region: 'auto',
-  endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-});
-
-const BUCKET = process.env.R2_BUCKET_NAME!;
-const PUBLIC_DOMAIN = process.env.R2_PUBLIC_DOMAIN!;
+import { uploadCertificateToDrive } from './drive';
 
 export async function uploadToR2(
   key: string,
   body: Buffer | ReadableStream | Blob,
-  contentType: string,
-  options?: { cacheControl?: string }
+  contentType: string
 ): Promise<string> {
-  await r2Client.send(new PutObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-    Body: body as any,
-    ContentType: contentType,
-    CacheControl: options?.cacheControl || 'public, max-age=31536000, immutable',
-  }));
-  
-  return `${PUBLIC_DOMAIN}/${key}`;
-}
+  let fileBuffer: Buffer;
+  if (Buffer.isBuffer(body)) {
+    fileBuffer = body;
+  } else if (body instanceof Blob) {
+    const arrayBuffer = await body.arrayBuffer();
+    fileBuffer = Buffer.from(arrayBuffer);
+  } else {
+    fileBuffer = Buffer.from(body as any);
+  }
 
-export async function deleteFromR2(key: string): Promise<void> {
-  await r2Client.send(new DeleteObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-  }));
-}
-
-export async function getSignedUploadUrl(
-  key: string,
-  contentType: string,
-  expiresIn: number = 3600
-): Promise<{ uploadUrl: string; publicUrl: string }> {
-  const command = new PutObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-    ContentType: contentType,
+  const result = await uploadCertificateToDrive({
+    fileBuffer,
+    fileName: key.split('/').pop() || `media_${Date.now()}`,
+    mimeType: contentType || 'application/octet-stream',
+    documentType: 'CAMPUS_MEDIA',
   });
-  
-  const uploadUrl = await getSignedUrl(r2Client, command, { expiresIn });
-  const publicUrl = `${PUBLIC_DOMAIN}/${key}`;
-  
-  return { uploadUrl, publicUrl };
+
+  return result.directDisplayUrl || result.webViewLink;
 }
 
-export async function getSignedDownloadUrl(key: string, expiresIn: number = 3600): Promise<string> {
-  const command = new GetObjectCommand({
-    Bucket: BUCKET,
-    Key: key,
-  });
-  
-  return getSignedUrl(r2Client, command, { expiresIn });
+export async function deleteFromR2(_key: string): Promise<void> {
+  // No-op: Managed via Google Drive
 }
 
 export function generateR2Key(prefix: string, fileName: string): string {
@@ -72,5 +44,5 @@ export function generateR2Key(prefix: string, fileName: string): string {
 }
 
 export function getPublicUrl(key: string): string {
-  return `${PUBLIC_DOMAIN}/${key}`;
+  return `/api/drive/file/${key}`;
 }

@@ -9,7 +9,7 @@ const statusMessages = [
   'Verifying Student Achievement Records...',
   'Loading Faculty Research Publications...',
   'Initializing Secure Administrative Workflows...',
-  'Establishing Encrypted Cloudflare R2 Channel...',
+  'Connecting to Institutional Google Drive Storage...',
   'Calibrating Deep Space Glassmorphism Interface...',
   'Ready to Empower Excellence!',
 ];

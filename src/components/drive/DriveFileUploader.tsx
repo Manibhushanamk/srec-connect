@@ -67,7 +67,7 @@ export function DriveFileUploader({
 
       setUploadedFileName(data.fileName);
       setUploadedFileSize(data.fileSize);
-      onChange(data.webViewLink);
+      onChange(data.directDisplayUrl || data.webViewLink);
     } catch (err: any) {
       console.error('[Drive Upload Component Error]', err);
       setUploadError(err.message || 'Network error occurred while uploading.');

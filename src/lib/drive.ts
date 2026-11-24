@@ -2,8 +2,8 @@ import { google } from 'googleapis';
 import { Readable } from 'stream';
 import fs from 'fs';
 import path from 'path';
+import sharp from 'sharp';
 import { prisma } from './prisma';
-import { uploadToR2, generateR2Key } from './r2';
 
 export class DriveSecurityError extends Error {
   constructor(message: string) {
@@ -40,7 +40,7 @@ export interface DriveUploadResult {
   directDisplayUrl: string;
   localMirrorUrl?: string | null;
   isPublicLink: boolean;
-  storageProvider: 'GOOGLE_DRIVE' | 'CLOUDFLARE_R2' | 'LOCAL';
+  storageProvider: 'GOOGLE_DRIVE' | 'LOCAL';
 }
 
 export interface StoredDriveTokens {
@@ -289,8 +289,8 @@ export async function initializeDriveFolders(drive: any): Promise<{ rootFolderId
 /**
  * Uploads verified student certificates or public event documents to Google Drive.
  * Places file inside the dedicated 'SREC CONNECT' folder in user's account.
- * Provides directDisplayUrl (/api/drive/file/[id]) so media can be rendered directly like Cloudflare.
- * Automatically falls back to Cloudflare R2 if Google Drive API is unavailable.
+ * Automatically optimizes images via Sharp (WebP conversion) for CDN-grade delivery.
+ * Provides directDisplayUrl (/api/drive/file/[id]) which streams directly like a Cloudflare CDN.
  */
 export async function uploadCertificateToDrive({
   fileBuffer,
@@ -311,6 +311,25 @@ export async function uploadCertificateToDrive({
 }): Promise<DriveUploadResult> {
   assertDriveAllowed(documentType);
 
+  // Auto-optimize images with Sharp before saving to Google Drive for CDN-grade speed
+  let uploadBuffer = fileBuffer;
+  let uploadMimeType = mimeType;
+  let uploadFileName = fileName;
+
+  if (mimeType.startsWith('image/') && !mimeType.includes('svg')) {
+    try {
+      uploadBuffer = await sharp(fileBuffer)
+        .rotate()
+        .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 82 })
+        .toBuffer();
+      uploadMimeType = 'image/webp';
+      uploadFileName = fileName.replace(/\.[^/.]+$/, '') + '.webp';
+    } catch (imgOptErr) {
+      console.warn('[Drive Image Pre-Optimization Warning] Using original image buffer:', imgOptErr);
+    }
+  }
+
   // 1. Primary: Attempt Google Drive upload into dedicated SREC CONNECT folder
   try {
     const drive = await getAuthenticatedDriveClient(accessToken, refreshToken);
@@ -322,17 +341,17 @@ export async function uploadCertificateToDrive({
       }
 
       const readable = new Readable();
-      readable.push(fileBuffer);
+      readable.push(uploadBuffer);
       readable.push(null);
 
       const response = await drive.files.create({
         requestBody: {
-          name: fileName,
+          name: uploadFileName,
           parents: targetFolderId ? [targetFolderId] : undefined,
           description: 'SREC CONNECT Verified Academic Document',
         },
         media: {
-          mimeType,
+          mimeType: uploadMimeType,
           body: readable,
         },
         fields: 'id, name, webViewLink, webContentLink',
@@ -340,7 +359,7 @@ export async function uploadCertificateToDrive({
 
       const fileId = response.data.id!;
 
-      // Automatically share certificates with public reader permissions
+      // Automatically share certificates with public reader permissions for CDN streaming
       try {
         await drive.permissions.create({
           fileId,
@@ -368,41 +387,23 @@ export async function uploadCertificateToDrive({
       };
     }
   } catch (driveErr: any) {
-    console.warn('[Drive Upload] Google Drive API upload failed, falling back to Cloudflare R2 CDN:', driveErr?.message || driveErr);
+    console.warn('[Drive Upload] Google Drive API upload failed, falling back to local storage:', driveErr?.message || driveErr);
   }
 
-  // 2. High-Performance Cloudflare R2 Fallback
-  try {
-    if (process.env.R2_ACCOUNT_ID && process.env.R2_ACCESS_KEY_ID && process.env.R2_SECRET_ACCESS_KEY) {
-      const r2Key = generateR2Key('uploads', fileName);
-      const r2Url = await uploadToR2(r2Key, fileBuffer, mimeType);
-      return {
-        fileId: `r2-${r2Key}`,
-        webViewLink: r2Url,
-        webContentLink: r2Url,
-        directDisplayUrl: r2Url,
-        isPublicLink: true,
-        storageProvider: 'CLOUDFLARE_R2',
-      };
-    }
-  } catch (r2Err: any) {
-    console.warn('[Drive Upload] Cloudflare R2 fallback failed:', r2Err?.message || r2Err);
-  }
-
-  // 3. Local mirror fallback for local dev
+  // 2. Local mirror fallback for offline development
   const mockFileId = `srec-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-  let localUrl = `/uploads/${fileName}`;
+  let localUrl = `/uploads/${uploadFileName}`;
   try {
     const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
     if (!fs.existsSync(uploadsDir)) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
-    const localFilePath = path.join(uploadsDir, fileName);
-    fs.writeFileSync(localFilePath, fileBuffer);
+    const localFilePath = path.join(uploadsDir, uploadFileName);
+    fs.writeFileSync(localFilePath, uploadBuffer);
 
     // Also persist with mockFileId prefix so /api/drive/file/[id] finds it immediately
-    const indexedFilePath = path.join(uploadsDir, `${mockFileId}_${fileName}`);
-    fs.writeFileSync(indexedFilePath, fileBuffer);
+    const indexedFilePath = path.join(uploadsDir, `${mockFileId}_${uploadFileName}`);
+    fs.writeFileSync(indexedFilePath, uploadBuffer);
   } catch (fsErr) {
     console.warn('[Drive Upload] Local filesystem write warning:', fsErr);
   }
