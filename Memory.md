@@ -5,6 +5,29 @@
 - **Department:** Computer Science & Engineering (Artificial Intelligence & Machine Learning)
 - **Current Version:** v3.0.0 (Production Certified & Live Deployed)
 - **Stack:** Next.js 15.5.25 (App Router), React 19, TypeScript, Tailwind CSS, Prisma ORM 6.19.3, Neon Serverless PostgreSQL (`v3_production` schema), NextAuth v4 (Google Workspace SSO), Sharp (adaptive WebP compression).
+- **Institutional Data Export Center Upgrade & Pending Count Bug Fix (Nov 24, 2026):**
+  - **Resolved Phantom "1 Pending in Verification" Bug (`src/app/admin/page.tsx`)**:
+    - Identified root cause in `getStats`: `deletedAt: null` was missing from `prisma.achievement.count({ where: { ...where, status: 'PENDING' } })`. A soft-deleted achievement (`cmwc7e30z0001ik12pgqjtdog`, deleted on 2026-11-11) retained `status: 'PENDING'`, which caused the Executive Command Center to count 1 pending achievement even though the achievements review desk correctly filtered it out.
+    - Updated `src/app/admin/page.tsx` to enforce `deletedAt: null` across all achievement, user, event, and incident counts.
+    - Updated soft-deleted pending records to `status: 'WITHDRAWN'`. Verification desk count is now strictly **0**.
+  - **NextAuth SSR Session Hydration & Navigation Flash Prevention (`src/app/layout.tsx` & `src/app/providers.tsx`)**:
+    - Updated `RootLayout` (`src/app/layout.tsx`) to retrieve `session = await getServerSession().catch(() => null)` on the server and pass it into `<Providers session={session}>`.
+    - Updated `Providers` (`src/app/providers.tsx`) to pass `session` into `<SessionProvider session={session}>`. Client components using `useSession()` are now instantly hydrated with the authenticated session on initial render, completely eliminating any flash of "Sign In" on protected routes.
+    - Added protected route safeguard in `AppHeader.tsx`: on any `/dashboard/*` or `/admin/*` route, if session is still loading, renders a loading skeleton rather than flashing "Sign In".
+    - Role-gated `AdminSidebar.tsx`: strictly prevents student users from seeing admin Quick Actions (`isAdminUser && !isStudent`).
+  - **Comprehensive Upgrade of Institutional Data Export Center (`src/app/admin/export/page.tsx`, `src/lib/exportHelper.ts`, `/api/admin/export`)**:
+    - **7 Accreditation Compliance Presets (1-Click)**:
+      1. NAAC Criterion 5.3 (Student Awards & Progression — Excel)
+      2. NBA Criterion 4 (External Competitions & Hackathons — Excel)
+      3. Student Master Roster (With Diploma Lateral Entry tags — Excel)
+      4. Faculty Teaching & Research Registry (Excel)
+      5. Campus Events & Participant Telemetry (Excel)
+      6. Grievance & Disciplinary Case Audit Dossier (Printable HTML / PDF)
+      7. Master Institutional Multi-Sheet Archive (Excel Workbook with 5 dedicated domain tabs)
+    - **6 Interactive Filter Controls**: Data Domain, Department Scope (all 11 departments or specific department), Verification Status, Academic Year, Graduation Batch, and Date Range.
+    - **4 Export Output Formats**: Native Excel (.xlsx) with auto-fitted column widths, UTF-8 CSV with BOM (\uFEFF) for Microsoft Excel compatibility, Printable HTML / PDF Dossier (.html) with official SREC letterhead and IQAC signature blocks, and Structured JSON (.json).
+    - **Live Real-Time Data Preview Table**: Fetches `/api/admin/export?preview=true&...` whenever filters change, showing record count badge and top 5 rows table before downloading.
+    - **Unit Tests Passed**: `tests/admin-export-center.test.ts` (8/8 tests passing).
 - **Latest Deployed Commit:** `362f636` -> `feat(achievements): allow student pending edit/withdraw and enforce strict approved record lock`.
 - **Student Pending Achievement Editing & Permanent Approved Record Lockout (Nov 24, 2026):**
   - **Core Business Logic Mandate ("Student can also edit their request while it is in pending. After approving, they cannot be edited and removed")**:

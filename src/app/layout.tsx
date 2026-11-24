@@ -4,6 +4,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 import { GlobalNavigationLoader } from '@/components/layout/GlobalNavigationLoader';
+import { getServerSession } from '@/lib/auth';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -61,11 +62,13 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const session = await getServerSession().catch(() => null);
+
   return (
     <html lang="en" className={`${inter.variable} dark`} suppressHydrationWarning>
       <head>
@@ -76,7 +79,7 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
-        <Providers>
+        <Providers session={session}>
           <Suspense fallback={null}>
             <GlobalNavigationLoader />
           </Suspense>

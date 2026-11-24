@@ -320,8 +320,8 @@ export const AppHeader: React.FC = () => {
                   </div>
                 )}
               </div>
-            ) : status === 'loading' ? (
-              /* Loading skeleton: NEVER flash Sign In while checking session */
+            ) : status === 'loading' || (pathname && (pathname.startsWith('/dashboard') || pathname.startsWith('/admin'))) ? (
+              /* Loading skeleton: NEVER flash Sign In while checking session or on protected routes */
               <div className="flex items-center gap-2 p-1.5 px-3 rounded-xl bg-secondary/40 border border-border/40 animate-pulse">
                 <div className="w-7 h-7 rounded-full bg-muted/60" />
                 <div className="w-16 h-3 bg-muted/60 rounded hidden md:block" />

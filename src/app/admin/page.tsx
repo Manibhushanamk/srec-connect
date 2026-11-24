@@ -75,10 +75,10 @@ const MODULES = [
 ];
 
 async function getStats(userId: string, isSuperAdmin: boolean, departmentId: string | null) {
-  const where = isSuperAdmin ? {} : { departmentId };
+  const where = isSuperAdmin ? { deletedAt: null } : { departmentId, deletedAt: null };
 
   const [users, departments, achievements, events, pendingAchievements, upcomingEvents] = await Promise.all([
-    prisma.user.count({ where: { status: 'ACTIVE' } }),
+    prisma.user.count({ where: { status: 'ACTIVE', deletedAt: null } }),
     prisma.department.count({ where: { isActive: true } }),
     prisma.achievement.count({ where: { ...where, status: 'PUBLISHED' } }),
     prisma.event.count({ where: { ...where, status: 'UPCOMING' } }),

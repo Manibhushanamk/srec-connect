@@ -317,7 +317,7 @@ export function AdminSidebar({ className }: { className?: string } = {}) {
             Quick Actions
           </p>
           <div className="space-y-1.5">
-            {isAdminUser ? (
+            {isAdminUser && !isStudent ? (
               <>
                 <Link
                   href="/admin/achievements?status=PENDING"
