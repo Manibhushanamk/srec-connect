@@ -445,6 +445,9 @@ export const FeedCard: React.FC<FeedPostProps> = ({
                 width={800}
                 height={600}
                 loading="lazy"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
                 className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.01]"
               />
             </div>
@@ -458,6 +461,9 @@ export const FeedCard: React.FC<FeedPostProps> = ({
                     width={400}
                     height={400}
                     loading="lazy"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.02]"
                   />
                 </div>

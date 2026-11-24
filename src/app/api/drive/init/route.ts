@@ -35,8 +35,17 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('[Drive Init Error]', error);
+    const errMsg = error?.message || '';
+    if (errMsg.includes('Google Drive API has not been used') || errMsg.includes('disabled')) {
+      return NextResponse.json({
+        success: false,
+        requiresApiEnablement: true,
+        enableUrl: 'https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=127891787958',
+        message: 'Google Drive API is pending one-click activation in Google Cloud Console for project 127891787958.',
+      }, { status: 200 });
+    }
     return NextResponse.json(
-      { error: error?.message || 'Failed to initialize Google Drive folder.' },
+      { error: errMsg || 'Failed to initialize Google Drive folder.' },
       { status: 500 }
     );
   }

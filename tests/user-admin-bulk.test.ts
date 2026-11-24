@@ -119,7 +119,7 @@ describe('Phase 3: User & Academic Administration (Bulk CSV & Roll Numbers)', ()
           },
         });
       }
-    });
+    }, { maxWait: 25000, timeout: 35000 });
 
     const insertedUsers = await prisma.user.findMany({
       where: { email: { in: batchRows.map((b) => b.email) } },

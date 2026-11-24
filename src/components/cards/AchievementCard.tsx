@@ -543,6 +543,9 @@ export const AchievementCard: React.FC<AchievementCardProps> = ({
                           src={proofUrl}
                           alt={`Certificate for ${title}`}
                           className="max-h-[460px] w-auto max-w-full object-contain rounded-xl shadow-md"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
                         />
                       </div>
                     ) : (

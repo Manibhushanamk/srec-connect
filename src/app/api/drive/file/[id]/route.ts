@@ -108,81 +108,95 @@ export async function GET(
   }
 
   // 3. Multi-Tier Google Drive Retrieval (Zero-Auth-Barrier CDN Pipeline)
+  const isGoogleDriveId =
+    !fileId.startsWith('srec-') &&
+    !fileId.startsWith('drive-srec-') &&
+    !fileId.startsWith('inline-') &&
+    fileId.length >= 20;
+
   let fetchedBuffer: Buffer | null = null;
   let fetchedMimeType = 'application/octet-stream';
   let fetchedFileName = `document_${fileId}`;
 
-  try {
-    // Attempt A: Authenticated Drive Client (session tokens, stored admin tokens, or service account)
-    const session = await getServerSession(authOptions).catch(() => null);
-    const drive = await getAuthenticatedDriveClient(
-      (session as any)?.accessToken,
-      (session as any)?.refreshToken
-    );
+  if (isGoogleDriveId) {
+    try {
+      // Attempt A: Authenticated Drive Client (session tokens, stored admin tokens, or service account)
+      const session = await getServerSession(authOptions).catch(() => null);
+      const drive = await getAuthenticatedDriveClient(
+        (session as any)?.accessToken,
+        (session as any)?.refreshToken
+      ).catch((authErr: any) => {
+        console.warn('[Drive Stream Auth Client Warning]', authErr?.message || authErr);
+        return null;
+      });
 
-    if (drive) {
-      try {
-        const meta = await drive.files.get({
-          fileId,
-          fields: 'id, name, mimeType, size',
-        });
-        fetchedMimeType = meta.data.mimeType || fetchedMimeType;
-        fetchedFileName = meta.data.name || fetchedFileName;
-
-        const fileRes = await drive.files.get(
-          { fileId, alt: 'media' },
-          { responseType: 'arraybuffer' }
-        );
-
-        if (fileRes.data) {
-          fetchedBuffer = Buffer.from(fileRes.data as ArrayBuffer);
-        }
-      } catch (clientErr: any) {
-        console.warn(`[Drive Stream] Client get failed for ${fileId}, trying public edge fallback:`, clientErr?.message);
-      }
-    }
-
-    // Attempt B: High-Speed Google Public Edge CDN (for shared certificates & feed images)
-    if (!fetchedBuffer) {
-      // 1. Try Google High-Speed Edge photo CDN
-      try {
-        const edgeRes = await fetch(`https://lh3.googleusercontent.com/d/${fileId}`, {
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-        });
-        if (edgeRes.ok) {
-          const contentType = edgeRes.headers.get('content-type') || '';
-          if (contentType.startsWith('image/')) {
-            const arr = await edgeRes.arrayBuffer();
-            fetchedBuffer = Buffer.from(arr);
-            fetchedMimeType = contentType;
-          }
-        }
-      } catch (edgeErr) {
-        // Continue to download link
-      }
-
-      // 2. Try Google Drive Direct Export / Download Link
-      if (!fetchedBuffer) {
+      if (drive) {
         try {
-          const downloadRes = await fetch(
-            `https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0`
+          const meta = await drive.files.get({
+            fileId,
+            fields: 'id, name, mimeType, size',
+          });
+          fetchedMimeType = meta.data.mimeType || fetchedMimeType;
+          fetchedFileName = meta.data.name || fetchedFileName;
+
+          const fileRes = await drive.files.get(
+            { fileId, alt: 'media' },
+            { responseType: 'arraybuffer' }
           );
-          if (downloadRes.ok) {
-            const contentType = downloadRes.headers.get('content-type') || '';
-            if (!contentType.includes('text/html')) {
-              const arr = await downloadRes.arrayBuffer();
+
+          if (fileRes.data) {
+            fetchedBuffer = Buffer.from(fileRes.data as ArrayBuffer);
+          }
+        } catch (clientErr: any) {
+          console.warn(`[Drive Stream] Client get failed for ${fileId}, trying public edge fallback:`, clientErr?.message);
+        }
+      }
+
+      // Attempt B: High-Speed Google Public Edge CDN (for shared certificates & feed images)
+      if (!fetchedBuffer) {
+        // 1. Try Google High-Speed Edge photo CDN
+        try {
+          const edgeRes = await fetch(`https://lh3.googleusercontent.com/d/${fileId}`, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
+          });
+          if (edgeRes.ok) {
+            const contentType = edgeRes.headers.get('content-type') || '';
+            if (contentType.startsWith('image/')) {
+              const arr = await edgeRes.arrayBuffer();
               fetchedBuffer = Buffer.from(arr);
-              fetchedMimeType = contentType || 'application/pdf';
+              fetchedMimeType = contentType;
             }
           }
-        } catch (dlErr) {
-          // Handled below
+        } catch (edgeErr) {
+          // Continue to download link
+        }
+
+        // 2. Try Google Drive Direct Export / Download Link
+        if (!fetchedBuffer) {
+          try {
+            const downloadRes = await fetch(
+              `https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0`
+            );
+            if (downloadRes.ok) {
+              const contentType = downloadRes.headers.get('content-type') || '';
+              if (!contentType.includes('text/html')) {
+                const arr = await downloadRes.arrayBuffer();
+                fetchedBuffer = Buffer.from(arr);
+                fetchedMimeType = contentType || 'application/pdf';
+              }
+            }
+          } catch (dlErr) {
+            // Handled below
+          }
         }
       }
+    } catch (err: any) {
+      console.error(`[Drive Stream Error] Failed to stream ${fileId}:`, err?.message || err);
     }
+  }
 
-    // 4. Process and Optimize Image if requested
-    if (fetchedBuffer) {
+  // 4. Process and Optimize Image if requested
+  if (fetchedBuffer) {
       let finalBuffer = fetchedBuffer;
       let finalMimeType = fetchedMimeType;
 
@@ -219,13 +233,25 @@ export async function GET(
       });
 
       return serveMediaBuffer(req, finalBuffer, finalMimeType, fetchedFileName, etag, lastModified, false);
-    }
-  } catch (err: any) {
-    console.error(`[Drive Stream Error] Failed to stream ${fileId}:`, err?.message || err);
   }
 
-  // 5. Final Graceful Fallback: Redirect directly to Google Drive preview viewer
-  return NextResponse.redirect(`https://drive.google.com/file/d/${fileId}/view`);
+  // 5. Final Safe Fallback: Return a clean, non-broken SVG media card instead of redirecting to a Google Drive 404 HTML page
+  const placeholderSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" fill="none">
+  <rect width="800" height="600" fill="#090d16"/>
+  <rect x="20" y="20" width="760" height="560" rx="16" stroke="#1e293b" stroke-width="2" stroke-dasharray="6 6"/>
+  <circle cx="400" cy="270" r="44" fill="#1e293b"/>
+  <path d="M380 270h40M400 250v40" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/>
+  <text x="400" y="348" text-anchor="middle" fill="#f1f5f9" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600">SREC Connect Institutional Media</text>
+  <text x="400" y="376" text-anchor="middle" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-size="13">Google Drive Storage Synchronizing</text>
+</svg>`;
+
+  return new NextResponse(placeholderSvg, {
+    status: 200,
+    headers: {
+      'Content-Type': 'image/svg+xml',
+      'Cache-Control': 'public, max-age=60',
+    },
+  });
 }
 
 /**
