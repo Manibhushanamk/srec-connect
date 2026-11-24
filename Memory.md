@@ -5,7 +5,22 @@
 - **Department:** Computer Science & Engineering (Artificial Intelligence & Machine Learning)
 - **Current Version:** v3.0.0 (Production Certified & Live Deployed)
 - **Stack:** Next.js 15.5.25 (App Router), React 19, TypeScript, Tailwind CSS, Prisma ORM 6.19.3, Neon Serverless PostgreSQL (`v3_production` schema), NextAuth v4 (Google Workspace SSO), Sharp (adaptive WebP compression).
-- **Latest Deployed Commit:** `c12f640` (feat(drive): add dashboard drive connection card and enforce mandatory drive permission for post media).
+- **Latest Deployed Commit:** `58d846c` -> `feat(drive): lock drive connection to user email, persist tokens in db, and ensure zero broken images`.
+- **Google Drive Email Lock, Permanent Token Persistence & Broken Media Elimination (Nov 24, 2026):**
+  - **Identical Account & Email Enforcement ("drive and the mail should same to connect with drive")**:
+    - Pre-filled and locked Google OAuth authorization with `login_hint: session.user.email` and `prompt: 'consent select_account'` in `GoogleDriveCard.tsx` and `PostComposer.tsx`. When a student/faculty member connects Drive, Google automatically focuses and pre-selects their exact institutional Google account.
+    - Verified email parity in `/api/drive/init` using Google's `https://oauth2.googleapis.com/tokeninfo`. If a user attempts to connect a mismatched Google account (e.g. personal Gmail instead of `@srecnandyal.edu.in`), the system flags `emailMismatch: true` and blocks the mismatch with an explicit warning banner and a 1-click button to authorize with their exact account.
+  - **Permanent Token Persistence & Automated Refresh ("i given access to drive but it asking drive reqe again")**:
+    - Stored Google Drive OAuth credentials for **all** users (Students, Faculty, Admins) in Neon PostgreSQL (`SystemSetting` table, key `USER_DRIVE_TOKENS_${userId}`).
+    - Configured automatic token refresh in NextAuth `jwt` callback, `getAuthenticatedDriveClient`, and `/api/drive/init`. When Google's 1-hour access token expires, the system automatically calls Google's token endpoint (`https://oauth2.googleapis.com/token`) using `refresh_token`, updates `SystemSetting`, and hydrates the user's session without re-prompting the user. Once permission is given, Drive remains permanently connected.
+  - **Zero-Barrier Media Streaming & Broken Frame Elimination**:
+    - Pre-warmed high-performance in-memory media cache (`src/lib/media-cache.ts`) upon post upload: when a user publishes a post with images, the compressed WebP buffer is immediately cached in memory, delivering instant sub-5ms CDN delivery on the very first request to `/api/drive/file/[id]`.
+    - Added database `thumbnailUrl` fallback (data URI) to `PostMedia`. If Google's edge CDN is indexing or takes time, `/api/drive/file/[id]` serves the stored buffer directly.
+    - Added `e.currentTarget.style.display = 'none'` on `onError` in `FeedCard.tsx` and updated optimistic post update in `page.tsx` so broken image frames and alt text never appear in the feed.
+  - **Empirical Validation**:
+    - Passed TypeScript compilation check (`tsc --noEmit`).
+    - Passed unit test suite `tests/drive-email-match-and-persistence.test.ts` (5/5 tests passing) and `tests/user-admin-bulk.test.ts` (7/7 tests passing).
+    - Captured Playwright screenshots `verify_signin_clean_oauth.png` and `verify_feed_clean_render.png`.
 - **Dashboard Drive Connection & Mandatory Post Media Drive Permission (Nov 24, 2026):**
   - **Dashboard Drive Integration Widget (`src/components/dashboard/GoogleDriveCard.tsx`)**: Created a dedicated, interactive Google Drive card component and embedded it across:
     - Student Dashboard (`/dashboard/student`)

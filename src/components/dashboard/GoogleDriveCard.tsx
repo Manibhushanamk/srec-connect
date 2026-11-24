@@ -21,6 +21,10 @@ export const GoogleDriveCard: React.FC<GoogleDriveCardProps> = ({ className = ''
     requiresReauth?: boolean;
     requiresApiEnablement?: boolean;
     enableUrl?: string;
+    emailMismatch?: boolean;
+    expectedEmail?: string;
+    actualEmail?: string;
+    email?: string;
     message?: string;
   } | null>(null);
 
@@ -55,7 +59,10 @@ export const GoogleDriveCard: React.FC<GoogleDriveCardProps> = ({ className = ''
     try {
       await signIn('google', {
         callbackUrl: window.location.href,
-      });
+      }, {
+        login_hint: session?.user?.email || undefined,
+        prompt: 'consent select_account',
+      } as any);
     } catch (err) {
       console.error('[Drive Connect Error]:', err);
       setConnecting(false);
@@ -234,21 +241,44 @@ export const GoogleDriveCard: React.FC<GoogleDriveCardProps> = ({ className = ''
         </div>
       ) : (
         <div className="space-y-3.5">
-          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-start gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold text-foreground">Drive Permission Required for Media</p>
-              <p className="text-[11px] text-amber-300/90 mt-1 leading-relaxed">
-                To upload campus photos, publish posts with media, and submit achievement certificates, authorize SREC Connect to create an isolated <span className="font-semibold text-foreground">SREC CONNECT</span> folder in your Google Drive.
-              </p>
+          {driveData?.emailMismatch ? (
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-foreground">Drive &amp; Account Email Must Match</p>
+                <p className="text-[11px] text-rose-300/90 mt-1 leading-relaxed">
+                  You authorized Google Drive with <span className="font-mono text-foreground font-semibold">{driveData.actualEmail}</span>, but your logged-in institutional account is <span className="font-mono text-foreground font-semibold">{driveData.expectedEmail || session.user.email}</span>. Both must be the exact same account.
+                </p>
+              </div>
             </div>
+          ) : (
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-foreground">Drive Permission Required for Media</p>
+                <p className="text-[11px] text-amber-300/90 mt-1 leading-relaxed">
+                  To upload campus photos, publish posts with media, and submit achievement certificates, authorize SREC Connect to create an isolated <span className="font-semibold text-foreground">SREC CONNECT</span> folder in your Google Drive.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="p-2.5 rounded-xl bg-secondary/50 border border-border/60 text-[11px] flex items-center justify-between">
+            <span className="text-muted-foreground">Authorized Account:</span>
+            <span className="font-mono font-semibold text-foreground truncate max-w-[220px]">
+              {session.user.email}
+            </span>
           </div>
 
           <div className="pt-1">
             <button
               onClick={handleConnect}
               disabled={connecting}
-              className="w-full py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm disabled:opacity-50"
+              className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-sm disabled:opacity-50 ${
+                driveData?.emailMismatch
+                  ? 'bg-rose-500 hover:bg-rose-400 active:bg-rose-600 text-white'
+                  : 'bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950'
+              }`}
             >
               {connecting ? (
                 <>
@@ -258,7 +288,7 @@ export const GoogleDriveCard: React.FC<GoogleDriveCardProps> = ({ className = ''
               ) : (
                 <>
                   <HardDrive className="w-4 h-4" />
-                  <span>Connect Google Drive</span>
+                  <span>Connect with {session.user.email}</span>
                   <ArrowRight className="w-3.5 h-3.5 ml-0.5" />
                 </>
               )}

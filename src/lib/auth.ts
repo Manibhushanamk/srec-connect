@@ -3,7 +3,13 @@ import GoogleProvider from 'next-auth/providers/google';
 import { prisma } from './prisma';
 import { Role } from '@prisma/client';
 import { AuthUserContext } from './rbac';
-import { saveSuperAdminDriveTokens, getAuthenticatedDriveClient, getOrCreateUserDriveFolder } from './drive';
+import {
+  saveSuperAdminDriveTokens,
+  saveUserDriveTokens,
+  getUserDriveTokens,
+  getAuthenticatedDriveClient,
+  getOrCreateUserDriveFolder,
+} from './drive';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -158,6 +164,7 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account, trigger, session }) {
       if (account?.access_token) {
         token.accessToken = account.access_token;
+        token.accessTokenExpires = account.expires_at ? account.expires_at * 1000 : Date.now() + 3600 * 1000;
       }
       if (account?.refresh_token) {
         token.refreshToken = account.refresh_token;
@@ -165,6 +172,37 @@ export const authOptions: NextAuthOptions = {
       if (trigger === 'update') {
         if (session?.name) token.name = session.name;
         if (session?.image) token.picture = session.image;
+      }
+
+      // Auto-refresh token if near expiration (within 5 minutes)
+      if (token.refreshToken && token.accessTokenExpires && Date.now() > (token.accessTokenExpires as number) - 300000) {
+        try {
+          const refreshRes = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: process.env.GOOGLE_CLIENT_ID || '',
+              client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+              grant_type: 'refresh_token',
+              refresh_token: token.refreshToken as string,
+            }),
+          });
+          if (refreshRes.ok) {
+            const refreshed = await refreshRes.json();
+            if (refreshed.access_token) {
+              token.accessToken = refreshed.access_token;
+              token.accessTokenExpires = Date.now() + (refreshed.expires_in || 3600) * 1000;
+              if (token.id) {
+                await saveUserDriveTokens(token.id as string, {
+                  access_token: refreshed.access_token,
+                  expiry_date: token.accessTokenExpires as number,
+                }).catch(() => null);
+              }
+            }
+          }
+        } catch (refreshErr) {
+          console.warn('[Auth] Token auto-refresh error in jwt callback:', refreshErr);
+        }
       }
 
       // Always resolve and synchronize with live database user
@@ -282,6 +320,26 @@ export const authOptions: NextAuthOptions = {
                 .catch((err) => console.warn('[Drive Auth Client Init Warning]:', err?.message || err));
             }
 
+            // Hydrate session token from persistent database storage if token is missing
+            if (!token.accessToken && dbUser.id) {
+              const stored = await getUserDriveTokens(dbUser.id);
+              if (stored?.access_token) {
+                token.accessToken = stored.access_token;
+                token.refreshToken = stored.refresh_token || token.refreshToken;
+                token.accessTokenExpires = stored.expiry_date;
+              }
+            }
+
+            // Auto-persist Google Drive credentials for ALL users (Students, Faculty, Admins)
+            if (account?.access_token && dbUser) {
+              saveUserDriveTokens(dbUser.id, {
+                access_token: account.access_token,
+                refresh_token: account.refresh_token || (token.refreshToken as string | undefined),
+                expiry_date: account.expires_at ? account.expires_at * 1000 : undefined,
+                email: lookupEmail,
+              }).catch((err) => console.warn('[Auth] Failed to auto-persist user Drive tokens:', err));
+            }
+
             // Auto-persist Super Admin Google Drive credentials for automated 14-day background backups
             if (account?.access_token && (dbUser.role === Role.SUPER_ADMIN || lookupEmail === (process.env.INITIAL_ADMIN_EMAIL || '').toLowerCase().trim())) {
               saveSuperAdminDriveTokens({
@@ -343,9 +401,9 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).departmentId = token.departmentId;
         (session.user as any).studentId = token.studentId;
         (session.user as any).facultyId = token.facultyId;
+        (session as any).accessToken = token.accessToken;
+        (session as any).refreshToken = token.refreshToken;
       }
-      (session as any).accessToken = token.accessToken;
-      (session as any).refreshToken = token.refreshToken;
       return session;
     },
 

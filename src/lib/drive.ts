@@ -56,6 +56,68 @@ export interface StoredDriveTokens {
 
 const SETTING_KEY_DRIVE_TOKENS = 'GOOGLE_DRIVE_TOKENS';
 
+export function getUserDriveTokensKey(userId: string): string {
+  return `USER_DRIVE_TOKENS_${userId}`;
+}
+
+/**
+ * Retrieves persistent Google Drive tokens for any student, faculty, or admin user.
+ */
+export async function getUserDriveTokens(userId: string): Promise<StoredDriveTokens | null> {
+  try {
+    const key = getUserDriveTokensKey(userId);
+    const setting = await prisma.systemSetting.findUnique({
+      where: { key },
+    });
+    if (!setting?.value) return null;
+    return JSON.parse(setting.value) as StoredDriveTokens;
+  } catch (err) {
+    console.warn(`[Drive Token Storage] Failed to read tokens for user ${userId}:`, err);
+    return null;
+  }
+}
+
+/**
+ * Persists or updates Google Drive tokens for any user in SystemSetting.
+ */
+export async function saveUserDriveTokens(userId: string, tokens: Partial<StoredDriveTokens>): Promise<void> {
+  const key = getUserDriveTokensKey(userId);
+  const existing = await getUserDriveTokens(userId);
+  const merged: StoredDriveTokens = {
+    access_token: tokens.access_token || existing?.access_token || '',
+    refresh_token: tokens.refresh_token || existing?.refresh_token,
+    expiry_date: tokens.expiry_date || existing?.expiry_date,
+    email: tokens.email || existing?.email,
+    connectedAt: existing?.connectedAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    rootFolderId: tokens.rootFolderId || existing?.rootFolderId,
+    backupFolderId: tokens.backupFolderId || existing?.backupFolderId,
+  };
+
+  await prisma.systemSetting.upsert({
+    where: { key },
+    update: {
+      value: JSON.stringify(merged),
+      description: `Persistent Google Drive OAuth credentials for user ${userId}`,
+    },
+    create: {
+      key,
+      value: JSON.stringify(merged),
+      description: `Persistent Google Drive OAuth credentials for user ${userId}`,
+    },
+  });
+}
+
+/**
+ * Disconnects a user's Google Drive account by wiping stored tokens.
+ */
+export async function disconnectUserDrive(userId: string): Promise<void> {
+  const key = getUserDriveTokensKey(userId);
+  await prisma.systemSetting.deleteMany({
+    where: { key },
+  });
+}
+
 /**
  * Retrieves the stored Super Admin Google Drive tokens from SystemSetting.
  */
@@ -113,27 +175,48 @@ export async function disconnectSuperAdminDrive(): Promise<void> {
 
 /**
  * Obtains an authenticated Google Drive client:
- * 1. User session tokens (accessToken / refreshToken) if provided.
+ * 1. User session tokens (accessToken / refreshToken) or user DB tokens if userId provided.
  * 2. Super Admin OAuth with automatic background token refresh.
  * 3. Institutional Service Account JWT fallback.
  */
-export async function getAuthenticatedDriveClient(userAccessToken?: string, userRefreshToken?: string) {
-  // Case A: User's session token passed directly
-  if (userAccessToken || userRefreshToken) {
+export async function getAuthenticatedDriveClient(
+  userAccessToken?: string,
+  userRefreshToken?: string,
+  userId?: string
+) {
+  let at = userAccessToken;
+  let rt = userRefreshToken;
+  let storedUserTokens: StoredDriveTokens | null = null;
+
+  // If userId provided, retrieve stored user tokens from database if missing
+  if (userId) {
+    storedUserTokens = await getUserDriveTokens(userId);
+    if (!at && storedUserTokens?.access_token) at = storedUserTokens.access_token;
+    if (!rt && storedUserTokens?.refresh_token) rt = storedUserTokens.refresh_token;
+  }
+
+  // Case A: User's token (session or persistent DB)
+  if (at || rt) {
     try {
       const oauth2Client = new google.auth.OAuth2(
         process.env.GOOGLE_CLIENT_ID,
         process.env.GOOGLE_CLIENT_SECRET
       );
       oauth2Client.setCredentials({
-        access_token: userAccessToken,
-        refresh_token: userRefreshToken,
+        access_token: at,
+        refresh_token: rt,
       });
 
       // Ensure valid access token, auto-refreshing if refresh_token is present
-      if (userRefreshToken) {
+      if (rt) {
         try {
-          await oauth2Client.getAccessToken();
+          const { token } = await oauth2Client.getAccessToken();
+          if (token && token !== at) {
+            at = token;
+            if (userId) {
+              await saveUserDriveTokens(userId, { access_token: token });
+            }
+          }
         } catch (tokenRefreshErr) {
           console.warn('[Drive Auth] User token auto-refresh warning:', tokenRefreshErr);
         }

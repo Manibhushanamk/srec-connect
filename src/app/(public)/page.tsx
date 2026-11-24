@@ -89,7 +89,7 @@ function HomePageContent() {
         department: newPost.author?.student?.departmentName || newPost.author?.faculty?.departmentName || 'CSE (AI & ML)',
         isVerified: true,
       },
-      images: newPost.images || [],
+      images: newPost.images || newPost.media?.map((m: any) => m.url) || [],
       likesCount: 0,
       commentsCount: 0,
       isLiked: false,

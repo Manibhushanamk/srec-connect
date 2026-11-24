@@ -1,48 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import { getStoredDriveTokens, getUserDriveTokens } from '@/lib/drive';
+import { getCachedMedia, setCachedMedia } from '@/lib/media-cache';
 import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
 
 export const runtime = 'nodejs';
-
-/**
- * High-Performance In-Memory Media Cache:
- * Delivers Cloudflare R2 / AWS S3 level sub-5ms latency for frequently requested
- * student certificates, achievement proofs, and campus feed photos.
- */
-interface CachedMediaEntry {
-  buffer: Buffer;
-  mimeType: string;
-  fileName: string;
-  size: number;
-  etag: string;
-  lastModified: string;
-  cachedAt: number;
-}
-
-const MEDIA_CACHE = new Map<string, CachedMediaEntry>();
-const MAX_CACHE_ITEMS = 150;
-const CACHE_TTL_MS = 1000 * 60 * 60 * 4; // 4 hours
-
-function getCached(key: string): CachedMediaEntry | null {
-  const item = MEDIA_CACHE.get(key);
-  if (!item) return null;
-  if (Date.now() - item.cachedAt > CACHE_TTL_MS) {
-    MEDIA_CACHE.delete(key);
-    return null;
-  }
-  return item;
-}
-
-function setCache(key: string, entry: CachedMediaEntry): void {
-  if (MEDIA_CACHE.size >= MAX_CACHE_ITEMS) {
-    const firstKey = MEDIA_CACHE.keys().next().value;
-    if (firstKey) MEDIA_CACHE.delete(firstKey);
-  }
-  MEDIA_CACHE.set(key, entry);
-}
 
 export async function GET(
   req: NextRequest,
@@ -64,8 +30,8 @@ export async function GET(
 
   const cacheKey = `${fileId}${targetWidth ? `_w${targetWidth}` : ''}${isThumbnail ? '_thumb' : ''}`;
 
-  // 1. In-Memory CDN Cache HIT Check
-  const cached = getCached(cacheKey);
+  // 1. In-Memory CDN Cache HIT Check (sub-5ms)
+  const cached = getCachedMedia(cacheKey);
   if (cached) {
     return serveMediaBuffer(req, cached.buffer, cached.mimeType, cached.fileName, cached.etag, cached.lastModified, true);
   }
@@ -91,7 +57,7 @@ export async function GET(
         const mimeType = mimeMap[ext] || 'application/octet-stream';
         const etag = `W/"srec-local-${fileId}-${stats.size}"`;
         const lastMod = stats.mtime.toUTCString();
-        setCache(cacheKey, {
+        setCachedMedia(cacheKey, {
           buffer,
           mimeType,
           fileName: match,
@@ -118,9 +84,9 @@ export async function GET(
 
   if (isGoogleDriveId) {
     try {
-      // Attempt A: Direct Google Drive REST API with OAuth Bearer Token
+      // Attempt A1: Direct Google Drive REST API with Session OAuth Bearer Token
       const session = await getServerSession(authOptions).catch(() => null);
-      const accessToken = (session as any)?.accessToken;
+      let accessToken = (session as any)?.accessToken;
 
       if (accessToken) {
         try {
@@ -147,7 +113,44 @@ export async function GET(
             fetchedBuffer = Buffer.from(arr);
           }
         } catch (clientErr: any) {
-          console.warn(`[Drive Stream] Direct REST get failed for ${fileId}, trying public edge fallback:`, clientErr?.message);
+          console.warn(`[Drive Stream] Direct REST get failed for ${fileId}:`, clientErr?.message);
+        }
+      }
+
+      // Attempt A2: Direct Google Drive REST API with System Super Admin or Post Author DB Tokens
+      if (!fetchedBuffer) {
+        try {
+          let systemToken = '';
+          const sys = await getStoredDriveTokens();
+          if (sys?.access_token) {
+            systemToken = sys.access_token;
+          } else {
+            const mediaRecord = await prisma.postMedia.findFirst({
+              where: { url: { contains: fileId } },
+              include: { post: { select: { authorId: true } } },
+            });
+            if (mediaRecord?.post?.authorId) {
+              const authorTokens = await getUserDriveTokens(mediaRecord.post.authorId);
+              if (authorTokens?.access_token) {
+                systemToken = authorTokens.access_token;
+              }
+            }
+          }
+
+          if (systemToken) {
+            const mediaRes = await fetch(
+              `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`,
+              {
+                headers: { Authorization: `Bearer ${systemToken}` },
+              }
+            );
+            if (mediaRes.ok) {
+              const arr = await mediaRes.arrayBuffer();
+              fetchedBuffer = Buffer.from(arr);
+            }
+          }
+        } catch (sysErr) {
+          console.warn(`[Drive Stream System Token Warning] for ${fileId}:`, sysErr);
         }
       }
 
@@ -189,6 +192,25 @@ export async function GET(
           }
         }
       }
+
+      // Attempt C: Database Stored Thumbnail/Data URI Fallback
+      if (!fetchedBuffer) {
+        try {
+          const mediaRecord = await prisma.postMedia.findFirst({
+            where: { url: { contains: fileId } },
+            select: { thumbnailUrl: true },
+          });
+          if (mediaRecord?.thumbnailUrl?.startsWith('data:image/')) {
+            const base64Data = mediaRecord.thumbnailUrl.split(',')[1];
+            if (base64Data) {
+              fetchedBuffer = Buffer.from(base64Data, 'base64');
+              fetchedMimeType = 'image/webp';
+            }
+          }
+        } catch (dbErr) {
+          // ignore
+        }
+      }
     } catch (err: any) {
       console.error(`[Drive Stream Error] Failed to stream ${fileId}:`, err?.message || err);
     }
@@ -221,7 +243,7 @@ export async function GET(
       const lastModified = new Date().toUTCString();
 
       // Store in memory cache for sub-5ms repeat loads
-      setCache(cacheKey, {
+      setCachedMedia(cacheKey, {
         buffer: finalBuffer,
         mimeType: finalMimeType,
         fileName: fetchedFileName,

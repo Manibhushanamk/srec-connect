@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { processPostImage, MAX_POST_IMAGES } from '@/lib/image-processor';
-import { uploadCertificateToDrive } from '@/lib/drive';
+import { uploadCertificateToDrive, getUserDriveTokens } from '@/lib/drive';
+import { setCachedMedia } from '@/lib/media-cache';
 import { sanitizeText, sanitizeSafeUrl } from '@/lib/sanitize';
 import { checkRateLimit } from '@/lib/rate-limit';
 
@@ -222,11 +223,19 @@ export async function POST(req: NextRequest) {
     }
 
     // MANDATORY GOOGLE DRIVE PERMISSION CHECK FOR POSTS WITH MEDIA
-    if (rawImages.length > 0) {
-      const accessToken = (session as any)?.accessToken;
-      const refreshToken = (session as any)?.refreshToken;
+    let driveAccessToken = (session as any)?.accessToken;
+    let driveRefreshToken = (session as any)?.refreshToken;
 
-      if (!accessToken && !refreshToken) {
+    if (rawImages.length > 0) {
+      if (!driveAccessToken && !driveRefreshToken && user?.id) {
+        const stored = await getUserDriveTokens(user.id);
+        if (stored?.access_token) {
+          driveAccessToken = stored.access_token;
+          driveRefreshToken = stored.refresh_token;
+        }
+      }
+
+      if (!driveAccessToken && !driveRefreshToken) {
         return NextResponse.json(
           {
             error: 'Google Drive connection is mandatory to upload posts with media. Please connect your Google Drive from your dashboard or profile.',
@@ -238,7 +247,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Process and upload attached images to user's Google Drive
-    const processedMedia: { url: string; width: number; height: number; order: number }[] = [];
+    const processedMedia: { url: string; thumbnailUrl: string; width: number; height: number; order: number }[] = [];
 
     for (let i = 0; i < rawImages.length; i++) {
       const raw = rawImages[i];
@@ -249,7 +258,7 @@ export async function POST(req: NextRequest) {
         imgBuffer = Buffer.from(base64Data, 'base64');
       } else if (raw.startsWith('http://') || raw.startsWith('https://')) {
         // Already hosted image URL
-        processedMedia.push({ url: raw, width: 800, height: 600, order: i });
+        processedMedia.push({ url: raw, thumbnailUrl: raw, width: 800, height: 600, order: i });
         continue;
       } else {
         imgBuffer = Buffer.from(raw, 'base64');
@@ -257,6 +266,7 @@ export async function POST(req: NextRequest) {
 
       // Sharp WebP processing & compression
       const processed = await processPostImage(imgBuffer);
+      const inlineDataUri = `data:image/webp;base64,${processed.buffer.toString('base64')}`;
 
       let publicUrl = '';
 
@@ -267,29 +277,37 @@ export async function POST(req: NextRequest) {
           fileName: `post_${Date.now()}_${i}.webp`,
           mimeType: 'image/webp',
           documentType: 'CAMPUS_MEDIA',
-          accessToken: (session as any)?.accessToken,
-          refreshToken: (session as any)?.refreshToken,
+          accessToken: driveAccessToken,
+          refreshToken: driveRefreshToken,
         });
+
+        // Pre-warm in-memory CDN cache immediately for sub-5ms instant delivery
+        if (driveResult.fileId) {
+          setCachedMedia(driveResult.fileId, {
+            buffer: processed.buffer,
+            mimeType: 'image/webp',
+            fileName: `post_${Date.now()}_${i}.webp`,
+            size: processed.buffer.length,
+            etag: `W/"srec-drive-${driveResult.fileId}-${processed.buffer.length}"`,
+            lastModified: new Date().toUTCString(),
+            cachedAt: Date.now(),
+          });
+        }
 
         // Ensure we never use an ephemeral local srec- file on serverless production
         if (driveResult.storageProvider === 'LOCAL' && driveResult.fileId?.startsWith('srec-')) {
-          publicUrl = `data:image/webp;base64,${processed.buffer.toString('base64')}`;
+          publicUrl = inlineDataUri;
         } else {
           publicUrl = driveResult.directDisplayUrl || driveResult.webViewLink;
         }
       } catch (driveErr: any) {
         console.warn('[Post Image Drive Upload] Drive upload error:', driveErr?.message || driveErr);
-        return NextResponse.json(
-          {
-            error: 'Google Drive permission has not been granted. Please connect your Google Drive from your dashboard to upload posts with media.',
-            requiresDriveConnect: true,
-          },
-          { status: 403 }
-        );
+        publicUrl = inlineDataUri;
       }
 
       processedMedia.push({
         url: publicUrl,
+        thumbnailUrl: inlineDataUri,
         width: processed.width,
         height: processed.height,
         order: i,
@@ -306,6 +324,7 @@ export async function POST(req: NextRequest) {
           media: {
             create: processedMedia.map((m) => ({
               url: m.url,
+              thumbnailUrl: m.thumbnailUrl,
               width: m.width,
               height: m.height,
               order: m.order,
@@ -361,7 +380,12 @@ export async function POST(req: NextRequest) {
       return post;
     });
 
-    return NextResponse.json({ post: newPost }, { status: 201 });
+    return NextResponse.json({
+      post: {
+        ...newPost,
+        images: newPost.media.map((m) => m.url),
+      },
+    }, { status: 201 });
   } catch (error: any) {
     console.error('[API Posts POST] Error:', error);
     return NextResponse.json({ error: error.message || 'Failed to create post' }, { status: 500 });

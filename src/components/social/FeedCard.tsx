@@ -448,7 +448,8 @@ export const FeedCard: React.FC<FeedPostProps> = ({
                 width={800}
                 height={600}
                 loading="lazy"
-                onError={() => {
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
                   setFailedImages((prev) => ({ ...prev, [0]: true }));
                 }}
                 className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.01]"
@@ -464,7 +465,8 @@ export const FeedCard: React.FC<FeedPostProps> = ({
                     width={400}
                     height={400}
                     loading="lazy"
-                    onError={() => {
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
                       setFailedImages((prev) => ({ ...prev, [idx]: true }));
                     }}
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.02]"

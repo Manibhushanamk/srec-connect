@@ -38,6 +38,10 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
     requiresReauth?: boolean;
     requiresApiEnablement?: boolean;
     enableUrl?: string;
+    emailMismatch?: boolean;
+    expectedEmail?: string;
+    actualEmail?: string;
+    email?: string;
     message?: string;
   } | null>(null);
   const [checkingDrive, setCheckingDrive] = useState(true);
@@ -59,7 +63,12 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
   const handleConnectDrive = async () => {
     setConnectingDrive(true);
     try {
-      await signIn('google', { callbackUrl: window.location.href });
+      await signIn('google', {
+        callbackUrl: window.location.href,
+      }, {
+        login_hint: session?.user?.email || undefined,
+        prompt: 'consent select_account',
+      } as any);
     } catch (err) {
       console.error('[Drive Connect Error]:', err);
       setConnectingDrive(false);
@@ -290,13 +299,21 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
 
           {/* Mandatory Google Drive Notice when images are attached */}
           {selectedImages.length > 0 && !driveStatus?.isConnected && (
-            <div className="mt-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className={`mt-3 p-3.5 rounded-xl border text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 ${
+              driveStatus?.emailMismatch
+                ? 'bg-rose-500/10 border-rose-500/30 text-rose-300'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+            }`}>
               <div className="flex items-start gap-2 min-w-0">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${driveStatus?.emailMismatch ? 'text-rose-400' : 'text-amber-400'}`} />
                 <div>
-                  <p className="font-bold text-foreground">Google Drive Connection Required</p>
-                  <p className="text-[11px] text-amber-300/90 mt-0.5">
-                    Drive authorization is mandatory to upload images. Your media is saved directly to your private SREC CONNECT folder.
+                  <p className="font-bold text-foreground">
+                    {driveStatus?.emailMismatch ? 'Drive & Account Email Must Match' : 'Google Drive Connection Required'}
+                  </p>
+                  <p className={`text-[11px] mt-0.5 ${driveStatus?.emailMismatch ? 'text-rose-300/90' : 'text-amber-300/90'}`}>
+                    {driveStatus?.emailMismatch
+                      ? `Drive was connected with ${driveStatus.actualEmail}, but your account is ${session.user.email}. Drive must match this exact account.`
+                      : `Drive authorization is mandatory to upload images. Your media is saved directly to your private SREC CONNECT folder (${session.user.email}).`}
                   </p>
                 </div>
               </div>
@@ -304,14 +321,18 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
                 type="button"
                 onClick={handleConnectDrive}
                 disabled={connectingDrive}
-                className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
+                className={`px-3.5 py-1.5 rounded-lg font-bold text-xs shrink-0 flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50 ${
+                  driveStatus?.emailMismatch
+                    ? 'bg-rose-500 hover:bg-rose-400 text-white'
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                }`}
               >
                 {connectingDrive ? (
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 ) : (
                   <HardDrive className="w-3.5 h-3.5" />
                 )}
-                <span>{connectingDrive ? 'Connecting...' : 'Connect Drive'}</span>
+                <span>{connectingDrive ? 'Connecting...' : driveStatus?.emailMismatch ? `Connect with ${session.user.email}` : 'Connect Drive'}</span>
               </button>
             </div>
           )}
