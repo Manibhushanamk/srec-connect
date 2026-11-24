@@ -101,6 +101,9 @@ export const FeedCard: React.FC<FeedPostProps> = ({
   const [showOptions, setShowOptions] = useState(false);
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [isTrashed, setIsTrashed] = useState(false);
+  const [failedImages, setFailedImages] = useState<Record<number, boolean>>({});
+
+  const activeImages = images.filter((_, idx) => !failedImages[idx]);
 
   const currentUserRole = (session?.user as any)?.role;
   const isSuperAdmin = currentUserRole === 'SUPER_ADMIN';
@@ -435,25 +438,25 @@ export const FeedCard: React.FC<FeedPostProps> = ({
       )}
 
       {/* 4. Instagram Media Frame (Max 2 images) */}
-      {images.length > 0 && (
+      {activeImages.length > 0 && (
         <div className="w-full bg-slate-950/10 dark:bg-slate-950/40 border-y border-border">
-          {images.length === 1 ? (
+          {activeImages.length === 1 ? (
             <div className="relative aspect-[4/3] max-h-[460px] overflow-hidden bg-black/5 flex items-center justify-center">
               <img
-                src={images[0]}
+                src={activeImages[0]}
                 alt="Post Media"
                 width={800}
                 height={600}
                 loading="lazy"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
+                onError={() => {
+                  setFailedImages((prev) => ({ ...prev, [0]: true }));
                 }}
                 className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.01]"
               />
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-1 max-h-[380px] overflow-hidden">
-              {images.slice(0, 2).map((img, idx) => (
+              {activeImages.slice(0, 2).map((img, idx) => (
                 <div key={idx} className="relative aspect-square overflow-hidden bg-black/5">
                   <img
                     src={img}
@@ -461,8 +464,8 @@ export const FeedCard: React.FC<FeedPostProps> = ({
                     width={400}
                     height={400}
                     loading="lazy"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
+                    onError={() => {
+                      setFailedImages((prev) => ({ ...prev, [idx]: true }));
                     }}
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.02]"
                   />

@@ -7,6 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeft, Lock, Save, MapPin, BookOpen, ExternalLink, User, Sparkles, Phone, Github, Linkedin } from 'lucide-react';
+import { GoogleDriveCard } from '@/components/dashboard/GoogleDriveCard';
 
 export default function FacultySettingsPage() {
   const [profile, setProfile] = useState<any>(null);
@@ -93,6 +94,9 @@ export default function FacultySettingsPage() {
             {msg}
           </div>
         )}
+
+        {/* Google Drive Integration Card */}
+        <GoogleDriveCard className="mb-6" />
 
         <form onSubmit={handleSave} className="space-y-6">
           {/* LOCKED ACADEMIC INTEGRITY FIELDS */}

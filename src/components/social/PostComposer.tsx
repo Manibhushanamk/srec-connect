@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
-import { useSession } from 'next-auth/react';
+import React, { useState, useRef, useEffect } from 'react';
+import { useSession, signIn } from 'next-auth/react';
 import Link from 'next/link';
-import { Image, Send, X, Lock, Globe, AlertCircle, Sparkles, Users, UserPlus } from 'lucide-react';
+import { Image, Send, X, Lock, Globe, AlertCircle, Sparkles, Users, UserPlus, HardDrive, AlertTriangle, ArrowRight, RefreshCw } from 'lucide-react';
 import { MAX_POST_IMAGES } from '@/lib/media-constants';
 import { MemberSelector, SelectedMember } from '@/components/shared/MemberSelector';
 
@@ -30,7 +30,41 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [driveStatus, setDriveStatus] = useState<{
+    isConnected?: boolean;
+    folderId?: string;
+    folderName?: string;
+    folderViewLink?: string;
+    requiresReauth?: boolean;
+    requiresApiEnablement?: boolean;
+    enableUrl?: string;
+    message?: string;
+  } | null>(null);
+  const [checkingDrive, setCheckingDrive] = useState(true);
+  const [connectingDrive, setConnectingDrive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!session?.user) {
+      setCheckingDrive(false);
+      return;
+    }
+    fetch('/api/drive/init')
+      .then((res) => res.json())
+      .then((data) => setDriveStatus(data))
+      .catch(() => setDriveStatus({ isConnected: false, requiresReauth: true }))
+      .finally(() => setCheckingDrive(false));
+  }, [session]);
+
+  const handleConnectDrive = async () => {
+    setConnectingDrive(true);
+    try {
+      await signIn('google', { callbackUrl: window.location.href });
+    } catch (err) {
+      console.error('[Drive Connect Error]:', err);
+      setConnectingDrive(false);
+    }
+  };
 
   const userRole = (session?.user as any)?.role;
   const roleBadge =
@@ -123,6 +157,11 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
       return;
     }
 
+    if (selectedImages.length > 0 && !driveStatus?.isConnected) {
+      setErrorMessage('Google Drive permission is mandatory to post media. Please connect your Google Drive first.');
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const res = await fetch('/api/posts', {
@@ -138,6 +177,9 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
 
       const data = await res.json();
       if (!res.ok) {
+        if (data.requiresDriveConnect) {
+          setDriveStatus((prev) => ({ ...prev, isConnected: false, requiresReauth: true }));
+        }
         throw new Error(data.error || 'Failed to publish post');
       }
 
@@ -246,6 +288,34 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
             </div>
           )}
 
+          {/* Mandatory Google Drive Notice when images are attached */}
+          {selectedImages.length > 0 && !driveStatus?.isConnected && (
+            <div className="mt-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-start gap-2 min-w-0">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-foreground">Google Drive Connection Required</p>
+                  <p className="text-[11px] text-amber-300/90 mt-0.5">
+                    Drive authorization is mandatory to upload images. Your media is saved directly to your private SREC CONNECT folder.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleConnectDrive}
+                disabled={connectingDrive}
+                className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shrink-0 flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
+              >
+                {connectingDrive ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <HardDrive className="w-3.5 h-3.5" />
+                )}
+                <span>{connectingDrive ? 'Connecting...' : 'Connect Drive'}</span>
+              </button>
+            </div>
+          )}
+
           {/* Instagram-style Co-author / Collaborators Section */}
           {isExpanded && showCollabSelector && (
             <div className="mt-3 p-3 bg-secondary/30 rounded-xl border border-border/80">
@@ -282,11 +352,13 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
                     selectedImages.length >= MAX_POST_IMAGES
                       ? 'bg-muted text-muted-foreground border-transparent cursor-not-allowed opacity-60'
+                      : !driveStatus?.isConnected
+                      ? 'bg-amber-950/20 text-amber-300 border-amber-600/30 hover:bg-amber-950/40'
                       : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border-border'
                   }`}
                 >
                   <Image className="w-3.5 h-3.5 text-emerald-500" />
-                  <span>Add Images ({selectedImages.length}/{MAX_POST_IMAGES})</span>
+                  <span>Add Images ({selectedImages.length}/{MAX_POST_IMAGES}){!driveStatus?.isConnected ? ' • Drive Req' : ''}</span>
                 </button>
 
                 <button
@@ -328,11 +400,16 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  disabled={isSubmitting || !content.trim()}
-                  className="btn-primary text-xs py-1.5 px-4 gap-1.5"
+                  disabled={isSubmitting || !content.trim() || (selectedImages.length > 0 && !driveStatus?.isConnected)}
+                  className="btn-primary text-xs py-1.5 px-4 gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
                     <span className="animate-pulse">Posting...</span>
+                  ) : selectedImages.length > 0 && !driveStatus?.isConnected ? (
+                    <>
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Connect Drive to Post Media</span>
+                    </>
                   ) : (
                     <>
                       <Send className="w-3.5 h-3.5" />

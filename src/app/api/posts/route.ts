@@ -221,7 +221,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Process and upload attached images to Cloudflare R2
+    // MANDATORY GOOGLE DRIVE PERMISSION CHECK FOR POSTS WITH MEDIA
+    if (rawImages.length > 0) {
+      const accessToken = (session as any)?.accessToken;
+      const refreshToken = (session as any)?.refreshToken;
+
+      if (!accessToken && !refreshToken) {
+        return NextResponse.json(
+          {
+            error: 'Google Drive connection is mandatory to upload posts with media. Please connect your Google Drive from your dashboard or profile.',
+            requiresDriveConnect: true,
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Process and upload attached images to user's Google Drive
     const processedMedia: { url: string; width: number; height: number; order: number }[] = [];
 
     for (let i = 0; i < rawImages.length; i++) {
@@ -254,10 +270,22 @@ export async function POST(req: NextRequest) {
           accessToken: (session as any)?.accessToken,
           refreshToken: (session as any)?.refreshToken,
         });
-        publicUrl = driveResult.directDisplayUrl || driveResult.webViewLink;
-      } catch (driveErr) {
-        console.warn('[Post Image Drive Upload] Drive upload fallback to local/data URI:', driveErr);
-        publicUrl = `data:image/webp;base64,${processed.buffer.toString('base64')}`;
+
+        // Ensure we never use an ephemeral local srec- file on serverless production
+        if (driveResult.storageProvider === 'LOCAL' && driveResult.fileId?.startsWith('srec-')) {
+          publicUrl = `data:image/webp;base64,${processed.buffer.toString('base64')}`;
+        } else {
+          publicUrl = driveResult.directDisplayUrl || driveResult.webViewLink;
+        }
+      } catch (driveErr: any) {
+        console.warn('[Post Image Drive Upload] Drive upload error:', driveErr?.message || driveErr);
+        return NextResponse.json(
+          {
+            error: 'Google Drive permission has not been granted. Please connect your Google Drive from your dashboard to upload posts with media.',
+            requiresDriveConnect: true,
+          },
+          { status: 403 }
+        );
       }
 
       processedMedia.push({

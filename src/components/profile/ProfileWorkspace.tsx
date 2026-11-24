@@ -37,6 +37,7 @@ import {
 import { AchievementCard } from '@/components/cards/AchievementCard';
 import { FeedCard } from '@/components/social/FeedCard';
 import { isLateralEntryRoll } from '@/lib/studentHelper';
+import { GoogleDriveCard } from '@/components/dashboard/GoogleDriveCard';
 
 interface ProfileWorkspaceProps {
   initialUser: {
@@ -809,6 +810,9 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                     )}
                   </div>
                 </div>
+
+                {/* Google Drive Integration & Storage Card */}
+                <GoogleDriveCard className="mb-5" />
 
                 {/* 3. Verified Achievements & Research Publications */}
                 <div className="social-card p-5 border-border bg-card space-y-4">

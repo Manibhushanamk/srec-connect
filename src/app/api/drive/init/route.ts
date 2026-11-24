@@ -15,22 +15,41 @@ export async function GET(req: NextRequest) {
     const accessToken = (session as any)?.accessToken;
     const refreshToken = (session as any)?.refreshToken;
 
-    const drive = await getAuthenticatedDriveClient(accessToken, refreshToken);
+    if (!accessToken && !refreshToken) {
+      return NextResponse.json({
+        isConnected: false,
+        success: false,
+        requiresReauth: true,
+        message: 'Google Drive permission not granted. Please connect Google Drive.',
+      }, { status: 200 });
+    }
+
+    let drive: any = null;
+    try {
+      drive = await getAuthenticatedDriveClient(accessToken, refreshToken);
+    } catch (e: any) {
+      console.warn('[Drive Init Auth Client Error]', e?.message || e);
+    }
+
     if (!drive) {
-      return NextResponse.json(
-        { error: 'Google Drive client could not be initialized. Please re-authenticate.' },
-        { status: 503 }
-      );
+      return NextResponse.json({
+        isConnected: false,
+        success: false,
+        requiresReauth: true,
+        message: 'Google Drive client could not be initialized. Please connect Google Drive.',
+      }, { status: 200 });
     }
 
     const folder = await findOrCreateDriveFolder(drive, 'SREC CONNECT');
     const folderViewLink = folder.webViewLink || `https://drive.google.com/drive/folders/${folder.id}`;
 
     return NextResponse.json({
+      isConnected: true,
       success: true,
       folderId: folder.id,
       folderName: folder.name,
       folderViewLink,
+      email: session.user.email,
       message: "Dedicated 'SREC CONNECT' folder is active in your Google Drive.",
     });
   } catch (error: any) {
@@ -38,16 +57,27 @@ export async function GET(req: NextRequest) {
     const errMsg = error?.message || '';
     if (errMsg.includes('Google Drive API has not been used') || errMsg.includes('disabled')) {
       return NextResponse.json({
+        isConnected: false,
         success: false,
         requiresApiEnablement: true,
         enableUrl: 'https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=127891787958',
         message: 'Google Drive API is pending one-click activation in Google Cloud Console for project 127891787958.',
       }, { status: 200 });
     }
-    return NextResponse.json(
-      { error: errMsg || 'Failed to initialize Google Drive folder.' },
-      { status: 500 }
-    );
+    if (errMsg.includes('insufficient') || errMsg.includes('invalid_grant') || error?.code === 401 || error?.code === 403) {
+      return NextResponse.json({
+        isConnected: false,
+        success: false,
+        requiresReauth: true,
+        message: 'Google Drive permission has not been granted. Please connect your Google Drive.',
+      }, { status: 200 });
+    }
+    return NextResponse.json({
+      isConnected: false,
+      success: false,
+      requiresReauth: true,
+      error: errMsg || 'Failed to initialize Google Drive folder.',
+    }, { status: 200 });
   }
 }
 

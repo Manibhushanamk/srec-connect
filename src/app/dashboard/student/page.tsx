@@ -10,6 +10,7 @@ import { getServerSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { Role } from '@prisma/client';
 import { formatDate } from '@/lib/utils';
+import { GoogleDriveCard } from '@/components/dashboard/GoogleDriveCard';
 import {
   Award,
   Medal,
@@ -206,6 +207,9 @@ export default async function StudentDashboardPage() {
         </div>
 
         <div className="space-y-6">
+          {/* Dedicated Google Drive Cloud Storage & Permission Card */}
+          <GoogleDriveCard />
+
           <Card variant="glass">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">

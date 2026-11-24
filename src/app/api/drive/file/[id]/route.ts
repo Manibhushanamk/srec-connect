@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getAuthenticatedDriveClient } from '@/lib/drive';
-import { Readable } from 'stream';
 import path from 'path';
 import fs from 'fs';
 import sharp from 'sharp';
@@ -120,35 +118,36 @@ export async function GET(
 
   if (isGoogleDriveId) {
     try {
-      // Attempt A: Authenticated Drive Client (session tokens, stored admin tokens, or service account)
+      // Attempt A: Direct Google Drive REST API with OAuth Bearer Token
       const session = await getServerSession(authOptions).catch(() => null);
-      const drive = await getAuthenticatedDriveClient(
-        (session as any)?.accessToken,
-        (session as any)?.refreshToken
-      ).catch((authErr: any) => {
-        console.warn('[Drive Stream Auth Client Warning]', authErr?.message || authErr);
-        return null;
-      });
+      const accessToken = (session as any)?.accessToken;
 
-      if (drive) {
+      if (accessToken) {
         try {
-          const meta = await drive.files.get({
-            fileId,
-            fields: 'id, name, mimeType, size',
-          });
-          fetchedMimeType = meta.data.mimeType || fetchedMimeType;
-          fetchedFileName = meta.data.name || fetchedFileName;
-
-          const fileRes = await drive.files.get(
-            { fileId, alt: 'media' },
-            { responseType: 'arraybuffer' }
+          const metaRes = await fetch(
+            `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size`,
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }
           );
+          if (metaRes.ok) {
+            const meta = await metaRes.json();
+            fetchedMimeType = meta.mimeType || fetchedMimeType;
+            fetchedFileName = meta.name || fetchedFileName;
+          }
 
-          if (fileRes.data) {
-            fetchedBuffer = Buffer.from(fileRes.data as ArrayBuffer);
+          const mediaRes = await fetch(
+            `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`,
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }
+          );
+          if (mediaRes.ok) {
+            const arr = await mediaRes.arrayBuffer();
+            fetchedBuffer = Buffer.from(arr);
           }
         } catch (clientErr: any) {
-          console.warn(`[Drive Stream] Client get failed for ${fileId}, trying public edge fallback:`, clientErr?.message);
+          console.warn(`[Drive Stream] Direct REST get failed for ${fileId}, trying public edge fallback:`, clientErr?.message);
         }
       }
 
@@ -333,5 +332,16 @@ function serveMediaBuffer(
       'X-Storage-Engine': 'SREC-GoogleDrive-CDN',
       'X-Cache-Status': cacheHit ? 'HIT' : 'MISS',
     },
+  });
+}
+
+export async function HEAD(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const getRes = await GET(req, { params });
+  return new NextResponse(null, {
+    status: getRes.status,
+    headers: getRes.headers,
   });
 }
