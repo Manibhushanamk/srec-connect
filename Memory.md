@@ -5,7 +5,33 @@
 - **Department:** Computer Science & Engineering (Artificial Intelligence & Machine Learning)
 - **Current Version:** v3.0.0 (Production Certified & Live Deployed)
 - **Stack:** Next.js 15.5.25 (App Router), React 19, TypeScript, Tailwind CSS, Prisma ORM 6.19.3, Neon Serverless PostgreSQL (`v3_production` schema), NextAuth v4 (Google Workspace SSO), Sharp (adaptive WebP compression).
-- **Latest Deployed Commit:** `58d846c` -> `feat(drive): lock drive connection to user email, persist tokens in db, and ensure zero broken images`.
+- **Latest Deployed Commit:** `fb09f25` -> `fix(navigation): add top profile hover dropdown with logout, fix student dashboard breadcrumb and role-gated sidebar`.
+- **Top Profile Hover Dropdown, Logout Button, Student Breadcrumb & Role-Gated Sidebar (Nov 24, 2026):**
+  - **Desktop Profile Hover Dropdown & Logout Button (`src/components/layout/AppHeader.tsx`)**:
+    - Replaced static `/profile` link with an interactive Desktop Profile Dropdown that opens smoothly on hover (`onMouseEnter`/`onMouseLeave` with 200ms debounce) or on click.
+    - Profile Dropdown includes:
+      - User Avatar & Verified Badge
+      - Full Name & Department Title
+      - Institutional Role Badge (`🎒 Student Scholar`, `🎓 Faculty`, `🏛️ HOD`, `👑 Super Admin`)
+      - Roll Number (for students) / Designation (for faculty) & Institutional Email
+      - Quick Links: Role-aware **My Dashboard** (`/dashboard/student` or `/dashboard/faculty` or `/admin`), **My Profile**, **Submit Achievement**
+      - Prominent **Sign Out / Logout button** with `LogOut` icon and red/rose styling (`onClick={() => signOut({ callbackUrl: '/signin' })}`)
+    - Added loading state skeleton in `AppHeader.tsx`: while `status === 'loading'`, displays a neutral pulse skeleton instead of flashing "Sign In" button to authenticated users.
+  - **Session Preservation across Dashboards (`src/app/dashboard/layout.tsx`)**:
+    - Removed nested `<SessionProvider>` in `DashboardLayout`. Root `src/app/layout.tsx` already wraps the app in `<SessionProvider>`. Removing the duplicate provider prevents session context resets when navigating to `/dashboard/*`.
+  - **Dynamic Role-Aware Breadcrumb (`src/components/layout/AdminShell.tsx`)**:
+    - Dynamically resolves root breadcrumb based on route or `roleScope`:
+      - Student Dashboard (`/dashboard/student`): displays `Student > Dashboard` (with `GraduationCap` icon), completely eliminating the incorrect `Admin > Dashboard`.
+      - Faculty Dashboard (`/dashboard/faculty`): displays `Faculty > Dashboard` (with `BookOpen` icon).
+      - Admin Console (`/admin`): displays `Admin > Dashboard`.
+  - **Role-Gated Left Sidebar & Student Navigation (`src/components/layout/AdminSidebar.tsx`)**:
+    - Built dedicated `Student Workspace` navigation tree for students (`My Dashboard & Honors`, `Submit Achievement`, `Campus Honors Wall`, `Campus Events`, `Student Directory`, `Grievance Portal`).
+    - Strictly gated Quick Actions: Admin actions (`Review Pending`, `Bulk Upload`, `User Directory`, `Trash Recovery`) are ONLY rendered for `SUPER_ADMIN`, `ADMIN`, `HOD`, or `isRoot`. For students, displays `Submit Achievement`, `Student Dashboard`, `Student Directory`. Never defaults to admin actions when role is loading or unknown.
+  - **Resilient Feed Media & Broken Image Elimination (`src/components/social/FeedCard.tsx` & `/api/drive/file/[id]`)**:
+    - Updated `FeedCard.tsx` image filtering to track failed URLs explicitly (`Record<string, boolean>`). When an image fails to load, it is cleanly removed from `activeImages`, preventing broken image icons or "Post Media" alt text from rendering.
+    - Updated `/api/drive/file/[id]` proxy to automatically refresh user Google Drive OAuth tokens using `refresh_token` if the access token has expired (or upon receiving 401 Unauthorized from Google), ensuring Google Drive media streams reliably for all campus viewers.
+  - **Live Production Deployment**:
+    - Deployed live to `https://srecconnect.dpdns.org` and `https://connect-srec.vercel.app`. Verified with Playwright screenshots.
 - **Google Drive Email Lock, Permanent Token Persistence & Broken Media Elimination (Nov 24, 2026):**
   - **Identical Account & Email Enforcement ("drive and the mail should same to connect with drive")**:
     - Pre-filled and locked Google OAuth authorization with `login_hint: session.user.email` and `prompt: 'consent select_account'` in `GoogleDriveCard.tsx` and `PostComposer.tsx`. When a student/faculty member connects Drive, Google automatically focuses and pre-selects their exact institutional Google account.
