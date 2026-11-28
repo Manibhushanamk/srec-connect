@@ -14,6 +14,11 @@ import { AchievementCard } from '@/components/cards/AchievementCard';
 import { formatDate } from '@/lib/utils';
 import { buildDateRangePrismaFilter } from '@/lib/timeline';
 import {
+  getCachedAchievementAcademicYears,
+  getCachedCategories,
+  getCachedDepartments,
+} from '@/lib/filter-cache';
+import {
   Award,
   Calendar,
   Users,
@@ -125,17 +130,9 @@ async function getAchievements(searchParams: {
         take: limit,
       }),
       prisma.achievement.count({ where }),
-      prisma.category.findMany({
-        where: { type: { in: ['ACHIEVEMENT', 'BOTH'] }, isActive: true, deletedAt: null },
-        orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
-      }),
-      prisma.department.findMany({ where: { isActive: true }, orderBy: { displayOrder: 'asc' } }),
-      prisma.achievement.findMany({
-        where: { status: { in: ['APPROVED', 'PUBLISHED'] }, deletedAt: null },
-        select: { academicYear: true },
-        distinct: ['academicYear'],
-        orderBy: { academicYear: 'desc' },
-      }),
+      getCachedCategories(['ACHIEVEMENT', 'BOTH']),
+      getCachedDepartments(),
+      getCachedAchievementAcademicYears(),
     ]);
 
     return {
@@ -145,7 +142,7 @@ async function getAchievements(searchParams: {
       currentPage: page,
       categories,
       departments,
-      academicYears: academicYears.map((a) => a.academicYear).filter((y): y is string => Boolean(y)),
+      academicYears,
     };
   } catch (error) {
     console.error('[Achievements] Failed to fetch achievements from database:', error);

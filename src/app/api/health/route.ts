@@ -17,52 +17,59 @@ export async function GET() {
   const checks: Record<string, any> = {};
   let overallStatus: 'HEALTHY' | 'DEGRADED' = 'HEALTHY';
 
-  // 1. Database Check & Latency Measurement
-  try {
-    const dbStart = performance.now();
-    await prisma.$queryRaw`SELECT 1`;
-    const dbLatencyMs = Math.round(performance.now() - dbStart);
+  const [dbResult, driveResult, backupResult] = await Promise.allSettled([
+    (async () => {
+      const dbStart = performance.now();
+      await prisma.$queryRaw`SELECT 1`;
+      return Math.round(performance.now() - dbStart);
+    })(),
+    getDriveConnectionStatus(),
+    isBackupDue(14),
+  ]);
+
+  if (dbResult.status === 'fulfilled') {
     checks.database = {
       status: 'UP',
-      latencyMs: dbLatencyMs,
+      latencyMs: dbResult.value,
     };
-  } catch (dbErr: any) {
+  } else {
     overallStatus = 'DEGRADED';
+    const dbErr = dbResult.reason as Error;
     checks.database = {
       status: 'DOWN',
-      error: dbErr.message || 'Database unreachable',
+      error: dbErr?.message || 'Database unreachable',
     };
     logger.error('Health check database probe failed', dbErr, { route: '/api/health' });
   }
 
-  // 2. Google Drive Storage Health
-  try {
-    const driveStatus = await getDriveConnectionStatus();
+  if (driveResult.status === 'fulfilled') {
+    const driveStatus = driveResult.value;
     checks.googleDrive = {
       isConnected: driveStatus.isConnected,
       email: driveStatus.email || null,
       rootFolderId: (driveStatus as any).rootFolderId || null,
       backupFolderId: (driveStatus as any).backupFolderId || null,
     };
-  } catch (driveErr: any) {
+  } else {
+    const driveErr = driveResult.reason as Error;
     checks.googleDrive = {
       isConnected: false,
-      error: driveErr.message,
+      error: driveErr?.message || 'Drive check failed',
     };
   }
 
-  // 3. Automated 14-Day Backup Health
-  try {
-    const backupSchedule = await isBackupDue(14);
+  if (backupResult.status === 'fulfilled') {
+    const backupSchedule = backupResult.value;
     checks.backup = {
       isDue: backupSchedule.isDue,
       lastBackupDate: backupSchedule.lastBackupDate,
       nextBackupDue: backupSchedule.nextBackupDue,
     };
-  } catch (backupErr: any) {
+  } else {
+    const backupErr = backupResult.reason as Error;
     checks.backup = {
       status: 'UNKNOWN',
-      error: backupErr.message,
+      error: backupErr?.message || 'Backup check failed',
     };
   }
 

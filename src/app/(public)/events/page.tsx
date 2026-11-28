@@ -10,6 +10,11 @@ import { EventsFilterBar } from '@/components/events/EventsFilterBar';
 import { formatDate, formatDateTime } from '@/lib/utils';
 import { buildDateRangePrismaFilter } from '@/lib/timeline';
 import {
+  getCachedCategories,
+  getCachedDepartments,
+  getCachedEventAcademicYears,
+} from '@/lib/filter-cache';
+import {
   Calendar,
   Clock,
   MapPin,
@@ -107,14 +112,9 @@ async function getEvents(searchParams: {
         take: limit,
       }),
       prisma.event.count({ where }),
-      prisma.category.findMany({ where: { type: { in: ['EVENT', 'BOTH'] }, isActive: true, deletedAt: null }, orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }] }),
-      prisma.department.findMany({ where: { isActive: true }, orderBy: { displayOrder: 'asc' } }),
-      prisma.event.findMany({
-        where: { deletedAt: null },
-        select: { academicYear: true },
-        distinct: ['academicYear'],
-        orderBy: { academicYear: 'desc' },
-      }),
+      getCachedCategories(['EVENT', 'BOTH']),
+      getCachedDepartments(),
+      getCachedEventAcademicYears(),
     ]);
 
     return {
@@ -124,7 +124,7 @@ async function getEvents(searchParams: {
       currentPage: page,
       categories,
       departments,
-      academicYears: academicYears.map((a) => a.academicYear).filter((y): y is string => Boolean(y)),
+      academicYears,
     };
   } catch (error) {
     console.error('[Events] Failed to fetch events from database:', error);
