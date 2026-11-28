@@ -62,8 +62,9 @@ async function getStudentData(studentId: string) {
     }),
     prisma.achievement.count({ where: { primaryStudentId: studentId, status: 'PENDING', deletedAt: null } }),
     prisma.category.findMany({
+      where: { isActive: true, deletedAt: null, type: { in: ['ACHIEVEMENT', 'BOTH'] } },
       select: { id: true, name: true },
-      orderBy: { name: 'asc' },
+      orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
     }),
   ]);
 

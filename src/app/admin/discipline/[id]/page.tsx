@@ -380,7 +380,7 @@ export default function AdminIncidentDossierPage({
 
       {/* Official Action Letter Print / Preview Modal */}
       {activeLetterAction && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md overflow-y-auto p-4 flex justify-center items-start pt-10">
+        <div className="fixed inset-0 z-50 bg-[#0D0E12]/80 overflow-y-auto p-4 flex justify-center items-start pt-10">
           <div className="w-full max-w-3xl">
             <OfficialActionLetter
               letterRef={activeLetterAction.letterRef || `SREC/CSE-AIML/DISC/2026/${activeLetterAction.id?.substring(0, 4)}`}

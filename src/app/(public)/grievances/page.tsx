@@ -31,6 +31,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent } from '@/components/ui/Card';
 import { OfficialActionLetter } from '@/components/discipline/OfficialActionLetter';
 import { formatDate, formatDateTime } from '@/lib/utils';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
 
 function StudentGrievancesContent() {
   const { data: session } = useSession();
@@ -272,7 +273,7 @@ function StudentGrievancesContent() {
 
       {/* Official Letter Modal */}
       {activeLetterAction && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md overflow-y-auto p-4 flex justify-center items-start pt-10">
+        <div className="fixed inset-0 z-50 bg-[#0D0E12]/80 overflow-y-auto p-4 flex justify-center items-start pt-10">
           <div className="w-full max-w-3xl">
             <OfficialActionLetter
               letterRef={activeLetterAction.letterRef || `SREC/CSE-AIML/DISC/2026/${activeLetterAction.id?.substring(0, 4)}`}
@@ -343,21 +344,23 @@ function StudentGrievancesContent() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-semibold text-foreground mb-1">Category</label>
-                  <select
+                  <CreatableSelect
                     value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                    className="w-full px-3 py-2.5 rounded-xl border border-input bg-background text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  >
-                    <option value="FACULTY_GRIEVANCE">Faculty-Related Grievance</option>
-                    <option value="CLASSROOM_DISCIPLINE">Classroom Academic Issue</option>
-                    <option value="ATTENDANCE_LATE">Attendance / Timetable Issue</option>
-                    <option value="INCOMPLETE_ASSIGNMENTS">Lab / Assignment Clarification</option>
-                    <option value="EXAMINATION_ISSUES">Exam / Evaluation Query</option>
-                    <option value="STUDENT_TO_STUDENT">Student-to-Student Dispute</option>
-                    <option value="INFRASTRUCTURE">Infrastructure & Lab Facilities</option>
-                    <option value="MOBILE_PHONE">Digital Policy / Device Issue</option>
-                    <option value="OTHER">Other Academic Concern</option>
-                  </select>
+                    onChange={(val) => setForm({ ...form, category: val })}
+                    options={[
+                      { value: 'FACULTY_GRIEVANCE', label: 'Faculty-Related Grievance' },
+                      { value: 'CLASSROOM_DISCIPLINE', label: 'Classroom Academic Issue' },
+                      { value: 'ATTENDANCE_LATE_ARRIVAL', label: 'Attendance / Timetable Issue' },
+                      { value: 'INCOMPLETE_ASSIGNMENTS', label: 'Lab / Assignment Clarification' },
+                      { value: 'EXAMINATION_ISSUES', label: 'Exam / Evaluation Query' },
+                      { value: 'STUDENT_TO_STUDENT', label: 'Student-to-Student Dispute' },
+                      { value: 'INFRASTRUCTURE', label: 'Infrastructure & Lab Facilities' },
+                      { value: 'MOBILE_PHONE_USAGE', label: 'Digital Policy / Device Issue' },
+                      { value: 'OTHER', label: 'Other Academic Concern' },
+                    ]}
+                    customOptionLabel="+ Custom Grievance Category..."
+                    customPlaceholder="e.g. Hostel Wifi / Library Timing"
+                  />
                 </div>
 
                 <div>

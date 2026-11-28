@@ -146,7 +146,7 @@ export const DirectoryPageSkeleton: React.FC<{
  */
 export const StoryHighlightsSkeleton: React.FC = () => {
   return (
-    <div className="social-card p-3.5 sm:p-4 bg-card border-border">
+    <div className="social-card p-3.5 sm:p-4">
       <div className="flex items-center justify-between mb-3 px-1">
         <Skeleton className="h-3.5 w-36 rounded-md" />
         <Skeleton className="h-3 w-16 rounded-md" />
@@ -170,7 +170,7 @@ export const StoryHighlightsSkeleton: React.FC = () => {
  */
 export const PostComposerSkeleton: React.FC = () => {
   return (
-    <div className="social-card p-4 sm:p-5 bg-card border-border space-y-3">
+    <div className="social-card p-4 sm:p-5 space-y-3">
       <div className="flex items-center gap-3">
         <Skeleton className="w-10 h-10 rounded-full shrink-0" />
         <Skeleton className="h-10 flex-1 rounded-xl" />
@@ -191,7 +191,7 @@ export const PostComposerSkeleton: React.FC = () => {
  */
 export const FeedCardSkeleton: React.FC = () => {
   return (
-    <div className="social-card p-4 sm:p-5 mb-4 border-border bg-card space-y-4">
+    <div className="social-card p-4 sm:p-5 mb-4 space-y-4">
       {/* Author Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -214,17 +214,17 @@ export const FeedCardSkeleton: React.FC = () => {
         <Skeleton className="h-3.5 w-4/6 rounded-md" />
       </div>
 
-      {/* Media Box */}
-      <Skeleton className="h-56 sm:h-72 w-full rounded-2xl" />
+      {/* Geometry-matched Media Box (aspect-[4/3] matching FeedCard to keep CLS <= 0.1) */}
+      <Skeleton className="aspect-[4/3] w-full rounded-2xl" />
 
       {/* Action Buttons */}
       <div className="flex items-center justify-between pt-2 border-t border-border/60">
         <div className="flex gap-4">
-          <Skeleton className="h-8 w-16 rounded-lg" />
-          <Skeleton className="h-8 w-16 rounded-lg" />
-          <Skeleton className="h-8 w-16 rounded-lg" />
+          <Skeleton className="h-11 w-16 rounded-lg" />
+          <Skeleton className="h-11 w-16 rounded-lg" />
+          <Skeleton className="h-11 w-16 rounded-lg" />
         </div>
-        <Skeleton className="h-8 w-8 rounded-lg" />
+        <Skeleton className="h-11 w-11 rounded-lg" />
       </div>
     </div>
   );
@@ -237,7 +237,7 @@ export const StatsGridSkeleton: React.FC = () => {
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="social-card p-4 border-border bg-card space-y-2">
+        <div key={i} className="social-card p-4 space-y-2">
           <Skeleton className="h-3.5 w-20 rounded-md" />
           <Skeleton className="h-7 w-16 rounded-lg" />
           <Skeleton className="h-3 w-28 rounded-sm" />
@@ -252,7 +252,7 @@ export const StatsGridSkeleton: React.FC = () => {
  */
 export const ProfileHeaderSkeleton: React.FC = () => {
   return (
-    <div className="social-card overflow-hidden mb-6 border-border bg-card">
+    <div className="social-card overflow-hidden mb-6">
       <Skeleton className="h-36 sm:h-52 w-full rounded-none" />
       <div className="p-4 sm:p-6 -mt-14 sm:-mt-18 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
         <div className="flex items-end gap-4">
@@ -301,7 +301,7 @@ export const TableRowsSkeleton: React.FC<{ rows?: number }> = ({ rows = 5 }) => 
  */
 export const EventCardSkeleton: React.FC = () => {
   return (
-    <div className="social-card p-5 bg-card border-border space-y-4">
+    <div className="social-card p-5 space-y-4">
       <Skeleton className="h-40 w-full rounded-2xl" />
       <div className="space-y-2">
         <div className="flex items-center gap-2">

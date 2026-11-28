@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { BugStatus, BugSeverity, Role } from '@prisma/client';
+import { BugReportPatchSchema, parseJsonBody } from '@/lib/schemas';
 
 export const runtime = 'nodejs';
 
@@ -83,8 +84,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Bug report not found.' }, { status: 404 });
     }
 
-    const body = await req.json();
-    const { status, severity, assignedToId, internalNotes, resolutionNotes } = body;
+    const parsed = await parseJsonBody(req, BugReportPatchSchema);
+    if (!parsed.success) return parsed.response;
+    const { status, severity, assignedToId, internalNotes, resolutionNotes } = parsed.data;
 
     const updateData: any = {};
     const auditEntries: any[] = report.auditTrail ? JSON.parse(report.auditTrail) : [];

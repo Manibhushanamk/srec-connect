@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Footer } from '@/components/layout/Footer';
 import { Card, CardContent } from '@/components/ui/Card';
@@ -24,12 +25,30 @@ import {
   Loader2,
 } from 'lucide-react';
 import { DriveFileUploader } from '@/components/drive/DriveFileUploader';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
+import { createCustomCategoryOption } from '@/lib/client-creatable';
 
 export default function StudentSubmitAchievementPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const actorRole = String((session?.user as any)?.role || 'STUDENT');
+  const actorDeptId = (session?.user as any)?.departmentId || null;
+  const canSubmitOnBehalf = ['WEB_MANAGER', 'FACULTY', 'HOD', 'SUPER_ADMIN', 'ADMIN'].includes(actorRole);
+
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  // Department-assisted submission state (Task 4)
+  const [assistMode, setAssistMode] = useState(false);
+  const [assistQuery, setAssistQuery] = useState('');
+  const [assistResults, setAssistResults] = useState<any[]>([]);
+  const [selectedAssistStudent, setSelectedAssistStudent] = useState<{
+    studentId?: string;
+    rollNumber: string;
+    name: string;
+    detail?: string;
+  } | null>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -105,6 +124,34 @@ export default function StudentSubmitAchievementPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // Debounced student directory search for Department-Assisted Submission
+  useEffect(() => {
+    if (!assistMode || assistQuery.trim().length < 2) {
+      setAssistResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/members/search?q=${encodeURIComponent(assistQuery.trim())}`);
+        if (res.ok) {
+          const data = await res.json();
+          const students = (data.members || []).filter((m: any) => {
+            const isStu = m.role === 'STUDENT' || Boolean(m.rollNumber);
+            if (!isStu) return false;
+            if (actorRole !== 'SUPER_ADMIN' && actorDeptId && m.departmentId && m.departmentId !== actorDeptId) {
+              return false;
+            }
+            return true;
+          });
+          setAssistResults(students);
+        }
+      } catch {
+        setAssistResults([]);
+      }
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [assistMode, assistQuery, actorRole, actorDeptId]);
+
   const handleSelectStudent = (student: any) => {
     if (teamMembers.some((m) => m.rollNumber.toUpperCase() === student.rollNumber.toUpperCase())) {
       alert(`${student.name} (${student.rollNumber}) is already added to team members.`);
@@ -162,6 +209,12 @@ export default function StudentSubmitAchievementPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...formData,
+        ...(assistMode && selectedAssistStudent
+          ? {
+              targetStudentId: selectedAssistStudent.studentId,
+              targetRollNumber: selectedAssistStudent.rollNumber,
+            }
+          : {}),
         teamMembers: teamMembers.filter((m) => m.rollNumber.trim().length > 0),
         postToFeed,
         feedCaption: feedCaption || undefined,
@@ -226,6 +279,92 @@ export default function StudentSubmitAchievementPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {canSubmitOnBehalf && (
+            <Card className="p-5 border-[#CA8A04]/45 dark:border-[#FACC15]/45 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Award className="w-4 h-4 text-[#CA8A04] dark:text-[#FACC15]" />
+                    <span>Submit on Behalf of Department Student</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Assisted institutional submission enters the 6-state Faculty → HOD verification workflow.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={assistMode}
+                  onClick={() => {
+                    setAssistMode(!assistMode);
+                    if (assistMode) setSelectedAssistStudent(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${
+                    assistMode
+                      ? 'bg-[#CA8A04] dark:bg-[#FACC15] text-white dark:text-[#0D0E12] border-[#CA8A04] dark:border-[#FACC15]'
+                      : 'bg-secondary text-foreground border-border'
+                  }`}
+                >
+                  {assistMode ? 'Assisted Active' : 'Enable Assisted Mode'}
+                </button>
+              </div>
+
+              {assistMode && (
+                <div className="space-y-2 pt-2 border-t border-border">
+                  {selectedAssistStudent ? (
+                    <div className="flex items-center justify-between p-3 rounded-xl bg-[#CA8A04]/15 dark:bg-[#FACC15]/15 border border-[#CA8A04]/40 dark:border-[#FACC15]/40 text-xs">
+                      <div>
+                        <p className="font-bold text-foreground">{selectedAssistStudent.name}</p>
+                        <p className="text-muted-foreground font-mono">{selectedAssistStudent.rollNumber}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAssistStudent(null)}
+                        className="text-xs font-semibold text-foreground hover:underline"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={assistQuery}
+                        onChange={(e) => setAssistQuery(e.target.value)}
+                        placeholder="Search department student by roll number or name..."
+                        className="input-field"
+                      />
+                      {assistResults.length > 0 && (
+                        <div className="mt-1.5 rounded-xl bg-card border border-border shadow-lg max-h-48 overflow-y-auto divide-y divide-border">
+                          {assistResults.map((stu: any) => (
+                            <button
+                              key={stu.id || stu.rollNumber}
+                              type="button"
+                              onClick={() => {
+                                setSelectedAssistStudent({
+                                  studentId: stu.studentId,
+                                  rollNumber: stu.rollNumber,
+                                  name: stu.name,
+                                  detail: stu.detail,
+                                });
+                                setAssistQuery('');
+                                setAssistResults([]);
+                              }}
+                              className="w-full px-3 py-2 text-left text-xs hover:bg-secondary flex items-center justify-between"
+                            >
+                              <span className="font-semibold text-foreground">{stu.name}</span>
+                              <span className="font-mono text-muted-foreground">{stu.rollNumber}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
+          )}
+
           <Card className="p-6 bg-card border-border space-y-5">
             <div>
               <label htmlFor="title" className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
@@ -247,37 +386,46 @@ export default function StudentSubmitAchievementPage() {
                 <label htmlFor="category" className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
                   Category *
                 </label>
-                <select
+                <CreatableSelect
                   id="category"
                   required
                   value={formData.categoryId}
-                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-background border border-border rounded-xl text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-                >
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormData({ ...formData, categoryId: val })}
+                  options={categories.map((cat) => ({ value: cat.id, label: cat.name }))}
+                  placeholder="Select category..."
+                  customOptionLabel="+ Custom Category..."
+                  customPlaceholder="Type custom category name..."
+                  onCreateCustom={async (name) => {
+                    const created = await createCustomCategoryOption(name, 'ACHIEVEMENT');
+                    if (created) {
+                      setCategories((prev) =>
+                        prev.some((c) => c.id === created.value) ? prev : [...prev, { id: created.value, name: created.label }]
+                      );
+                    }
+                    return created;
+                  }}
+                />
               </div>
 
               <div>
                 <label htmlFor="level" className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
                   Competition Level *
                 </label>
-                <select
+                <CreatableSelect
                   id="level"
+                  required
                   value={formData.level}
-                  onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-background border border-border rounded-xl text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-                >
-                  <option value="COLLEGE">College Level</option>
-                  <option value="DISTRICT">District Level</option>
-                  <option value="STATE">State Level</option>
-                  <option value="NATIONAL">National Level</option>
-                  <option value="INTERNATIONAL">International Level</option>
-                </select>
+                  onChange={(val) => setFormData({ ...formData, level: val })}
+                  options={[
+                    { value: 'COLLEGE', label: 'College Level' },
+                    { value: 'DISTRICT', label: 'District Level' },
+                    { value: 'STATE', label: 'State Level' },
+                    { value: 'NATIONAL', label: 'National Level' },
+                    { value: 'INTERNATIONAL', label: 'International Level' },
+                  ]}
+                  customOptionLabel="+ Custom Level..."
+                  customPlaceholder="e.g. Regional / Consortium..."
+                />
               </div>
             </div>
 
@@ -331,18 +479,21 @@ export default function StudentSubmitAchievementPage() {
                 <label htmlFor="acadYear" className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
                   Academic Year *
                 </label>
-                <select
+                <CreatableSelect
                   id="acadYear"
+                  required
                   value={formData.academicYear}
-                  onChange={(e) => setFormData({ ...formData, academicYear: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-background border border-border rounded-xl text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-                >
-                  <option value="2026-2027">2026-2027</option>
-                  <option value="2025-2026">2025-2026</option>
-                  <option value="2024-2025">2024-2025</option>
-                  <option value="2023-2024">2023-2024</option>
-                  <option value="2022-2023">2022-2023</option>
-                </select>
+                  onChange={(val) => setFormData({ ...formData, academicYear: val })}
+                  options={[
+                    { value: '2026-2027', label: '2026-2027' },
+                    { value: '2025-2026', label: '2025-2026' },
+                    { value: '2024-2025', label: '2024-2025' },
+                    { value: '2023-2024', label: '2023-2024' },
+                    { value: '2022-2023', label: '2022-2023' },
+                  ]}
+                  customOptionLabel="+ Custom Academic Year..."
+                  customPlaceholder="e.g. 2027-2028"
+                />
               </div>
             </div>
 

@@ -59,7 +59,13 @@ const MENU_GROUPS = {
     icon: Users,
     items: [
       { href: '/admin/users', label: 'All Users', icon: Users },
-      { href: '/admin/bulk-upload', label: 'Bulk Ingestion', icon: Upload },
+    ],
+  },
+  'bulk-upload': {
+    label: 'Bulk Ingestion',
+    icon: Upload,
+    items: [
+      { href: '/admin/bulk-upload', label: 'Bulk Upload', icon: Upload },
     ],
   },
   achievements: {
@@ -67,6 +73,7 @@ const MENU_GROUPS = {
     icon: Award,
     items: [
       { href: '/admin/achievements', label: 'Verification Desk', icon: Award },
+      { href: '/admin/export', label: 'Export & Reports', icon: Download },
       { href: '/achievements', label: 'Honors Wall', icon: Zap },
     ],
   },
@@ -258,7 +265,7 @@ export function AdminSidebar({ className }: { className?: string } = {}) {
   return (
     <aside
       className={cn(
-        'left-0 top-16 bottom-0 w-72 bg-space-900/95 backdrop-blur-2xl border-r border-slate-800/50 z-30 overflow-y-auto scrollbar-thin',
+        'left-0 top-16 bottom-0 w-72 glass-header border-r z-30 overflow-y-auto scrollbar-thin',
         className || 'fixed'
       )}
       aria-label="Admin navigation"
@@ -340,12 +347,45 @@ export function AdminSidebar({ className }: { className?: string } = {}) {
                   <Users className="w-4 h-4 text-emerald-400" />
                   <span>User Directory</span>
                 </Link>
+                {isRoot && (
+                  <Link
+                    href="/admin/trash"
+                    className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                  >
+                    <Trash2 className="w-4 h-4 text-rose-400" />
+                    <span>Trash Recovery</span>
+                  </Link>
+                )}
+              </>
+            ) : userRole === 'WEB_MANAGER' ? (
+              <>
                 <Link
-                  href="/admin/trash"
+                  href="/admin/achievements"
                   className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
                 >
-                  <Trash2 className="w-4 h-4 text-rose-400" />
-                  <span>Trash Recovery</span>
+                  <Award className="w-4 h-4 text-cyan-400" />
+                  <span>Verification Desk</span>
+                </Link>
+                <Link
+                  href="/admin/bulk-upload"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <Upload className="w-4 h-4 text-primary" />
+                  <span>Bulk Upload</span>
+                </Link>
+                <Link
+                  href="/admin/events"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <Calendar className="w-4 h-4 text-emerald-400" />
+                  <span>Campus Events</span>
+                </Link>
+                <Link
+                  href="/admin/notices"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <Zap className="w-4 h-4 text-amber-400" />
+                  <span>Notices &amp; Circulars</span>
                 </Link>
               </>
             ) : isFaculty ? (
@@ -356,6 +396,13 @@ export function AdminSidebar({ className }: { className?: string } = {}) {
                 >
                   <Award className="w-4 h-4 text-cyan-400" />
                   <span>Verification Desk</span>
+                </Link>
+                <Link
+                  href="/admin/bulk-upload"
+                  className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-space-700/50 transition-all duration-200"
+                >
+                  <Upload className="w-4 h-4 text-primary" />
+                  <span>Bulk Upload</span>
                 </Link>
                 <Link
                   href="/dashboard/faculty/submit"
@@ -401,14 +448,14 @@ export function AdminSidebar({ className }: { className?: string } = {}) {
         </div>
       </nav>
 
-      <div className="p-4 border-t border-slate-800/50 bg-space-900/95 backdrop-blur-2xl">
+      <div className="p-4 border-t border-border bg-black/15 dark:bg-white/5">
         <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-space-800/50">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center flex-shrink-0 shadow-sm">
             <Crown className="w-4 h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-slate-100 truncate">
-              {userRole === 'STUDENT' ? 'Student Workspace' : userRole === 'FACULTY' ? 'Faculty Portal' : 'SREC Connect v3.0'}
+              {userRole === 'STUDENT' ? 'Student Workspace' : userRole === 'FACULTY' ? 'Faculty Portal' : 'SREC Connect'}
             </p>
             <p className="text-[10px] text-slate-400">
               {userRole === 'STUDENT' ? 'Academic Honors Center' : userRole === 'FACULTY' ? 'Research & Review Desk' : 'Institutional Console'}

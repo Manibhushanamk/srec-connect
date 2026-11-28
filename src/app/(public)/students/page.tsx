@@ -59,7 +59,7 @@ async function getStudents(searchParams: {
   }
 
   try {
-    const [students, total, departments, batches, sections] = await Promise.all([
+    const [students, total, departments, batches, dbBatches, sections] = await Promise.all([
       prisma.student.findMany({
         where,
         include: {
@@ -85,6 +85,11 @@ async function getStudents(searchParams: {
         distinct: ['batch'],
         orderBy: { batch: 'desc' },
       }),
+      prisma.batch.findMany({
+        where: { isActive: true },
+        select: { name: true },
+        orderBy: [{ startYear: 'desc' }],
+      }),
       prisma.student.findMany({
         where: { isActive: true, deletedAt: null },
         select: { section: true },
@@ -93,13 +98,20 @@ async function getStudents(searchParams: {
       }),
     ]);
 
+    const mergedBatches = Array.from(
+      new Set([
+        ...dbBatches.map((b) => b.name),
+        ...batches.map((b) => b.batch).filter((b): b is string => b !== null && b !== undefined),
+      ])
+    ).sort((a, b) => b.localeCompare(a));
+
     return {
       students,
       total,
       totalPages: Math.ceil(total / limit),
       currentPage: page,
       departments,
-      batches: batches.map((b) => b.batch).filter((b): b is string => b !== null && b !== undefined),
+      batches: mergedBatches,
       sections: sections.map((s) => s.section).filter((s): s is string => s !== null && s !== undefined),
     };
   } catch (error) {

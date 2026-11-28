@@ -17,7 +17,7 @@ export const ThemeToggle: React.FC<{ className?: string }> = ({ className = '' }
     <button
       type="button"
       onClick={cycleTheme}
-      className={`min-h-[40px] min-w-[40px] sm:min-h-[44px] sm:min-w-[44px] p-2 inline-flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground bg-secondary/80 hover:bg-secondary border border-border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-ring ${className}`}
+      className={`min-h-[44px] min-w-[44px] p-2 inline-flex items-center justify-center rounded-xl text-muted-foreground hover:text-foreground bg-secondary/80 hover:bg-secondary border border-border transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-ring ${className}`}
       aria-label={`Current theme: ${theme}. Click to switch theme.`}
       title={`Theme: ${theme.toUpperCase()}`}
     >

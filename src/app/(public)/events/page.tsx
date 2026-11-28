@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyStatePreset } from '@/components/ui/EmptyState';
 import { EventsFilterBar } from '@/components/events/EventsFilterBar';
 import { formatDate, formatDateTime } from '@/lib/utils';
+import { buildDateRangePrismaFilter } from '@/lib/timeline';
 import {
   Calendar,
   Clock,
@@ -29,11 +30,15 @@ async function getEvents(searchParams: {
   page?: string;
   status?: string;
   category?: string;
+  type?: string;
   department?: string;
   academicYear?: string;
+  timeline?: string;
+  dateFrom?: string;
+  dateTo?: string;
   search?: string;
 }) {
-  const page = parseInt(searchParams.page || '1', 10);
+  const page = Math.max(1, parseInt(searchParams.page || '1', 10) || 1);
   const limit = 12;
   const skip = (page - 1) * limit;
 
@@ -42,21 +47,49 @@ async function getEvents(searchParams: {
   if (searchParams.status && searchParams.status !== 'all') {
     where.status = searchParams.status;
   }
-  if (searchParams.category && searchParams.category !== 'all') {
-    where.category = { name: searchParams.category };
+  const activeCategory = searchParams.category && searchParams.category !== 'all'
+    ? searchParams.category
+    : searchParams.type && searchParams.type !== 'all'
+    ? searchParams.type
+    : null;
+  if (activeCategory) {
+    where.category = { name: { equals: activeCategory, mode: 'insensitive' } };
   }
   if (searchParams.department && searchParams.department !== 'all') {
-    where.department = { code: searchParams.department };
+    where.OR = undefined;
+    where.AND = [
+      ...(where.AND || []),
+      {
+        OR: [
+          { departmentId: searchParams.department },
+          { department: { code: searchParams.department } },
+        ],
+      },
+    ];
   }
   if (searchParams.academicYear && searchParams.academicYear !== 'all') {
     where.academicYear = searchParams.academicYear;
   }
+  const dateFilter = buildDateRangePrismaFilter(
+    searchParams.timeline,
+    searchParams.dateFrom,
+    searchParams.dateTo
+  );
+  if (dateFilter) {
+    where.startDate = dateFilter;
+  }
   if (searchParams.search) {
-    where.OR = [
-      { title: { contains: searchParams.search, mode: 'insensitive' } },
-      { description: { contains: searchParams.search, mode: 'insensitive' } },
-      { venue: { contains: searchParams.search, mode: 'insensitive' } },
-      { speaker: { contains: searchParams.search, mode: 'insensitive' } },
+    where.AND = [
+      ...(where.AND || []),
+      {
+        OR: [
+          { title: { contains: searchParams.search, mode: 'insensitive' } },
+          { description: { contains: searchParams.search, mode: 'insensitive' } },
+          { venue: { contains: searchParams.search, mode: 'insensitive' } },
+          { organizer: { contains: searchParams.search, mode: 'insensitive' } },
+          { speaker: { contains: searchParams.search, mode: 'insensitive' } },
+        ],
+      },
     ];
   }
 
@@ -74,7 +107,7 @@ async function getEvents(searchParams: {
         take: limit,
       }),
       prisma.event.count({ where }),
-      prisma.category.findMany({ where: { type: { in: ['EVENT', 'BOTH'] }, isActive: true }, orderBy: { displayOrder: 'asc' } }),
+      prisma.category.findMany({ where: { type: { in: ['EVENT', 'BOTH'] }, isActive: true, deletedAt: null }, orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }] }),
       prisma.department.findMany({ where: { isActive: true }, orderBy: { displayOrder: 'asc' } }),
       prisma.event.findMany({
         where: { deletedAt: null },
@@ -114,8 +147,12 @@ export default async function EventsPage({
     page?: string;
     status?: string;
     category?: string;
+    type?: string;
     department?: string;
     academicYear?: string;
+    timeline?: string;
+    dateFrom?: string;
+    dateTo?: string;
     search?: string;
   }>;
 }) {

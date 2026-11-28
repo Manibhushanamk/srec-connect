@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from '@/lib/auth';
+import { PostCollaborateSchema, parseJsonBody } from '@/lib/schemas';
 
 export async function POST(
   req: NextRequest,
@@ -13,12 +14,9 @@ export async function POST(
     }
 
     const { id: postId } = await params;
-    const body = await req.json();
-    const action = body.action; // 'ACCEPT' | 'DECLINE'
-
-    if (!['ACCEPT', 'DECLINE'].includes(action)) {
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(req, PostCollaborateSchema);
+    if (!parsed.success) return parsed.response;
+    const { action } = parsed.data;
 
     const currentUserId = (session.user as any).id;
 

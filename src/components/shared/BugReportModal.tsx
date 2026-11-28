@@ -15,6 +15,7 @@ import {
   Info,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
 
 interface BugReportModalProps {
   isOpen: boolean;
@@ -131,10 +132,10 @@ export function BugReportModal({ isOpen, onClose, defaultRoute }: BugReportModal
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-space-950/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-space-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0D0E12]/70 overflow-y-auto">
+      <div className="relative w-full max-w-2xl glass-sheet liquid-sheet-enter rounded-3xl shadow-2xl overflow-hidden my-8">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-space-950/50">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <div className="flex items-center gap-2.5">
             <div className="p-2 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20">
               <Bug className="w-5 h-5" />
@@ -206,20 +207,16 @@ export function BugReportModal({ isOpen, onClose, defaultRoute }: BugReportModal
             {/* Category & Severity Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
                   Category
                 </label>
-                <select
+                <CreatableSelect
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-space-950 border border-slate-800 text-sm text-white focus:outline-none focus:border-cyan-500 transition-colors"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c.value} value={c.value}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setCategory}
+                  options={CATEGORIES}
+                  customOptionLabel="+ Custom Bug Category..."
+                  customPlaceholder="Type custom category..."
+                />
               </div>
 
               <div>

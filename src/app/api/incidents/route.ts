@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { sanitizeIncidentForViewer } from '@/lib/incident-auth';
 import { IncidentCategory, IncidentPriority, IncidentStatus } from '@prisma/client';
+import { sanitizeText } from '@/lib/sanitize';
+import { IncidentCategorySchema, IncidentCreateSchema, parseJsonBody } from '@/lib/schemas';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions).catch(() => null);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -51,22 +54,31 @@ export async function GET(req: NextRequest) {
       where.reporter = { role: { not: 'STUDENT' } };
     }
 
-    // Role-based visibility isolation:
-    // Disciplinary complaints given to a student by faculty/HOD are strictly restricted to HOD, Super Admin, and the reporting faculty.
+    // Fail-closed role & department visibility isolation
     if (currentUser.role === 'STUDENT') {
-      // Student can ONLY view cases where they are the reporter OR the accused subject
       const studentId = currentUser.student?.id;
       where.OR = [
         { reporterId: currentUser.id },
         ...(studentId ? [{ studentId }] : []),
       ];
     } else if (currentUser.role === 'FACULTY') {
-      // Regular Faculty can ONLY view complaints they personally reported
-      where.reporterId = currentUser.id;
+      if (!currentUser.departmentId) {
+        return NextResponse.json({ error: 'Forbidden: Faculty department binding required' }, { status: 403 });
+      }
+      where.OR = [
+        { reporterId: currentUser.id },
+        { isConfidentialHOD: false, departmentId: currentUser.departmentId },
+      ];
+    } else if (currentUser.role === 'HOD') {
+      if (!currentUser.departmentId) {
+        return NextResponse.json({ error: 'Forbidden: HOD department binding required' }, { status: 403 });
+      }
+      where.departmentId = currentUser.departmentId;
+    } else if (currentUser.role !== 'SUPER_ADMIN') {
+      return NextResponse.json({ error: 'Forbidden: Role isolated from grievance records' }, { status: 403 });
     }
-    // HOD and SUPER_ADMIN have full sovereign departmental visibility to all cases across all sections and batches
 
-    const incidents = await prisma.incident.findMany({
+    const rawIncidents = await prisma.incident.findMany({
       where,
       include: {
         reporter: {
@@ -92,6 +104,25 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
+    if (currentUser.role === 'SUPER_ADMIN') {
+      const confidentialIds = rawIncidents.filter((i) => i.isConfidentialHOD).map((i) => i.id);
+      if (confidentialIds.length > 0) {
+        await prisma.auditLog.create({
+          data: {
+            actorId: currentUser.id,
+            actorEmail: currentUser.email,
+            actorRole: currentUser.role,
+            action: 'CONFIDENTIAL_INCIDENT_READ',
+            entityType: 'Incident',
+            entityId: confidentialIds[0],
+            metadata: JSON.stringify({ count: confidentialIds.length, incidentIds: confidentialIds }),
+          },
+        });
+      }
+    }
+
+    const incidents = rawIncidents.map((inc) => sanitizeIncidentForViewer(currentUser, inc));
+
     return NextResponse.json({ incidents });
   } catch (error: any) {
     console.error('[Incidents API GET] Error:', error);
@@ -101,45 +132,44 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    let currentUser = null;
-
-    if (session?.user?.email) {
-      currentUser = await prisma.user.findUnique({
-        where: { email: session.user.email.toLowerCase().trim() },
-        include: { student: true, faculty: true },
-      });
+    const session = await getServerSession(authOptions).catch(() => null);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
-    const {
-      title,
-      description,
-      category = 'CLASSROOM_DISCIPLINE',
-      priority = 'MEDIUM',
-      studentRollNumber,
-      isConfidentialHOD = false,
-      reporterEmail,
-      attachmentUrl,
-    } = body;
-
-    if (!currentUser && reporterEmail) {
-      currentUser = await prisma.user.findUnique({
-        where: { email: reporterEmail.toLowerCase().trim() },
-        include: { student: true, faculty: true },
-      });
-    }
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email.toLowerCase().trim() },
+      include: { student: true, faculty: true },
+    });
 
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!title?.trim() || !description?.trim()) {
-      return NextResponse.json({ error: 'Title and description are required' }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(req, IncidentCreateSchema);
+    if (!parsed.success) return parsed.response;
+    const {
+      title,
+      description,
+      category: rawCategory,
+      customCategory,
+      priority,
+      studentRollNumber,
+      isConfidentialHOD,
+      attachmentUrl,
+    } = parsed.data;
+
+    const categoryParse = IncidentCategorySchema.safeParse(rawCategory);
+    const resolvedCategory = categoryParse.success ? categoryParse.data : 'OTHER';
+    const resolvedCustomCategory = customCategory
+      ? sanitizeText(customCategory).slice(0, 80)
+      : !categoryParse.success && rawCategory
+      ? sanitizeText(rawCategory).slice(0, 80)
+      : null;
 
     // Resolve target student if roll number provided
     let targetStudentId: string | null = null;
+    let resolvedDepartmentId: string | null = currentUser.departmentId ?? null;
     if (studentRollNumber) {
       const targetStudent = await prisma.student.findUnique({
         where: { rollNumber: studentRollNumber.toUpperCase().trim() },
@@ -151,26 +181,26 @@ export async function POST(req: NextRequest) {
         );
       }
       targetStudentId = targetStudent.id;
+      resolvedDepartmentId = targetStudent.departmentId ?? resolvedDepartmentId;
     } else if (currentUser.role === 'STUDENT' && currentUser.student?.id) {
       // Auto-bond grievance to the submitting student's profile if not reporting another student
       targetStudentId = currentUser.student.id;
+      resolvedDepartmentId = currentUser.student.departmentId ?? resolvedDepartmentId;
     }
-
-    // Student filing a faculty grievance automatically triggers confidential HOD routing
-    const shouldBeConfidential =
-      Boolean(isConfidentialHOD) || category === 'FACULTY_GRIEVANCE';
 
     const incident = await prisma.incident.create({
       data: {
         reporterId: currentUser.id,
         studentId: targetStudentId,
-        title: title.trim(),
+        departmentId: resolvedDepartmentId,
+        title: sanitizeText(title),
         description: attachmentUrl
-          ? `${description.trim()}\n\n[Attachment: ${attachmentUrl.trim()}]`
-          : description.trim(),
-        category: category as IncidentCategory,
-        priority: priority as IncidentPriority,
-        isConfidentialHOD: shouldBeConfidential,
+          ? `${sanitizeText(description)}\n\n[Attachment: ${attachmentUrl.trim()}]`
+          : sanitizeText(description),
+        category: resolvedCategory,
+        customCategory: resolvedCustomCategory,
+        priority,
+        isConfidentialHOD: Boolean(isConfidentialHOD) || resolvedCategory === 'FACULTY_GRIEVANCE',
         status: 'REPORTED',
       },
       include: {

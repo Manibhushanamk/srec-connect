@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { memo, useState } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import {
@@ -15,6 +15,10 @@ import {
   Flag,
   Users,
   Trash2,
+  Pencil,
+  X,
+  Lock,
+  Globe,
 } from 'lucide-react';
 import { formatTimeAgo } from '@/lib/utils';
 
@@ -22,6 +26,7 @@ export interface FeedAuthor {
   id: string;
   name: string;
   role: 'STUDENT' | 'FACULTY' | 'HOD' | 'ADMIN' | 'SUPER_ADMIN' | 'WEB_MANAGER' | string;
+  departmentId?: string | null;
   rollNumber?: string;
   facultyId?: string;
   studentId?: string;
@@ -56,6 +61,8 @@ export interface FeedPostProps {
   content: string;
   images?: string[];
   createdAt: string;
+  updatedAt?: string;
+  visibility?: 'PUBLIC' | 'COLLEGE_ONLY' | 'PRIVATE' | string;
   likesCount: number;
   commentsCount: number;
   isLiked?: boolean;
@@ -72,14 +79,18 @@ export interface FeedPostProps {
     status: string;
   }[];
   initialComments?: FeedComment[];
+  isPriority?: boolean;
+  isAboveFold?: boolean;
 }
 
-export const FeedCard: React.FC<FeedPostProps> = ({
+const FeedCardComponent: React.FC<FeedPostProps> = ({
   id,
   author,
   content,
   images = [],
   createdAt,
+  updatedAt,
+  visibility: initialVisibility = 'PUBLIC',
   likesCount: initialLikesCount,
   commentsCount,
   isLiked: initialIsLiked = false,
@@ -87,9 +98,23 @@ export const FeedCard: React.FC<FeedPostProps> = ({
   achievement,
   collaborators = [],
   initialComments = [],
+  isPriority = false,
+  isAboveFold = false,
 }) => {
   const { data: session } = useSession();
   const currentUserId = (session?.user as any)?.id;
+  const [postContent, setPostContent] = useState(content);
+  const [postImages, setPostImages] = useState<string[]>(images);
+  const [postVisibility, setPostVisibility] = useState<string>(initialVisibility);
+  const [postUpdatedAt, setPostUpdatedAt] = useState<string | undefined>(updatedAt);
+  const [isEditingModalOpen, setIsEditingModalOpen] = useState(false);
+  const [editContent, setEditContent] = useState(content);
+  const [editVisibility, setEditVisibility] = useState<'PUBLIC' | 'COLLEGE_ONLY' | 'PRIVATE'>(
+    (initialVisibility as any) || 'PUBLIC'
+  );
+  const [editImages, setEditImages] = useState<string[]>(images.slice(0, 2));
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState('');
   const [likesCount, setLikesCount] = useState(initialLikesCount);
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const [isBookmarked, setIsBookmarked] = useState(initialIsBookmarked);
@@ -102,14 +127,21 @@ export const FeedCard: React.FC<FeedPostProps> = ({
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [isTrashed, setIsTrashed] = useState(false);
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
-  const [loadedImages, setLoadedImages] = useState<Record<string, boolean>>({});
 
-  const activeImages = images.filter((img) => !failedImages[img]);
+  const activeImages = postImages.filter((img) => !failedImages[img]);
 
   const currentUserRole = (session?.user as any)?.role;
+  const currentUserDeptId = (session?.user as any)?.departmentId;
   const isSuperAdmin = currentUserRole === 'SUPER_ADMIN';
   const isAuthor = currentUserId === author.id;
-  const canDeletePost = isAuthor || isSuperAdmin;
+  const isSameDeptHod =
+    currentUserRole === 'HOD' && Boolean(currentUserDeptId) && currentUserDeptId === author.departmentId;
+  const isWebManagerModeratable = currentUserRole === 'WEB_MANAGER' && postVisibility !== 'PRIVATE';
+  const canDeletePost = isAuthor || isSuperAdmin || isSameDeptHod || isWebManagerModeratable;
+
+  const isEdited =
+    Boolean(postUpdatedAt) &&
+    new Date(postUpdatedAt!).getTime() - new Date(createdAt).getTime() > 60_000;
 
   const getAuthorProfileUrl = (auth: FeedAuthor) => {
     if (session?.user && ((session.user as any).id === auth.id || session.user.name === auth.name)) {
@@ -143,10 +175,19 @@ export const FeedCard: React.FC<FeedPostProps> = ({
   };
 
   const handleTrashPost = async () => {
-    if (!confirm('Move this post to Trash? It will be immediately removed from the live feed.')) return;
+    const isModAction = !isAuthor;
+    const reason = isModAction
+      ? window.prompt('Optional moderation reason for audit log (or leave blank):') ?? undefined
+      : undefined;
+    if (!isModAction && !confirm('Move this post to Trash? It will be immediately removed from the live feed.')) return;
+    if (isModAction && !confirm('Remove this post under moderation policy?')) return;
     setShowOptions(false);
     try {
-      const res = await fetch(`/api/posts/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/posts/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
       if (res.ok) {
         setIsTrashed(true);
       } else {
@@ -154,6 +195,41 @@ export const FeedCard: React.FC<FeedPostProps> = ({
       }
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editContent.trim()) {
+      setEditError('Post content cannot be empty.');
+      return;
+    }
+    setIsSavingEdit(true);
+    setEditError('');
+    try {
+      const res = await fetch(`/api/posts/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: editContent.trim(),
+          visibility: editVisibility,
+          images: editImages.slice(0, 2),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setEditError(data.error || 'Failed to update post');
+      } else {
+        setPostContent(data.post.content);
+        setPostVisibility(data.post.visibility);
+        setPostImages(data.post.images || []);
+        setPostUpdatedAt(data.post.updatedAt || new Date().toISOString());
+        setIsEditingModalOpen(false);
+      }
+    } catch {
+      setEditError('Network error saving post changes');
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
@@ -263,7 +339,12 @@ export const FeedCard: React.FC<FeedPostProps> = ({
   };
 
   return (
-    <article id={`post-${id}`} className="social-card social-card-hover mb-5 overflow-hidden transition-all duration-200">
+    <article
+      id={`post-${id}`}
+      className={`social-card social-card-hover mb-5 overflow-hidden transition-colors duration-150 ${
+        isPriority || isAboveFold ? '' : 'feed-offscreen-card'
+      }`}
+    >
       {/* 1. Header (LinkedIn + Instagram Profile Row) */}
       <div className="flex items-center justify-between p-4 pb-3">
         <div className="flex items-center gap-3">
@@ -336,6 +417,11 @@ export const FeedCard: React.FC<FeedPostProps> = ({
                 <span className="font-medium text-muted-foreground">{author.role}</span>
               )}{' '}
               • {author.department} • <span className="text-muted-foreground/80">{formatTimeAgo(createdAt)}</span>
+              {isEdited && (
+                <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded bg-secondary text-[10px] font-medium text-muted-foreground border border-border">
+                  Edited
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -343,13 +429,29 @@ export const FeedCard: React.FC<FeedPostProps> = ({
         <div className="relative">
           <button
             onClick={() => setShowOptions(!showOptions)}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             aria-label="Post options"
           >
             <MoreHorizontal className="w-4 h-4" />
           </button>
           {showOptions && (
             <div className="absolute right-0 top-8 z-20 w-44 rounded-xl bg-card border border-border shadow-lg py-1 text-xs">
+              {isAuthor && (
+                <button
+                  onClick={() => {
+                    setEditContent(postContent);
+                    setEditVisibility((postVisibility as any) || 'PUBLIC');
+                    setEditImages(postImages.slice(0, 2));
+                    setEditError('');
+                    setShowOptions(false);
+                    setIsEditingModalOpen(true);
+                  }}
+                  className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-muted text-foreground font-medium border-b border-border"
+                >
+                  <Pencil className="w-3.5 h-3.5 text-primary" />
+                  Edit Post
+                </button>
+              )}
               <button
                 onClick={handleReportPost}
                 className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-muted text-muted-foreground hover:text-foreground font-medium"
@@ -363,7 +465,7 @@ export const FeedCard: React.FC<FeedPostProps> = ({
                   className="w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-rose-500/10 text-rose-500 font-medium border-t border-border"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  Move to Trash
+                  {isAuthor ? 'Delete Post' : 'Remove Post'}
                 </button>
               )}
             </div>
@@ -373,9 +475,9 @@ export const FeedCard: React.FC<FeedPostProps> = ({
 
       {/* Instagram-style Collaboration Invitation Banner */}
       {myPendingCollab && (
-        <div className="mx-4 mb-3 p-3 bg-cyan-950/40 border border-cyan-800/70 rounded-xl flex items-center justify-between gap-3 text-xs shadow-sm">
-          <div className="flex items-center gap-2 text-cyan-200 min-w-0">
-            <Users className="w-4 h-4 text-cyan-400 shrink-0" />
+        <div className="mx-4 mb-3 p-3 bg-primary/12 border border-primary/35 rounded-xl flex items-center justify-between gap-3 text-xs shadow-sm">
+          <div className="flex items-center gap-2 text-foreground min-w-0">
+            <Users className="w-4 h-4 text-primary shrink-0" />
             <span className="truncate">
               <strong>{author.name}</strong> invited you to co-author this post.
             </span>
@@ -383,7 +485,7 @@ export const FeedCard: React.FC<FeedPostProps> = ({
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => handleCollabAction('ACCEPT')}
-              className="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-semibold text-[11px] transition-colors"
+              className="px-2.5 py-1 bg-primary hover:bg-[#C2410C] dark:hover:bg-[#FB923C] text-white rounded-lg font-semibold text-[11px] transition-colors"
             >
               Accept
             </button>
@@ -406,7 +508,7 @@ export const FeedCard: React.FC<FeedPostProps> = ({
       {/* 2. Content Body */}
       <div className="px-4 pb-3">
         <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">
-          {content}
+          {postContent}
         </p>
       </div>
 
@@ -438,58 +540,46 @@ export const FeedCard: React.FC<FeedPostProps> = ({
         </div>
       )}
 
-      {/* 4. Instagram Media Frame (Max 2 images) */}
+      {/* 4. Instagram Media Frame (Max 2 images, immediate SSR LCP paint with fixed aspect ratios) */}
       {activeImages.length > 0 && (
-        <div className="w-full bg-slate-900/40 border-y border-border overflow-hidden">
+        <div className="w-full bg-black/10 dark:bg-white/5 border-y border-border overflow-hidden">
           {activeImages.length === 1 ? (
-            <div className="relative aspect-[4/3] max-h-[460px] overflow-hidden bg-slate-900/50 flex items-center justify-center">
+            <div className="relative aspect-[4/3] max-h-[460px] overflow-hidden bg-black/15 dark:bg-white/5 flex items-center justify-center">
               <img
                 src={activeImages[0]}
                 alt=""
                 aria-label="Post media attachment"
                 width={800}
                 height={600}
-                loading="lazy"
-                onLoad={() => {
-                  setLoadedImages((prev) => ({ ...prev, [activeImages[0]]: true }));
-                }}
+                loading={isPriority || isAboveFold ? 'eager' : 'lazy'}
+                fetchPriority={isPriority ? 'high' : undefined}
+                decoding={isPriority ? 'sync' : 'async'}
                 onError={(e) => {
                   e.currentTarget.style.display = 'none';
                   setFailedImages((prev) => ({ ...prev, [activeImages[0]]: true }));
                 }}
-                className={`w-full h-full object-cover transition-all duration-300 hover:scale-[1.01] ${
-                  loadedImages[activeImages[0]] ? 'opacity-100' : 'opacity-0'
-                }`}
+                className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.01]"
               />
-              {!loadedImages[activeImages[0]] && !failedImages[activeImages[0]] && (
-                <div className="absolute inset-0 bg-slate-800/30 animate-pulse flex items-center justify-center" />
-              )}
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-1 max-h-[380px] overflow-hidden">
               {activeImages.slice(0, 2).map((img, idx) => (
-                <div key={idx} className="relative aspect-square overflow-hidden bg-slate-900/50">
+                <div key={idx} className="relative aspect-square overflow-hidden bg-black/15 dark:bg-white/5">
                   <img
                     src={img}
                     alt=""
                     aria-label={`Post media attachment ${idx + 1}`}
                     width={400}
                     height={400}
-                    loading="lazy"
-                    onLoad={() => {
-                      setLoadedImages((prev) => ({ ...prev, [img]: true }));
-                    }}
+                    loading={(isPriority || isAboveFold) && idx === 0 ? 'eager' : 'lazy'}
+                    fetchPriority={isPriority && idx === 0 ? 'high' : undefined}
+                    decoding={isPriority && idx === 0 ? 'sync' : 'async'}
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
                       setFailedImages((prev) => ({ ...prev, [img]: true }));
                     }}
-                    className={`w-full h-full object-cover transition-all duration-300 hover:scale-[1.02] ${
-                      loadedImages[img] ? 'opacity-100' : 'opacity-0'
-                    }`}
+                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-[1.02]"
                   />
-                  {!loadedImages[img] && !failedImages[img] && (
-                    <div className="absolute inset-0 bg-slate-800/30 animate-pulse flex items-center justify-center" />
-                  )}
                 </div>
               ))}
             </div>
@@ -498,12 +588,12 @@ export const FeedCard: React.FC<FeedPostProps> = ({
       )}
 
       {/* 5. Instagram Action Row */}
-      <div className="px-4 py-3 flex items-center justify-between border-t border-border/50">
-        <div className="flex items-center gap-4">
+      <div className="px-3 sm:px-4 py-1.5 flex items-center justify-between border-t border-border/50">
+        <div className="flex items-center gap-1 sm:gap-3">
           {/* Like Button */}
           <button
             onClick={toggleLike}
-            className={`flex items-center gap-1.5 text-xs font-semibold transition-all duration-150 ${
+            className={`min-h-[44px] min-w-[44px] px-2 flex items-center justify-center gap-1.5 text-xs font-semibold transition-all duration-150 ${
               isLiked ? 'text-rose-500 scale-105' : 'text-muted-foreground hover:text-foreground'
             }`}
             aria-label="Like post"
@@ -515,7 +605,7 @@ export const FeedCard: React.FC<FeedPostProps> = ({
           {/* Comment Button */}
           <button
             onClick={() => setShowComments(!showComments)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            className="min-h-[44px] min-w-[44px] px-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
             aria-label="View comments"
           >
             <MessageCircle className="w-5 h-5" />
@@ -525,7 +615,7 @@ export const FeedCard: React.FC<FeedPostProps> = ({
           {/* Share Button */}
           <button
             onClick={handleShare}
-            className="flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            className="min-h-[44px] min-w-[44px] px-2 flex items-center justify-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Share post"
           >
             {copied ? (
@@ -541,7 +631,7 @@ export const FeedCard: React.FC<FeedPostProps> = ({
         {/* Bookmark Button */}
         <button
           onClick={toggleBookmark}
-          className={`p-1.5 rounded-lg transition-colors ${
+          className={`min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 rounded-lg transition-colors ${
             isBookmarked ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
           }`}
           aria-label="Save post"
@@ -580,8 +670,94 @@ export const FeedCard: React.FC<FeedPostProps> = ({
           </form>
         </div>
       )}
+
+      {/* Author-Only Edit Sheet/Modal (.glass-sheet) */}
+      {isEditingModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-[#0D0E12]/70">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Edit post"
+            className="w-full sm:max-w-lg glass-sheet liquid-sheet-enter border rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-foreground">Edit Campus Post</h3>
+              <button
+                type="button"
+                onClick={() => setIsEditingModalOpen(false)}
+                aria-label="Close edit dialog"
+                className="p-2 rounded-xl bg-secondary border border-border text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <form onSubmit={handleSaveEdit} className="space-y-3">
+              <textarea
+                rows={4}
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="input-field resize-y"
+                placeholder="Update your post..."
+              />
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  {editVisibility === 'PRIVATE' ? <Lock className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
+                  Visibility:
+                </label>
+                <select
+                  value={editVisibility}
+                  onChange={(e) => setEditVisibility(e.target.value as any)}
+                  className="input-field max-w-[180px]"
+                >
+                  <option value="PUBLIC">Public Campus Feed</option>
+                  <option value="COLLEGE_ONLY">College Members Only</option>
+                  <option value="PRIVATE">Private</option>
+                </select>
+              </div>
+              {editImages.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-muted-foreground">Attached Photos (max 2)</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {editImages.slice(0, 2).map((img, i) => (
+                      <div key={i} className="relative aspect-[4/3] rounded-xl overflow-hidden border border-border">
+                        <img src={img} alt={`Attachment ${i + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setEditImages(editImages.filter((_, idx) => idx !== i))}
+                          className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/70 text-white"
+                          aria-label={`Remove image ${i + 1}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {editError && <p className="text-xs text-rose-400 font-medium">{editError}</p>}
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingModalOpen(false)}
+                  className="btn-secondary text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingEdit}
+                  className="btn-primary text-xs"
+                >
+                  {isSavingEdit ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </article>
   );
 };
 
+export const FeedCard = memo(FeedCardComponent);
 export default FeedCard;

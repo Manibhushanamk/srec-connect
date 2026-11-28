@@ -119,7 +119,7 @@ export default async function EventDetailPage({ params }: EventDetailPageProps) 
               href={event.posterUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="absolute top-4 right-4 px-3 py-1.5 rounded-xl bg-background/80 backdrop-blur-md border border-border text-xs font-medium text-foreground hover:bg-background transition-all shadow-md flex items-center gap-1.5 opacity-90 group-hover:opacity-100"
+              className="absolute top-4 right-4 px-3 py-1.5 rounded-xl bg-background/85 border border-border text-xs font-medium text-foreground hover:bg-background transition-all shadow-md flex items-center gap-1.5 opacity-90 group-hover:opacity-100"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               <span>View Full Poster</span>

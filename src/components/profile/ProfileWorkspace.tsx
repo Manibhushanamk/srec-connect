@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signOut, useSession } from 'next-auth/react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import {
   Shield,
   Crown,
@@ -33,11 +33,17 @@ import {
   Award,
   MessageCircle,
   PlusCircle,
+  Camera,
+  Upload,
+  HardDrive,
+  Loader2,
+  X,
 } from 'lucide-react';
 import { AchievementCard } from '@/components/cards/AchievementCard';
 import { FeedCard } from '@/components/social/FeedCard';
-import { isLateralEntryRoll } from '@/lib/studentHelper';
+import { isLateralEntryRoll, ACADEMIC_BATCH_OPTIONS } from '@/lib/studentHelper';
 import { GoogleDriveCard } from '@/components/dashboard/GoogleDriveCard';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
 
 interface ProfileWorkspaceProps {
   initialUser: {
@@ -185,7 +191,112 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
 
   // Status
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarDrivePrompt, setAvatarDrivePrompt] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
+
+  const downscaleAvatarForDrive = (file: File): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onerror = () => resolve(file);
+      reader.onload = () => {
+        const src = reader.result as string;
+        const img = new window.Image();
+        img.onerror = () => resolve(file);
+        img.onload = () => {
+          const maxDim = 512;
+          const scale = Math.min(1, maxDim / Math.max(img.width || maxDim, img.height || maxDim));
+          const w = Math.max(1, Math.round((img.width || maxDim) * scale));
+          const h = Math.max(1, Math.round((img.height || maxDim) * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(file);
+            return;
+          }
+          ctx.drawImage(img, 0, 0, w, h);
+          canvas.toBlob(
+            (blob) => resolve(blob || file),
+            'image/webp',
+            0.84
+          );
+        };
+        img.src = src;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleAvatarFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (avatarFileInputRef.current) avatarFileInputRef.current.value = '';
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setFeedback({ type: 'error', text: 'Please select an image file (JPG, PNG, or WebP).' });
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    setAvatarDrivePrompt(false);
+    setFeedback(null);
+
+    try {
+      const optimizedBlob = await downscaleAvatarForDrive(file);
+      const fd = new FormData();
+      fd.append(
+        'file',
+        optimizedBlob,
+        file.name.replace(/\.[^/.]+$/, '') + '.webp'
+      );
+      fd.append('documentType', 'PROFILE_AVATAR');
+
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: fd,
+      });
+      const uploadData = await uploadRes.json();
+
+      if (uploadRes.status === 403 && uploadData.requiresDriveConnect) {
+        setAvatarDrivePrompt(true);
+        throw new Error(uploadData.error || 'Connect Google Drive to store your profile picture.');
+      }
+
+      if (!uploadRes.ok || !uploadData.url) {
+        throw new Error(uploadData.error || 'Failed to store profile picture in Google Drive.');
+      }
+
+      setAvatarUrl(uploadData.url);
+      setImgError(false);
+
+      // Persist avatar URL immediately across User / Student / Faculty records
+      const saveRes = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarUrl: uploadData.url }),
+      });
+
+      if (!saveRes.ok) {
+        throw new Error('Photo uploaded to Drive, but profile save failed. Click Save Customizations.');
+      }
+
+      if (updateSession) {
+        await updateSession({ image: uploadData.url });
+      }
+      setFeedback({
+        type: 'success',
+        text: 'Profile picture compressed to WebP and saved directly to your Google Drive!',
+      });
+      router.refresh();
+    } catch (err: any) {
+      setFeedback({ type: 'error', text: err.message || 'Avatar upload failed.' });
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   const defaultHeadline = isFaculty
     ? `${designation}${degrees ? ` • ${degrees}` : ''}`
@@ -246,43 +357,43 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-6">
-      {/* 1. Profile Header Hero */}
-      <div className="social-card overflow-hidden border-border bg-card shadow-subtle">
+      {/* 1. Profile Header Hero (Tier 1 Liquid Glass, zero nested double-blur badges) */}
+      <div className="social-card overflow-hidden">
         {/* Banner */}
         <div className={`h-32 sm:h-44 w-full relative ${
           isSuperAdmin
-            ? 'bg-gradient-to-r from-slate-900 via-indigo-950 to-blue-900'
+            ? 'bg-gradient-to-r from-[#181A20] via-[#272A35] to-[#0D0E12]'
             : isHOD
-            ? 'bg-gradient-to-r from-blue-900 via-sky-950 to-indigo-900'
+            ? 'bg-gradient-to-r from-[#181A20] via-[#3A2118] to-[#0D0E12]'
             : isFaculty
-            ? 'bg-gradient-to-r from-slate-800 via-cyan-950 to-slate-900'
-            : 'bg-gradient-to-r from-blue-900 via-indigo-900 to-purple-900'
+            ? 'bg-gradient-to-r from-[#181A20] via-[#29221A] to-[#0D0E12]'
+            : 'bg-gradient-to-r from-[#181A20] via-[#2D1F27] to-[#0D0E12]'
         }`}>
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-white/10 via-transparent to-black/30" />
           
-          {/* Role Status Tag on Banner */}
+          {/* Role Status Tag on Banner (solid translucent fill — zero double blur inside .glass-card) */}
           <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
             {isSuperAdmin && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 backdrop-blur-md shadow-sm">
-                <Crown className="w-3.5 h-3.5 text-amber-400" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#0D0E12]/75 text-[#FACC15] border border-[#FACC15]/45 shadow-sm">
+                <Crown className="w-3.5 h-3.5 text-[#FACC15]" />
                 SOVEREIGN SUPER ADMIN
               </span>
             )}
             {isHOD && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40 backdrop-blur-md shadow-sm">
-                <Building2 className="w-3.5 h-3.5 text-sky-400" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#0D0E12]/75 text-[#FB923C] border border-[#F97316]/45 shadow-sm">
+                <Building2 className="w-3.5 h-3.5 text-[#F97316]" />
                 HEAD OF DEPARTMENT
               </span>
             )}
             {isFaculty && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 backdrop-blur-md shadow-sm">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#0D0E12]/75 text-emerald-300 border border-emerald-500/45 shadow-sm">
                 <Briefcase className="w-3.5 h-3.5 text-emerald-400" />
                 ACADEMIC FACULTY
               </span>
             )}
             {isStudent && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 backdrop-blur-md shadow-sm">
-                <GraduationCap className="w-3.5 h-3.5 text-blue-400" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#0D0E12]/75 text-[#FB923C] border border-[#F97316]/45 shadow-sm">
+                <GraduationCap className="w-3.5 h-3.5 text-[#F97316]" />
                 STUDENT SCHOLAR
               </span>
             )}
@@ -446,11 +557,11 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
       </div>
 
       {/* 2. Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-border pb-2">
+      <div className="flex items-center gap-2 border-b border-border pb-2 overflow-x-auto no-scrollbar">
         <button
           type="button"
           onClick={() => setActiveTab('overview')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
+          className={`min-h-[44px] whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
             activeTab === 'overview'
               ? 'bg-primary text-primary-foreground shadow-xs'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -461,7 +572,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
         <button
           type="button"
           onClick={() => setActiveTab('customize')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+          className={`min-h-[44px] whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
             activeTab === 'customize'
               ? 'bg-primary text-primary-foreground shadow-xs'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -473,7 +584,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
         <button
           type="button"
           onClick={() => setActiveTab('security')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+          className={`min-h-[44px] whitespace-nowrap px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
             activeTab === 'security'
               ? 'bg-primary text-primary-foreground shadow-xs'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -507,7 +618,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
         <div className="space-y-6">
           {/* Admin Launchpad for Super Admin and Department HOD */}
           {(isSuperAdmin || isHOD) && (
-            <div className="social-card p-5 border-border bg-card">
+            <div className="social-card p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
@@ -643,7 +754,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                 </div>
 
                 {/* 2. Detailed Academic Credentials Grid */}
-                <div className="social-card p-5 border-border bg-card space-y-4">
+                <div className="social-card p-5 space-y-4">
                   <div className="flex items-center justify-between border-b border-border/60 pb-3 flex-wrap gap-2">
                     <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                       <GraduationCap className="w-4 h-4 text-primary" />
@@ -815,7 +926,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                 <GoogleDriveCard className="mb-5" />
 
                 {/* 3. Verified Achievements & Research Publications */}
-                <div className="social-card p-5 border-border bg-card space-y-4">
+                <div className="social-card p-5 space-y-4">
                   <div className="flex items-center justify-between border-b border-border/60 pb-3 flex-wrap gap-2">
                     <div>
                       <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
@@ -879,7 +990,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
 
           {/* Quick Details Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="social-card p-4 border-border bg-card space-y-2">
+            <div className="social-card p-4 space-y-2">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Institutional Affiliation
               </span>
@@ -891,7 +1002,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
               </p>
             </div>
 
-            <div className="social-card p-4 border-border bg-card space-y-2">
+            <div className="social-card p-4 space-y-2">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 Account Status & Role
               </span>
@@ -909,7 +1020,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
           </div>
 
           {/* 4. Community Feed Posts Section */}
-          <div className="social-card p-5 border-border bg-card space-y-4">
+          <div className="social-card p-5 space-y-4">
             <div className="flex items-center justify-between border-b border-border/60 pb-3 flex-wrap gap-2">
               <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                 <MessageCircle className="w-4 h-4 text-primary" />
@@ -953,7 +1064,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
       {/* TAB 2: EDIT & CUSTOMIZATION */}
       {activeTab === 'customize' && (
         <form onSubmit={handleSave} className="space-y-6">
-          <div className="social-card p-5 sm:p-6 border-border bg-card space-y-5">
+          <div className="social-card p-5 sm:p-6 space-y-5">
             <div>
               <h3 className="text-sm font-bold text-foreground">Personal Profile Customization</h3>
               <p className="text-xs text-muted-foreground">
@@ -995,25 +1106,110 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                 </span>
               </div>
 
-              {/* Avatar URL with live preview */}
-              <div>
-                <label className="block text-xs font-semibold text-foreground mb-1">
-                  Profile Avatar Image URL (HTTPS)
-                </label>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-secondary border border-border flex items-center justify-center overflow-hidden shrink-0">
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="Preview" className="w-full h-full object-cover" />
-                    ) : (
-                      <User className="w-5 h-5 text-muted-foreground" />
+              {/* Profile Picture Upload to User Google Drive + URL Override */}
+              <div className="p-4 rounded-2xl bg-secondary/35 border border-border space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-2xl bg-card border border-border flex items-center justify-center overflow-hidden shrink-0">
+                      {avatarUrl && !imgError ? (
+                        <img
+                          src={avatarUrl}
+                          alt="Profile preview"
+                          width={56}
+                          height={56}
+                          className="w-full h-full object-cover"
+                          onError={() => setImgError(true)}
+                        />
+                      ) : (
+                        <User className="w-6 h-6 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                        <Camera className="w-3.5 h-3.5 text-primary" />
+                        <span>Profile Picture (Stored in Your Google Drive)</span>
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Uploaded photos are compressed to compact WebP and saved inside your SREC CONNECT Drive folder.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap shrink-0">
+                    <input
+                      ref={avatarFileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleAvatarFileSelected}
+                      className="hidden"
+                      aria-label="Choose profile photo file"
+                    />
+                    <button
+                      type="button"
+                      disabled={isUploadingAvatar}
+                      onClick={() => avatarFileInputRef.current?.click()}
+                      className="min-h-[44px] inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-95 transition disabled:opacity-60 cursor-pointer"
+                    >
+                      {isUploadingAvatar ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Upload className="w-4 h-4" />
+                      )}
+                      <span>{isUploadingAvatar ? 'Uploading to Drive...' : 'Upload Profile Pic'}</span>
+                    </button>
+
+                    {avatarUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAvatarUrl('');
+                          setImgError(false);
+                        }}
+                        className="min-h-[44px] inline-flex items-center gap-1 px-3 py-2 rounded-xl border border-border bg-card text-xs font-medium text-muted-foreground hover:text-rose-400 transition cursor-pointer"
+                        aria-label="Clear profile photo"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        <span>Clear</span>
+                      </button>
                     )}
                   </div>
+                </div>
+
+                {avatarDrivePrompt && (
+                  <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 text-amber-300">
+                      <HardDrive className="w-4 h-4 shrink-0" />
+                      <span>Connect Google Drive first to store your profile picture securely in your Drive.</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        signIn('google', { callbackUrl: '/profile' }, {
+                          login_hint: initialUser.email,
+                          prompt: 'consent select_account',
+                        } as any)
+                      }
+                      className="min-h-[44px] px-3.5 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs shrink-0"
+                    >
+                      Connect Google Drive
+                    </button>
+                  </div>
+                )}
+
+                <div>
+                  <label htmlFor="profile-avatar-url" className="block text-[11px] font-medium text-muted-foreground mb-1">
+                    Or paste existing Drive proxy / HTTPS avatar URL
+                  </label>
                   <input
-                    type="url"
+                    id="profile-avatar-url"
+                    type="text"
                     value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                    className="flex-1 text-xs bg-secondary/50 border border-border rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background transition-all"
-                    placeholder="https://..."
+                    onChange={(e) => {
+                      setAvatarUrl(e.target.value);
+                      setImgError(false);
+                    }}
+                    className="w-full text-xs bg-background border border-border rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
+                    placeholder="/api/drive/file/... or https://..."
                   />
                 </div>
               </div>
@@ -1289,18 +1485,23 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                               </span>
                             )}
                           </div>
-                          <input
-                            type="text"
-                            value={batch}
-                            disabled={!canManageAcademicAnchors}
-                            onChange={(e) => setBatch(e.target.value)}
-                            className={`w-full text-xs rounded-xl p-3 border transition-all ${
-                              canManageAcademicAnchors
-                                ? 'bg-secondary/50 border-border focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background'
-                                : 'bg-secondary/20 border-border/60 text-muted-foreground cursor-not-allowed'
-                            }`}
-                            placeholder="e.g. 2022-2026"
-                          />
+                          {canManageAcademicAnchors ? (
+                            <CreatableSelect
+                              value={batch}
+                              onChange={setBatch}
+                              options={ACADEMIC_BATCH_OPTIONS}
+                              customOptionLabel="+ Custom Batch (Not listed)..."
+                              customPlaceholder="e.g. 2026-2030"
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              value={batch}
+                              disabled
+                              className="w-full text-xs rounded-xl p-3 border transition-all bg-secondary/20 border-border/60 text-muted-foreground cursor-not-allowed"
+                              placeholder="e.g. 2022-2026"
+                            />
+                          )}
                         </div>
                         <div>
                           <div className="flex items-center justify-between mb-1">
@@ -1314,18 +1515,28 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
                               </span>
                             )}
                           </div>
-                          <input
-                            type="text"
-                            value={section}
-                            disabled={!canManageAcademicAnchors}
-                            onChange={(e) => setSection(e.target.value)}
-                            className={`w-full text-xs rounded-xl p-3 border transition-all ${
-                              canManageAcademicAnchors
-                                ? 'bg-secondary/50 border-border focus:outline-none focus:ring-2 focus:ring-primary/40 focus:bg-background'
-                                : 'bg-secondary/20 border-border/60 text-muted-foreground cursor-not-allowed'
-                            }`}
-                            placeholder="e.g. A"
-                          />
+                          {canManageAcademicAnchors ? (
+                            <CreatableSelect
+                              value={section}
+                              onChange={setSection}
+                              options={[
+                                { value: 'A', label: 'Section A' },
+                                { value: 'B', label: 'Section B' },
+                                { value: 'C', label: 'Section C' },
+                                { value: 'D', label: 'Section D' },
+                              ]}
+                              customOptionLabel="+ Custom Section..."
+                              customPlaceholder="e.g. E"
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              value={section}
+                              disabled
+                              className="w-full text-xs rounded-xl p-3 border transition-all bg-secondary/20 border-border/60 text-muted-foreground cursor-not-allowed"
+                              placeholder="e.g. A"
+                            />
+                          )}
                         </div>
                       </div>
                       {!canManageAcademicAnchors && (
@@ -1363,7 +1574,7 @@ export const ProfileWorkspace: React.FC<ProfileWorkspaceProps> = ({ initialUser 
       {/* TAB 3: SYSTEM ROLE & SECURITY CLEARANCE */}
       {activeTab === 'security' && (
         <div className="space-y-6">
-          <div className="social-card p-5 sm:p-6 border-border bg-card space-y-4">
+          <div className="social-card p-5 sm:p-6 space-y-4">
             <div className="flex items-center gap-2 text-foreground font-bold text-sm">
               <Lock className="w-4 h-4 text-primary" />
               <span>Institutional Identity & Security Governance</span>

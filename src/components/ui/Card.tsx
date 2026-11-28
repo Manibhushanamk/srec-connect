@@ -9,18 +9,16 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant = 'glass', hover = false, children, ...props }, ref) => {
-    const baseStyles = 'rounded-2xl transition-all duration-300';
+    const baseStyles = 'rounded-2xl transition-all duration-200';
     
     const variants = {
-      default: 'bg-card text-card-foreground backdrop-blur-md border border-border shadow-subtle',
-      glass: 'bg-card/85 text-card-foreground backdrop-blur-md border border-border/80 shadow-xs',
-      bento: 'bg-card text-card-foreground border border-border shadow-subtle relative overflow-hidden',
-      elevated: 'bg-card text-card-foreground border border-border shadow-card',
+      default: 'glass-card',
+      glass: 'glass-card',
+      bento: 'glass-card relative overflow-hidden',
+      elevated: 'glass-card',
     };
 
-    const hoverStyles = hover 
-      ? 'hover:border-primary/50 hover:shadow-card hover:scale-[1.01]' 
-      : '';
+    const hoverStyles = hover ? 'glass-card-hover' : '';
 
     return (
       <div
@@ -29,7 +27,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         {...props}
       >
         {variant === 'bento' && (
-          <div className="absolute inset-0 bg-gradient-to-tr from-brand-500/10 via-transparent to-cyan-500/10 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-[#F97316]/10 via-transparent to-[#FACC15]/10 opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
         )}
         {children}
       </div>

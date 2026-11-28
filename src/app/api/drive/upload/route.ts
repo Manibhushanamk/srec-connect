@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { uploadCertificateToDrive, assertDriveAllowed } from '@/lib/drive';
+import { uploadCertificateToDrive, assertDriveAllowed, isPublicMediaDocumentType } from '@/lib/drive';
 
 export const runtime = 'nodejs';
 
@@ -83,6 +83,7 @@ export async function POST(req: NextRequest) {
       fileName: stampedFileName,
       mimeType,
       documentType,
+      isPublicMedia: isPublicMediaDocumentType(documentType),
       accessToken: (session as any)?.accessToken,
       refreshToken: (session as any)?.refreshToken,
     });

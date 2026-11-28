@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, ExternalLink, RefreshCw, Link as LinkIcon, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { ProofPreview, normalizeProofUrl } from '@/components/shared/ProofPreview';
 
 interface DriveFileUploaderProps {
   value: string;
@@ -67,7 +68,11 @@ export function DriveFileUploader({
 
       setUploadedFileName(data.fileName);
       setUploadedFileSize(data.fileSize);
-      onChange(data.directDisplayUrl || data.webViewLink);
+      onChange(
+        documentType === 'STUDENT_CERTIFICATE' || documentType === 'INCIDENT_EVIDENCE'
+          ? normalizeProofUrl(data.directDisplayUrl || data.webViewLink) || data.directDisplayUrl || data.webViewLink
+          : data.directDisplayUrl || data.webViewLink
+      );
     } catch (err: any) {
       console.error('[Drive Upload Component Error]', err);
       setUploadError(err.message || 'Network error occurred while uploading.');
@@ -154,12 +159,16 @@ export function DriveFileUploader({
 
             <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
               <a
-                href={value}
+                href={
+                  documentType === 'STUDENT_CERTIFICATE' || documentType === 'INCIDENT_EVIDENCE'
+                    ? normalizeProofUrl(value) || value
+                    : value
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-background border border-border text-foreground hover:bg-muted transition-colors shadow-2xs"
               >
-                <span>View on Drive</span>
+                <span>Open Proof</span>
                 <ExternalLink className="w-3.5 h-3.5" />
               </a>
               <button
@@ -174,31 +183,15 @@ export function DriveFileUploader({
           </div>
           {value && (
             <div className="mt-3 pt-3 border-t border-emerald-500/20 space-y-2">
-              {(value.match(/\.(png|jpe?g|webp|gif)$/i) || value.includes('googleusercontent') || value.startsWith('/api/drive/file/')) && (
-                <div className="rounded-lg overflow-hidden border border-emerald-500/30 bg-black/40 max-h-48 flex items-center justify-center p-1">
-                  <img
-                    src={value}
-                    alt="Certificate Preview"
-                    className="max-h-44 object-contain rounded"
-                    onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                  />
-                </div>
-              )}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2 text-[11px] text-muted-foreground min-w-0">
-                  <span className="font-semibold text-emerald-400">Direct CDN Display:</span>
-                  <span className="font-mono text-[10px] truncate max-w-xs">{value}</span>
-                </div>
-                <a
-                  href={value}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-medium"
-                >
-                  <span>Direct View</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              </div>
+              <ProofPreview
+                url={
+                  documentType === 'STUDENT_CERTIFICATE' || documentType === 'INCIDENT_EVIDENCE'
+                    ? normalizeProofUrl(value)
+                    : value
+                }
+                title={uploadedFileName || 'Certificate Preview'}
+                heightClass="h-44"
+              />
             </div>
           )}
         </div>

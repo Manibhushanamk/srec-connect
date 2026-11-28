@@ -156,8 +156,8 @@ export function getAllowedAssignableRoles(actorRole?: Role | string | null): Rol
     return [Role.WEB_MANAGER, Role.FACULTY, Role.STUDENT];
   }
   if (isWebManager(actorRole)) {
-    // Web Managers have authority over Faculty and Students in their department
-    return [Role.FACULTY, Role.STUDENT];
+    // Web Managers are strictly isolated from user provisioning/management
+    return [];
   }
   return [];
 }
@@ -194,18 +194,10 @@ export function canManageTargetUser(
   }
 
   if (isWebManager(actor.role)) {
-    if (!actor.departmentId) {
-      return { allowed: false, reason: 'Your Web Manager account is not bound to an academic department.' };
-    }
-    // Web Manager can only manage Faculty and Students
-    if (targetUser.role !== Role.FACULTY && targetUser.role !== Role.STUDENT) {
-      return { allowed: false, reason: 'Web Managers can only manage Faculty and Student accounts.' };
-    }
-    // Target must belong to Web Manager's department
-    if (targetUser.departmentId && targetUser.departmentId !== actor.departmentId) {
-      return { allowed: false, reason: 'Unauthorized: Target user belongs to a different academic department.' };
-    }
-    return { allowed: true };
+    return {
+      allowed: false,
+      reason: 'Forbidden: Web Managers are strictly isolated from institutional user management.',
+    };
   }
 
   return { allowed: false, reason: 'Forbidden: Insufficient administrative privileges.' };
@@ -332,6 +324,7 @@ export function getVisibleMenuGroups(context: PermissionContext): string[] {
       'overview',
       'departments',
       'users',
+      'bulk-upload',
       'achievements',
       'events',
       'discipline',
@@ -347,6 +340,7 @@ export function getVisibleMenuGroups(context: PermissionContext): string[] {
       'overview',
       'departments',
       'users',
+      'bulk-upload',
       'achievements',
       'events',
       'discipline',
@@ -359,7 +353,7 @@ export function getVisibleMenuGroups(context: PermissionContext): string[] {
   if (context.role === 'WEB_MANAGER') {
     return [
       'overview',
-      'users',
+      'bulk-upload',
       'achievements',
       'events',
       'notices',

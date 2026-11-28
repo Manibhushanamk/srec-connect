@@ -30,6 +30,7 @@ import {
   Briefcase,
   User,
   PlusCircle,
+  Download,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import { NotificationBell } from '@/components/layout/NotificationBell';
@@ -100,7 +101,7 @@ export const AppHeader: React.FC = () => {
   const isHOD = userRole === 'HOD';
   const isFaculty = userRole === 'FACULTY' || isHOD;
   const isStudent = userRole === 'STUDENT';
-  const isAdmin = isSuperAdmin || userRole === 'ADMIN' || isHOD;
+  const isAdmin = isSuperAdmin || userRole === 'ADMIN' || isHOD || userRole === 'WEB_MANAGER';
 
   const roleBadgeText =
     isSuperAdmin ? '👑 Super Admin' :
@@ -130,10 +131,10 @@ export const AppHeader: React.FC = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-card/90 backdrop-blur-md border-b border-border transition-colors">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+      <header className="sticky top-0 md:top-2 z-40 w-full md:w-[calc(100%-2rem)] md:max-w-[1400px] md:mx-auto glass-header border-b md:border md:rounded-2xl transition-colors">
+        <div className="max-w-[1360px] mx-auto px-2.5 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-3">
           {/* Brand & Department Emblem */}
-          <Link href="/" className="flex items-center gap-2.5 sm:gap-3 focus:outline-none group min-w-0">
+          <Link href="/" className="flex items-center gap-2 sm:gap-3 focus:outline-none group min-w-0">
             {/* Official SREC Emblem */}
             <div className="w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
               <img
@@ -147,16 +148,11 @@ export const AppHeader: React.FC = () => {
             </div>
 
             <div className="flex flex-col min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-sm sm:text-base tracking-tight text-foreground truncate">
-                  SREC CONNECT
-                </span>
-                <span className="hidden sm:inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary border border-primary/20">
-                  v3.0
-                </span>
-              </div>
-              <span className="text-[10px] sm:text-[11px] font-medium text-muted-foreground leading-none truncate max-w-[150px] sm:max-w-none">
-                CSE — Artificial Intelligence & Machine Learning
+              <span className="font-bold text-sm sm:text-base tracking-tight text-foreground truncate">
+                SREC CONNECT
+              </span>
+              <span className="text-[10px] sm:text-[11px] font-medium text-muted-foreground leading-none truncate max-w-[115px] min-[400px]:max-w-[175px] sm:max-w-none">
+                CSE — Artificial Intelligence &amp; Machine Learning
               </span>
             </div>
           </Link>
@@ -226,10 +222,10 @@ export const AppHeader: React.FC = () => {
                   />
                 </button>
 
-                {/* Profile Hover Dropdown Menu */}
+                {/* Profile Dropdown Menu (uses crisp menu surface without double-blur inside glass-header) */}
                 {isProfileDropdownOpen && (
                   <div
-                    className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-2xl bg-card/95 backdrop-blur-2xl border border-border shadow-2xl z-50 p-3 space-y-2.5 animate-in fade-in zoom-in-95 duration-150"
+                    className="absolute right-0 top-full mt-2 w-72 sm:w-80 rounded-2xl glass-menu-surface liquid-sheet-enter z-50 p-3 space-y-2.5"
                     role="menu"
                     aria-orientation="vertical"
                   >
@@ -330,7 +326,7 @@ export const AppHeader: React.FC = () => {
               <div className="flex items-center gap-1.5">
                 <Link
                   href="/signin"
-                  className="btn-primary text-xs py-1.5 px-3 sm:py-2 sm:px-3.5"
+                  className="btn-primary text-xs min-h-[44px] py-2 px-3 sm:px-3.5 whitespace-nowrap"
                 >
                   <LogIn className="w-3.5 h-3.5" />
                   <span>Sign In</span>
@@ -339,7 +335,7 @@ export const AppHeader: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                  className="md:hidden p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
+                  className="md:hidden min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
                   aria-label="Toggle navigation"
                 >
                   <Menu className="w-5 h-5" />
@@ -352,7 +348,7 @@ export const AppHeader: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden flex items-center gap-1.5 p-1 rounded-xl hover:bg-secondary/80 border border-border/60 transition-colors focus:outline-none"
+                className="md:hidden min-h-[44px] min-w-[44px] flex items-center justify-center gap-1.5 p-1.5 rounded-xl hover:bg-secondary/80 border border-border/60 transition-colors focus:outline-none"
                 aria-label="Open navigation menu"
               >
                 <div className="w-7 h-7 rounded-full bg-primary/15 text-primary border border-primary/30 flex items-center justify-center font-bold text-[11px] overflow-hidden">
@@ -377,15 +373,15 @@ export const AppHeader: React.FC = () => {
       {/* Mobile Slide-Over Navigation Drawer */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 md:hidden flex justify-end animate-fade-in" role="dialog" aria-modal="true">
-          {/* Backdrop */}
+          {/* Backdrop (no blur scrim to avoid double-blur with glass-sheet drawer) */}
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-[#0D0E12]/70 transition-opacity"
             onClick={() => setIsMobileMenuOpen(false)}
             aria-hidden="true"
           />
 
           {/* Drawer Content */}
-          <div className="relative w-full max-w-[320px] sm:max-w-xs bg-card/95 backdrop-blur-2xl border-l border-border h-full flex flex-col shadow-2xl z-10 overflow-hidden">
+          <div className="relative w-full max-w-[320px] sm:max-w-xs glass-sheet liquid-sheet-enter border-l h-full flex flex-col shadow-2xl z-10 overflow-hidden">
             {/* Drawer Top Header */}
             <div className="p-4 border-b border-border flex items-center justify-between shrink-0 bg-secondary/30">
               <div className="flex items-center gap-2">
@@ -593,18 +589,20 @@ export const AppHeader: React.FC = () => {
                           <Calendar className="w-4 h-4 text-purple-400" />
                           <span>Campus Events Desk</span>
                         </Link>
-                        <Link
-                          href="/admin/users"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
-                            pathname === '/admin/users'
-                              ? 'bg-primary text-primary-foreground font-semibold'
-                              : 'text-foreground/80 hover:text-foreground hover:bg-secondary/60'
-                          }`}
-                        >
-                          <Users className="w-4 h-4 text-emerald-500" />
-                          <span>User Directory</span>
-                        </Link>
+                        {userRole !== 'WEB_MANAGER' && (
+                          <Link
+                            href="/admin/users"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
+                              pathname === '/admin/users'
+                                ? 'bg-primary text-primary-foreground font-semibold'
+                                : 'text-foreground/80 hover:text-foreground hover:bg-secondary/60'
+                            }`}
+                          >
+                            <Users className="w-4 h-4 text-emerald-500" />
+                            <span>User Directory</span>
+                          </Link>
+                        )}
                         <Link
                           href="/admin/bulk-upload"
                           onClick={() => setIsMobileMenuOpen(false)}
@@ -614,21 +612,23 @@ export const AppHeader: React.FC = () => {
                               : 'text-foreground/80 hover:text-foreground hover:bg-secondary/60'
                           }`}
                         >
-                          <FileSpreadsheet className="w-4 h-4 text-cyan-500" />
+                          <FileSpreadsheet className="w-4 h-4 text-primary" />
                           <span>Bulk Data Ingestion</span>
                         </Link>
-                        <Link
-                          href="/admin/discipline"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
-                            pathname === '/admin/discipline'
-                              ? 'bg-primary text-primary-foreground font-semibold'
-                              : 'text-foreground/80 hover:text-foreground hover:bg-secondary/60'
-                          }`}
-                        >
-                          <ShieldAlert className="w-4 h-4 text-rose-500" />
-                          <span>Discipline & Grievances</span>
-                        </Link>
+                        {userRole !== 'WEB_MANAGER' && (
+                          <Link
+                            href="/admin/discipline"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
+                              pathname === '/admin/discipline'
+                                ? 'bg-primary text-primary-foreground font-semibold'
+                                : 'text-foreground/80 hover:text-foreground hover:bg-secondary/60'
+                            }`}
+                          >
+                            <ShieldAlert className="w-4 h-4 text-rose-500" />
+                            <span>Discipline & Grievances</span>
+                          </Link>
+                        )}
                         <Link
                           href="/admin/notices"
                           onClick={() => setIsMobileMenuOpen(false)}
@@ -642,17 +642,31 @@ export const AppHeader: React.FC = () => {
                           <span>Notices & Circulars</span>
                         </Link>
                         <Link
-                          href="/admin/trash"
+                          href="/admin/export"
                           onClick={() => setIsMobileMenuOpen(false)}
                           className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
-                            pathname === '/admin/trash'
+                            pathname === '/admin/export'
                               ? 'bg-primary text-primary-foreground font-semibold'
                               : 'text-foreground/80 hover:text-foreground hover:bg-secondary/60'
                           }`}
                         >
-                          <Trash2 className="w-4 h-4 text-rose-400" />
-                          <span>Trash Recovery</span>
+                          <Download className="w-4 h-4 text-emerald-400" />
+                          <span>Export Achievements</span>
                         </Link>
+                        {userRole !== 'WEB_MANAGER' && (
+                          <Link
+                            href="/admin/trash"
+                            onClick={() => setIsMobileMenuOpen(false)}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors ${
+                              pathname === '/admin/trash'
+                                ? 'bg-primary text-primary-foreground font-semibold'
+                                : 'text-foreground/80 hover:text-foreground hover:bg-secondary/60'
+                            }`}
+                          >
+                            <Trash2 className="w-4 h-4 text-rose-400" />
+                            <span>Trash Recovery</span>
+                          </Link>
+                        )}
                       </>
                     )}
                   </nav>

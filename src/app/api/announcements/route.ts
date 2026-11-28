@@ -3,11 +3,13 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { canAccessAdmin } from '@/lib/rbac';
+import { AnnouncementCreateSchema, parseJsonBody } from '@/lib/schemas';
+import { ensureBatchesRegistered } from '@/lib/category-batch-helpers';
 import { AnnouncementPriority, AnnouncementTargetRole } from '@prisma/client';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions).catch(() => null);
     const { searchParams } = new URL(req.url);
     const limit = Math.min(parseInt(searchParams.get('limit') || '20', 10), 50);
 
@@ -82,33 +84,15 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    let currentUser = null;
+    const session = await getServerSession(authOptions).catch(() => null);
 
-    if (session?.user?.email) {
-      currentUser = await prisma.user.findUnique({
-        where: { email: session.user.email.toLowerCase().trim() },
-      });
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
-    const {
-      title,
-      content,
-      priority = 'NORMAL',
-      targetRole = 'ALL',
-      batch,
-      section,
-      departmentId,
-      expiresAt,
-      authorEmail,
-    } = body;
-
-    if (!currentUser && authorEmail) {
-      currentUser = await prisma.user.findUnique({
-        where: { email: authorEmail.toLowerCase().trim() },
-      });
-    }
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email.toLowerCase().trim() },
+    });
 
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -121,8 +105,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!title?.trim() || !content?.trim()) {
-      return NextResponse.json({ error: 'Title and content are required' }, { status: 400 });
+    const parsed = await parseJsonBody(req, AnnouncementCreateSchema);
+    if (!parsed.success) return parsed.response;
+
+    const {
+      title,
+      content,
+      priority,
+      targetRole,
+      batch,
+      section,
+      departmentId,
+      expiresAt,
+    } = parsed.data;
+
+    if (batch) {
+      await ensureBatchesRegistered([batch]).catch(() => null);
     }
 
     // Default expiration: 30 days from now if not specified

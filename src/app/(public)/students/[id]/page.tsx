@@ -14,6 +14,7 @@ import { EmptyStatePreset } from '@/components/ui/EmptyState';
 import { ProfileHeader } from '@/components/portfolio/ProfileHeader';
 import { AchievementCard } from '@/components/cards/AchievementCard';
 import { FeedCard } from '@/components/social/FeedCard';
+import { resolveAchievementCardProof } from '@/lib/admin-auth';
 import { formatDate } from '@/lib/utils';
 import {
   Award,
@@ -104,15 +105,17 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
 
   const viewerEmail = session?.user?.email?.toLowerCase().trim();
   let viewerRole = '';
+  let viewerRecord: { id: string; role: string; departmentId: string | null } | null = null;
   let isStaffOrAdmin = false;
   if (viewerEmail) {
     const viewer = await prisma.user.findUnique({
       where: { email: viewerEmail },
-      select: { role: true },
+      select: { id: true, role: true, departmentId: true },
     });
     if (viewer) {
+      viewerRecord = viewer;
       viewerRole = viewer.role;
-      isStaffOrAdmin = ['SUPER_ADMIN', 'HOD', 'FACULTY'].includes(viewer.role);
+      isStaffOrAdmin = ['SUPER_ADMIN', 'ADMIN', 'HOD', 'FACULTY'].includes(viewer.role);
     }
   }
 
@@ -371,29 +374,40 @@ export default async function StudentProfilePage({ params }: StudentProfilePageP
                 />
               ) : (
                 <div className="grid grid-cols-1 2xl:grid-cols-2 gap-5">
-                  {allAchievements.map((achievement: any) => (
-                    <AchievementCard
-                      key={achievement.id}
-                      id={achievement.id}
-                      title={achievement.title}
-                      description={achievement.description}
-                      categoryName={achievement.category?.name || 'Academic Honor'}
-                      level={achievement.level || 'NATIONAL'}
-                      positionRank={achievement.positionRank}
-                      participationType={achievement.participationType || 'SOLO'}
-                      organizationEventName={achievement.organizationEventName || 'Institutional Body'}
-                      academicYear={achievement.academicYear || '2025-2026'}
-                      achievementDate={achievement.achievementDate instanceof Date ? achievement.achievementDate.toISOString() : String(achievement.achievementDate)}
-                      personName={student.name}
-                      personType="STUDENT"
-                      rollNumber={student.rollNumber}
-                      departmentName={student.department?.name || 'CSE (AI & ML)'}
-                      googleDriveUrl={achievement.googleDriveUrl}
-                      certificateUrl={achievement.certificateUrl || achievement.googleDriveUrl}
-                      tags={achievement.tags}
-                      href={`/achievements/${achievement.id}`}
-                    />
-                  ))}
+                  {allAchievements.map((achievement: any) => {
+                    const proofProps = resolveAchievementCardProof(
+                      {
+                        ...achievement,
+                        primaryStudent: { user: { id: student.user?.id } },
+                      },
+                      viewerRecord
+                    );
+                    return (
+                      <AchievementCard
+                        key={achievement.id}
+                        id={achievement.id}
+                        title={achievement.title}
+                        description={achievement.description}
+                        categoryName={achievement.category?.name || 'Academic Honor'}
+                        level={achievement.level || 'NATIONAL'}
+                        positionRank={achievement.positionRank}
+                        participationType={achievement.participationType || 'SOLO'}
+                        organizationEventName={achievement.organizationEventName || 'Institutional Body'}
+                        academicYear={achievement.academicYear || '2025-2026'}
+                        achievementDate={achievement.achievementDate instanceof Date ? achievement.achievementDate.toISOString() : String(achievement.achievementDate)}
+                        personName={student.name}
+                        personType="STUDENT"
+                        rollNumber={student.rollNumber}
+                        departmentName={student.department?.name || 'CSE (AI & ML)'}
+                        googleDriveUrl={proofProps.visibleProofUrl}
+                        certificateUrl={proofProps.visibleProofUrl}
+                        coverImageUrl={proofProps.coverImageUrl}
+                        hasPrivateProof={proofProps.hasPrivateProof}
+                        tags={achievement.tags}
+                        href={`/achievements/${achievement.id}`}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

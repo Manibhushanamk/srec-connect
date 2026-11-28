@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { canAccessAdmin } from '@/lib/rbac';
+import { EventCheckinSchema, parseJsonBody } from '@/lib/schemas';
 
 export async function POST(
   req: NextRequest,
@@ -10,25 +11,15 @@ export async function POST(
 ) {
   try {
     const { id: eventId } = await params;
-    const session = await getServerSession(authOptions);
-
-    let operatorUser = null;
-    if (session?.user?.email) {
-      operatorUser = await prisma.user.findUnique({
-        where: { email: session.user.email.toLowerCase().trim() },
-        include: { faculty: true },
-      });
+    const session = await getServerSession(authOptions).catch(() => null);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized: Sign in required' }, { status: 401 });
     }
 
-    const body = await req.json().catch(() => ({}));
-    const { rollNumber, userId, checkInMethod = 'QR_SCAN', operatorEmail } = body;
-
-    // If operator session is not present, allow authorized operator email in body (e.g. CLI/tests)
-    if (!operatorUser && operatorEmail) {
-      operatorUser = await prisma.user.findUnique({
-        where: { email: operatorEmail.toLowerCase().trim() },
-      });
-    }
+    const operatorUser = await prisma.user.findUnique({
+      where: { email: session.user.email.toLowerCase().trim() },
+      include: { faculty: true },
+    });
 
     if (!operatorUser || (!canAccessAdmin(operatorUser) && operatorUser.role !== 'FACULTY')) {
       return NextResponse.json(
@@ -36,6 +27,10 @@ export async function POST(
         { status: 403 }
       );
     }
+
+    const parsed = await parseJsonBody(req, EventCheckinSchema);
+    if (!parsed.success) return parsed.response;
+    const { rollNumber, userId, checkInMethod } = parsed.data;
 
     const event = await prisma.event.findUnique({
       where: { id: eventId, deletedAt: null },

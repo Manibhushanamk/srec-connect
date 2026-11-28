@@ -47,13 +47,13 @@ export function Modal({
   const modalContent = (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="fixed inset-0 bg-space-950/80 backdrop-blur-sm transition-opacity"
+        className="fixed inset-0 bg-[#0D0E12]/70 transition-opacity"
         onClick={closeOnOverlayClick ? onClose : undefined}
         aria-hidden="true"
       />
       <div
         className={cn(
-          'relative w-full bg-space-800/95 backdrop-blur-2xl border border-slate-700/50 rounded-2xl shadow-glass overflow-hidden animate-slide-up',
+          'relative w-full glass-sheet liquid-sheet-enter border rounded-3xl shadow-2xl overflow-hidden',
           sizes[size],
           className
         )}
@@ -63,15 +63,15 @@ export function Modal({
         aria-describedby={description ? 'modal-description' : undefined}
       >
         {(title || showCloseButton) && (
-          <div className="flex items-start justify-between p-6 border-b border-slate-700/50 sticky top-0 bg-space-800/95 backdrop-blur-2xl z-10">
+          <div className="flex items-start justify-between p-6 border-b border-border sticky top-0 z-10">
             <div>
               {title && (
-                <h2 id="modal-title" className="text-xl font-semibold text-slate-100">
+                <h2 id="modal-title" className="text-xl font-semibold text-foreground">
                   {title}
                 </h2>
               )}
               {description && (
-                <p id="modal-description" className="text-sm text-slate-400 mt-1">
+                <p id="modal-description" className="text-sm text-muted-foreground mt-1">
                   {description}
                 </p>
               )}
@@ -79,7 +79,7 @@ export function Modal({
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-space-700/50 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 rounded-xl text-muted-foreground hover:text-foreground liquid-chip transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
                 aria-label="Close modal"
               >
                 <X className="w-5 h-5" />

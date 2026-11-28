@@ -62,7 +62,7 @@ export function EmptyState({
   };
 
   return (
-    <div className={cn('flex flex-col items-center justify-center py-14 px-6 text-center bg-card/60 backdrop-blur-md rounded-2xl border border-border/80 shadow-xs', className)}>
+    <div className={cn('flex flex-col items-center justify-center py-14 px-6 text-center glass-card', className)}>
       <div className="relative w-16 h-16 rounded-2xl flex items-center justify-center mb-5 border border-dashed border-border bg-muted/60">
         <div className="absolute inset-0 bg-primary/5 rounded-2xl" />
         {icon || iconMap.default}

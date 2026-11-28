@@ -357,10 +357,10 @@ export default function AdminBugDashboardPage() {
 
       {/* Triage Detail Drawer / Modal */}
       {selectedReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-space-950/80 backdrop-blur-md overflow-y-auto">
-          <div className="relative w-full max-w-2xl bg-space-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-8 max-h-[85vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0D0E12]/75 overflow-y-auto">
+          <div className="relative w-full max-w-2xl glass-sheet liquid-sheet-enter rounded-3xl shadow-2xl overflow-hidden my-8 max-h-[85vh] flex flex-col">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-space-950/60">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-mono text-cyan-400 font-bold">
                   ISSUE #{selectedReport.id.slice(-6).toUpperCase()}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { PostCommentSchema, parseJsonBody } from '@/lib/schemas';
 
 export async function GET(
   req: NextRequest,
@@ -66,16 +67,9 @@ export async function POST(
       return NextResponse.json({ error: 'User account is suspended or inactive' }, { status: 403 });
     }
 
-    const body = await req.json();
-    const content = typeof body.content === 'string' ? body.content.trim() : '';
-
-    if (!content) {
-      return NextResponse.json({ error: 'Comment content cannot be empty' }, { status: 400 });
-    }
-
-    if (content.length > 500) {
-      return NextResponse.json({ error: 'Comment exceeds max length of 500 characters' }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(req, PostCommentSchema);
+    if (!parsed.success) return parsed.response;
+    const { content } = parsed.data;
 
     const comment = await prisma.postComment.create({
       data: {

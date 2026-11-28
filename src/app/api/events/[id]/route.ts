@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { canAccessAdmin } from '@/lib/rbac';
+import { EventPatchSchema, parseJsonBody } from '@/lib/schemas';
+import { resolveOrCreateCategoryId } from '@/lib/category-batch-helpers';
 
 export async function GET(
   req: NextRequest,
@@ -122,18 +124,31 @@ export async function PATCH(
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    const body = await req.json();
+    const parsed = await parseJsonBody(req, EventPatchSchema);
+    if (!parsed.success) return parsed.response;
+    const body = parsed.data;
     const updateData: any = {};
 
-    if (body.title !== undefined) updateData.title = body.title.trim();
-    if (body.description !== undefined) updateData.description = body.description?.trim() || null;
-    if (body.venue !== undefined) updateData.venue = body.venue.trim();
-    if (body.organizer !== undefined) updateData.organizer = body.organizer.trim();
-    if (body.speaker !== undefined) updateData.speaker = body.speaker?.trim() || null;
-    if (body.capacity !== undefined) updateData.capacity = Math.max(1, Number(body.capacity));
+    if (body.customCategoryName || body.categoryId) {
+      const resolvedCatId = await resolveOrCreateCategoryId({
+        categoryId: body.categoryId,
+        customCategoryName: body.customCategoryName,
+        type: 'EVENT',
+      });
+      if (resolvedCatId) updateData.categoryId = resolvedCatId;
+    }
+
+    if (body.title !== undefined) updateData.title = body.title;
+    if (body.description !== undefined) updateData.description = body.description || null;
+    if (body.venue !== undefined) updateData.venue = body.venue;
+    if (body.organizer !== undefined) updateData.organizer = body.organizer;
+    if (body.speaker !== undefined) updateData.speaker = body.speaker || null;
+    if (body.capacity !== undefined) updateData.capacity = body.capacity;
     if (body.status !== undefined) updateData.status = body.status;
-    if (body.posterUrl !== undefined) updateData.posterUrl = body.posterUrl?.trim() || null;
-    if (body.whatsappGroupUrl !== undefined) updateData.whatsappGroupUrl = body.whatsappGroupUrl?.trim() || null;
+    if (body.academicYear !== undefined) updateData.academicYear = body.academicYear;
+    if (body.departmentId !== undefined) updateData.departmentId = body.departmentId || null;
+    if (body.posterUrl !== undefined) updateData.posterUrl = body.posterUrl || null;
+    if (body.whatsappGroupUrl !== undefined) updateData.whatsappGroupUrl = body.whatsappGroupUrl || null;
     if (body.startDate) updateData.startDate = new Date(body.startDate);
     if (body.endDate) updateData.endDate = new Date(body.endDate);
     if (body.registrationDeadline !== undefined) {

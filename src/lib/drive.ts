@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import sharp from 'sharp';
 import { prisma } from './prisma';
+import { canAccessIncident, IncidentAccessUser } from './incident-auth';
 
 export class DriveSecurityError extends Error {
   constructor(message: string) {
@@ -380,6 +381,7 @@ export async function uploadCertificateToDrive({
   fileName,
   mimeType,
   documentType = 'VERIFIED_CERTIFICATE',
+  isPublicMedia = false,
   folderId,
   accessToken,
   refreshToken,
@@ -388,11 +390,14 @@ export async function uploadCertificateToDrive({
   fileName: string;
   mimeType: string;
   documentType?: string;
+  isPublicMedia?: boolean;
   folderId?: string;
   accessToken?: string;
   refreshToken?: string;
 }): Promise<DriveUploadResult> {
-  assertDriveAllowed(documentType);
+  if (isPublicMedia) {
+    assertDriveAllowed(documentType);
+  }
 
   // Auto-optimize images with Sharp before saving to Google Drive for CDN-grade speed
   let uploadBuffer = fileBuffer;
@@ -431,7 +436,9 @@ export async function uploadCertificateToDrive({
         requestBody: {
           name: uploadFileName,
           parents: targetFolderId ? [targetFolderId] : undefined,
-          description: 'SREC CONNECT Verified Academic Document',
+          description: isPublicMedia
+            ? 'SREC CONNECT Public Campus Media'
+            : 'SREC CONNECT Private Institutional Document',
         },
         media: {
           mimeType: uploadMimeType,
@@ -442,30 +449,33 @@ export async function uploadCertificateToDrive({
 
       const fileId = response.data.id!;
 
-      // Automatically share certificates with public reader permissions for CDN streaming
-      try {
-        await drive.permissions.create({
-          fileId,
-          requestBody: {
-            role: 'reader',
-            type: 'anyone',
-          },
-        });
-      } catch (permErr: any) {
-        console.warn('[Drive Permissions] Public reader permission warning (handled gracefully):', permErr?.message);
+      // Grant public reader ACL ONLY for public user/post media (never private certificates/grievances)
+      if (isPublicMedia) {
+        try {
+          await drive.permissions.create({
+            fileId,
+            requestBody: {
+              role: 'reader',
+              type: 'anyone',
+            },
+          });
+        } catch (permErr: any) {
+          console.warn('[Drive Permissions] Public reader permission warning (handled gracefully):', permErr?.message);
+        }
       }
 
       const webViewLink = response.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`;
       const webContentLink = response.data.webContentLink || `https://drive.google.com/uc?id=${fileId}&export=download`;
-      // Direct stream URL served like Cloudflare CDN
-      const directDisplayUrl = `/api/drive/file/${fileId}`;
+      const directDisplayUrl = isPublicMedia
+        ? `/api/drive/file/${fileId}`
+        : `/api/drive/document/${fileId}`;
 
       return {
         fileId,
         webViewLink,
         webContentLink,
         directDisplayUrl,
-        isPublicLink: true,
+        isPublicLink: Boolean(isPublicMedia),
         storageProvider: 'GOOGLE_DRIVE',
       };
     }
@@ -484,7 +494,7 @@ export async function uploadCertificateToDrive({
       webViewLink: dataUri,
       webContentLink: dataUri,
       directDisplayUrl: dataUri,
-      isPublicLink: true,
+      isPublicLink: Boolean(isPublicMedia),
       storageProvider: 'DATA_URI',
     };
   }
@@ -511,9 +521,11 @@ export async function uploadCertificateToDrive({
     fileId: mockFileId,
     webViewLink: localUrl,
     webContentLink: localUrl,
-    directDisplayUrl: `/api/drive/file/${mockFileId}`,
+    directDisplayUrl: isPublicMedia
+      ? `/api/drive/file/${mockFileId}`
+      : `/api/drive/document/${mockFileId}`,
     localMirrorUrl: localUrl,
-    isPublicLink: true,
+    isPublicLink: Boolean(isPublicMedia),
     storageProvider: 'LOCAL',
   };
 }
@@ -616,6 +628,186 @@ export async function downloadDriveFile(fileId: string): Promise<Buffer> {
   );
 
   return Buffer.from(response.data as ArrayBuffer);
+}
+
+export interface DriveAssetAccessResult {
+  isPrivateDocument: boolean;
+  isPublicMedia: boolean;
+  allowed: boolean;
+  ownerUserId?: string | null;
+  reason?: string;
+}
+
+const PUBLIC_DRIVE_MEDIA_TYPES = new Set([
+  'CAMPUS_MEDIA',
+  'POST_MEDIA',
+  'AVATAR',
+  'PROFILE_AVATAR',
+  'EVENT_POSTER',
+]);
+
+export function isPublicMediaDocumentType(documentType?: string | null): boolean {
+  if (!documentType) return false;
+  return PUBLIC_DRIVE_MEDIA_TYPES.has(documentType.toUpperCase().trim());
+}
+
+/**
+ * Classifies a Google Drive fileId against DB ownership & sensitivity boundaries,
+ * and evaluates RBAC access for /api/drive/file/[id] vs /api/drive/document/[id].
+ */
+export async function verifyDriveAssetAccess(
+  fileId: string,
+  currentUser: IncidentAccessUser | null | undefined
+): Promise<DriveAssetAccessResult> {
+  const [postMedia, avatarUser, achievement, achievementMedia, incident, uploadAudit] = await Promise.all([
+    prisma.postMedia.findFirst({
+      where: { url: { contains: fileId }, post: { deletedAt: null } },
+      select: { id: true, post: { select: { authorId: true, visibility: true } } },
+    }),
+    prisma.user.findFirst({
+      where: { avatarUrl: { contains: fileId }, deletedAt: null },
+      select: { id: true },
+    }),
+    prisma.achievement.findFirst({
+      where: {
+        deletedAt: null,
+        OR: [{ certificateUrl: { contains: fileId } }, { googleDriveUrl: { contains: fileId } }],
+      },
+      select: {
+        id: true,
+        departmentId: true,
+        createdById: true,
+        primaryStudent: { select: { user: { select: { id: true } } } },
+        faculty: { select: { user: { select: { id: true } } } },
+      },
+    }),
+    prisma.achievementMedia.findFirst({
+      where: { url: { contains: fileId } },
+      select: {
+        id: true,
+        achievement: {
+          select: {
+            id: true,
+            departmentId: true,
+            createdById: true,
+            primaryStudent: { select: { user: { select: { id: true } } } },
+            faculty: { select: { user: { select: { id: true } } } },
+          },
+        },
+      },
+    }),
+    prisma.incident.findFirst({
+      where: { description: { contains: fileId }, deletedAt: null },
+      select: {
+        id: true,
+        reporterId: true,
+        studentId: true,
+        departmentId: true,
+        isConfidentialHOD: true,
+      },
+    }),
+    prisma.auditLog.findFirst({
+      where: { action: 'DRIVE_FILE_UPLOADED', entityId: fileId },
+      select: { actorId: true, metadata: true },
+    }),
+  ]);
+
+  if (incident) {
+    const decision = canAccessIncident(currentUser, incident);
+    return {
+      isPrivateDocument: true,
+      isPublicMedia: false,
+      allowed: decision.allowed,
+      ownerUserId: incident.reporterId,
+      reason: decision.reason,
+    };
+  }
+
+  const linkedAch = achievement || achievementMedia?.achievement;
+  if (linkedAch) {
+    const ownerUserId =
+      linkedAch.primaryStudent?.user?.id || linkedAch.faculty?.user?.id || linkedAch.createdById || null;
+
+    if (!currentUser) {
+      return {
+        isPrivateDocument: true,
+        isPublicMedia: false,
+        allowed: false,
+        ownerUserId,
+        reason: 'Unauthorized',
+      };
+    }
+
+    const isOwner =
+      Boolean(ownerUserId && ownerUserId === currentUser.id) ||
+      Boolean(linkedAch.createdById && linkedAch.createdById === currentUser.id);
+    const isDeptReviewer =
+      (currentUser.role === 'FACULTY' || currentUser.role === 'HOD') &&
+      Boolean(currentUser.departmentId) &&
+      linkedAch.departmentId === currentUser.departmentId;
+    const isGlobalAdmin = currentUser.role === 'SUPER_ADMIN' || currentUser.role === 'ADMIN';
+    const allowed = isGlobalAdmin || isOwner || isDeptReviewer;
+
+    return {
+      isPrivateDocument: true,
+      isPublicMedia: false,
+      allowed,
+      ownerUserId,
+      reason: allowed ? undefined : 'Forbidden: Certificate access restricted to owner or department reviewers',
+    };
+  }
+
+  if (uploadAudit) {
+    let isUploadPublic = false;
+    try {
+      const meta = uploadAudit.metadata ? JSON.parse(uploadAudit.metadata) : {};
+      isUploadPublic = Boolean(meta.isPublicLink) || isPublicMediaDocumentType(meta.documentType);
+    } catch {
+      isUploadPublic = false;
+    }
+
+    if (!isUploadPublic) {
+      if (!currentUser) {
+        return {
+          isPrivateDocument: true,
+          isPublicMedia: false,
+          allowed: false,
+          ownerUserId: uploadAudit.actorId,
+          reason: 'Unauthorized',
+        };
+      }
+      const allowed =
+        currentUser.role === 'SUPER_ADMIN' ||
+        currentUser.role === 'ADMIN' ||
+        currentUser.role === 'FACULTY' ||
+        currentUser.role === 'HOD' ||
+        uploadAudit.actorId === currentUser.id;
+      return {
+        isPrivateDocument: true,
+        isPublicMedia: false,
+        allowed,
+        ownerUserId: uploadAudit.actorId,
+        reason: allowed ? undefined : 'Forbidden: Private upload restricted',
+      };
+    }
+  }
+
+  if (postMedia || avatarUser) {
+    return {
+      isPrivateDocument: false,
+      isPublicMedia: true,
+      allowed: true,
+      ownerUserId: postMedia?.post?.authorId || avatarUser?.id || null,
+    };
+  }
+
+  // Unlinked Drive file ID: public route may handle public media, private route rejects unless SUPER_ADMIN
+  return {
+    isPrivateDocument: false,
+    isPublicMedia: false,
+    allowed: currentUser?.role === 'SUPER_ADMIN',
+    reason: currentUser?.role === 'SUPER_ADMIN' ? undefined : 'Forbidden: Unlinked document restricted',
+  };
 }
 
 /**

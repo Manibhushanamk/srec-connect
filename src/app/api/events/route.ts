@@ -3,17 +3,25 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { canAccessAdmin } from '@/lib/rbac';
+import { EventCreateSchema, parseJsonBody } from '@/lib/schemas';
+import { resolveOrCreateCategoryId } from '@/lib/category-batch-helpers';
+import { buildDateRangePrismaFilter, resolveTimelineDateRange } from '@/lib/timeline';
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const page = Math.max(parseInt(searchParams.get('page') || '1', 10), 1);
-    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '12', 10), 1), 50);
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '12', 10), 1), 100);
     const skip = (page - 1) * limit;
 
     const status = searchParams.get('status');
     const categoryId = searchParams.get('categoryId');
+    const category = searchParams.get('category');
     const departmentId = searchParams.get('departmentId');
+    const academicYear = searchParams.get('academicYear');
+    const timeline = searchParams.get('timeline');
+    const dateFrom = searchParams.get('dateFrom');
+    const dateTo = searchParams.get('dateTo');
     const search = searchParams.get('search');
 
     const where: any = { deletedAt: null };
@@ -23,15 +31,26 @@ export async function GET(req: NextRequest) {
     }
     if (categoryId && categoryId !== 'ALL' && categoryId !== 'all') {
       where.categoryId = categoryId;
+    } else if (category && category !== 'ALL' && category !== 'all') {
+      where.category = { name: { equals: category, mode: 'insensitive' } };
     }
     if (departmentId && departmentId !== 'ALL' && departmentId !== 'all') {
       where.departmentId = departmentId;
+    }
+    if (academicYear && academicYear !== 'ALL' && academicYear !== 'all') {
+      where.academicYear = academicYear;
+    }
+    const timelineInfo = resolveTimelineDateRange(timeline, dateFrom, dateTo);
+    const startFilter = buildDateRangePrismaFilter(timeline, dateFrom, dateTo);
+    if (startFilter) {
+      where.startDate = startFilter;
     }
     if (search) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
         { venue: { contains: search, mode: 'insensitive' } },
+        { organizer: { contains: search, mode: 'insensitive' } },
         { speaker: { contains: search, mode: 'insensitive' } },
       ];
     }
@@ -66,6 +85,8 @@ export async function GET(req: NextRequest) {
       total,
       page,
       totalPages: Math.ceil(total / limit),
+      timelineLabel: timelineInfo.label,
+      timelinePreset: timelineInfo.preset,
     });
   } catch (error: any) {
     console.error('[Events API GET] Error:', error);
@@ -92,11 +113,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
+    const parsed = await parseJsonBody(req, EventCreateSchema);
+    if (!parsed.success) return parsed.response;
+
     const {
       title,
       description,
-      categoryId,
+      categoryId: rawCategoryId,
+      customCategoryName,
       departmentId,
       startDate,
       endDate,
@@ -104,14 +128,20 @@ export async function POST(req: NextRequest) {
       organizer,
       speaker,
       speakerResourcePerson,
-      capacity = 100,
+      capacity,
       registrationDeadline,
       whatsappGroupUrl,
       posterUrl,
-      academicYear = '2025-2026',
-    } = body;
+      academicYear,
+    } = parsed.data;
 
-    if (!title?.trim() || !categoryId || !startDate || !endDate || !venue?.trim()) {
+    const categoryId = await resolveOrCreateCategoryId({
+      categoryId: rawCategoryId,
+      customCategoryName,
+      type: 'EVENT',
+    });
+
+    if (!categoryId) {
       return NextResponse.json(
         { error: 'Title, category, startDate, endDate, and venue are required' },
         { status: 400 }

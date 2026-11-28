@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { canAccessAdmin } from '@/lib/rbac';
+import { canAccessIncident } from '@/lib/incident-auth';
+import { IncidentResponseSchema, parseJsonBody } from '@/lib/schemas';
 
 export async function POST(
   req: NextRequest,
@@ -10,57 +11,35 @@ export async function POST(
 ) {
   try {
     const { id: incidentId } = await params;
-    const session = await getServerSession(authOptions);
-
-    let currentUser = null;
-    if (session?.user?.email) {
-      currentUser = await prisma.user.findUnique({
-        where: { email: session.user.email.toLowerCase().trim() },
-        include: { student: true, faculty: true },
-      });
+    const session = await getServerSession(authOptions).catch(() => null);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { message, authorEmail } = body;
-
-    if (!currentUser && authorEmail) {
-      currentUser = await prisma.user.findUnique({
-        where: { email: authorEmail.toLowerCase().trim() },
-        include: { student: true, faculty: true },
-      });
-    }
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user.email.toLowerCase().trim() },
+      include: { student: true, faculty: true },
+    });
 
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!message?.trim()) {
-      return NextResponse.json({ error: 'Message content is required' }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(req, IncidentResponseSchema);
+    if (!parsed.success) return parsed.response;
+    const { message } = parsed.data;
 
     const incident = await prisma.incident.findUnique({
       where: { id: incidentId },
     });
 
-    if (!incident) {
+    if (!incident || incident.deletedAt !== null) {
       return NextResponse.json({ error: 'Incident not found' }, { status: 404 });
     }
 
-    // Access authorization
-    const isReporter = incident.reporterId === currentUser.id;
-    const isSubjectStudent = incident.studentId && currentUser.student?.id === incident.studentId;
-    const isHOD = currentUser.role === 'HOD';
-    const isSuperAdmin = currentUser.role === 'SUPER_ADMIN';
-    const isFacultyStaff = currentUser.role === 'FACULTY';
-
-    if (incident.isConfidentialHOD) {
-      if (!isHOD && !isSuperAdmin && !isReporter) {
-        return NextResponse.json({ error: 'Forbidden: Confidential case' }, { status: 403 });
-      }
-    } else {
-      if (!isReporter && !isSubjectStudent && !isHOD && !isSuperAdmin && !isFacultyStaff) {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-      }
+    const decision = canAccessIncident(currentUser, incident);
+    if (!decision.allowed) {
+      return NextResponse.json({ error: decision.reason || 'Forbidden' }, { status: 403 });
     }
 
     // Append to immutable response timeline

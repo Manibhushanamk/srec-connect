@@ -62,7 +62,7 @@ export function LegalTableOfContents({ sections, currentPage }: LegalTableOfCont
   return (
     <>
       {/* Mobile Collapsible Sticky Jump Bar */}
-      <div className="lg:hidden sticky top-16 z-30 mb-6 bg-card/95 backdrop-blur-md border border-border rounded-2xl p-3 shadow-md">
+      <div className="lg:hidden sticky top-16 z-30 mb-6 glass-header rounded-2xl border p-3 shadow-md">
         <button
           onClick={() => setIsOpenMobile(!isOpenMobile)}
           className="w-full flex items-center justify-between text-xs font-semibold text-foreground px-2 py-1"
@@ -101,7 +101,7 @@ export function LegalTableOfContents({ sections, currentPage }: LegalTableOfCont
       <aside className="hidden lg:block w-72 flex-shrink-0">
         <div className="sticky top-20 space-y-6">
           {/* Quick Document Switcher */}
-          <div className="bg-card/85 backdrop-blur-md border border-border/80 rounded-2xl p-4 shadow-subtle space-y-3">
+          <div className="glass-card p-4 space-y-3">
             <h4 className="text-[11px] uppercase font-bold tracking-wider text-muted-foreground">
               Institutional Governance
             </h4>
@@ -134,7 +134,7 @@ export function LegalTableOfContents({ sections, currentPage }: LegalTableOfCont
           </div>
 
           {/* Navigation Links */}
-          <div className="bg-card/85 backdrop-blur-md border border-border/80 rounded-2xl p-5 shadow-subtle space-y-3">
+          <div className="glass-card p-5 space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-border/60">
               <h4 className="text-xs font-bold text-foreground flex items-center gap-2">
                 <ListFilter className="w-3.5 h-3.5 text-primary" />

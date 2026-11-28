@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { MemberSelector, SelectedMember } from '@/components/shared/MemberSelector';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
+import { ACADEMIC_BATCH_OPTIONS } from '@/lib/studentHelper';
 
 export default function AdminDisciplinePage() {
   const [incidents, setIncidents] = useState<any[]>([]);
@@ -203,31 +205,33 @@ export default function AdminDisciplinePage() {
             />
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Section Selector */}
-            <select
-              value={sectionFilter}
-              onChange={(e) => setSectionFilter(e.target.value)}
-              className="px-3 py-2 bg-background border border-border rounded-xl text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-            >
-              <option value="ALL">All Sections</option>
-              <option value="A">Section A</option>
-              <option value="B">Section B</option>
-              <option value="C">Section C</option>
-            </select>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="w-36">
+              <CreatableSelect
+                value={sectionFilter === 'ALL' ? '' : sectionFilter}
+                onChange={(val) => setSectionFilter(val || 'ALL')}
+                options={[
+                  { value: 'A', label: 'Section A' },
+                  { value: 'B', label: 'Section B' },
+                  { value: 'C', label: 'Section C' },
+                  { value: 'D', label: 'Section D' },
+                ]}
+                placeholder="All Sections"
+                customOptionLabel="+ Custom Sec..."
+                customPlaceholder="Sec"
+              />
+            </div>
 
-            {/* Batch Selector */}
-            <select
-              value={batchFilter}
-              onChange={(e) => setBatchFilter(e.target.value)}
-              className="px-3 py-2 bg-background border border-border rounded-xl text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-            >
-              <option value="ALL">All Batches</option>
-              <option value="2022-2026">Batch 2022-2026</option>
-              <option value="2023-2027">Batch 2023-2027</option>
-              <option value="2024-2028">Batch 2024-2028</option>
-              <option value="2025-2029">Batch 2025-2029</option>
-            </select>
+            <div className="w-52">
+              <CreatableSelect
+                value={batchFilter === 'ALL' ? '' : batchFilter}
+                onChange={(val) => setBatchFilter(val || 'ALL')}
+                options={ACADEMIC_BATCH_OPTIONS}
+                placeholder="All Batches"
+                customOptionLabel="+ Custom Batch..."
+                customPlaceholder="e.g. 2026-2030"
+              />
+            </div>
           </div>
         </div>
 
@@ -352,23 +356,25 @@ export default function AdminDisciplinePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-slate-300 font-medium mb-1">Category *</label>
-              <select
+              <label className="block text-muted-foreground font-medium mb-1">Category *</label>
+              <CreatableSelect
                 value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-rose-500"
-              >
-                <option value="CLASSROOM_DISCIPLINE">Classroom Discipline</option>
-                <option value="ATTENDANCE_LATE_ARRIVAL">Attendance / Late Arrival</option>
-                <option value="MOBILE_PHONE_USAGE">Mobile Phone Usage</option>
-                <option value="EXAMINATION_ISSUES">Examination Irregularities</option>
-                <option value="INCOMPLETE_ASSIGNMENTS">Incomplete Assignments</option>
-                <option value="STUDENT_TO_STUDENT">Student-to-Student Conflict</option>
-                <option value="FACULTY_GRIEVANCE">Faculty Grievance (Student to Staff)</option>
-                <option value="INFRASTRUCTURE">Infrastructure Concern</option>
-                <option value="MISCONDUCT">General Misconduct</option>
-                <option value="OTHER">Other Issue</option>
-              </select>
+                onChange={(val) => setForm({ ...form, category: val })}
+                options={[
+                  { value: 'CLASSROOM_DISCIPLINE', label: 'Classroom Discipline' },
+                  { value: 'ATTENDANCE_LATE_ARRIVAL', label: 'Attendance / Late Arrival' },
+                  { value: 'MOBILE_PHONE_USAGE', label: 'Mobile Phone Usage' },
+                  { value: 'EXAMINATION_ISSUES', label: 'Examination Irregularities' },
+                  { value: 'INCOMPLETE_ASSIGNMENTS', label: 'Incomplete Assignments' },
+                  { value: 'STUDENT_TO_STUDENT', label: 'Student-to-Student Conflict' },
+                  { value: 'FACULTY_GRIEVANCE', label: 'Faculty Grievance (Student to Staff)' },
+                  { value: 'INFRASTRUCTURE', label: 'Infrastructure Concern' },
+                  { value: 'MISCONDUCT', label: 'General Misconduct' },
+                  { value: 'OTHER', label: 'Other Issue' },
+                ]}
+                customOptionLabel="+ Custom Category..."
+                customPlaceholder="Type custom category..."
+              />
             </div>
 
             <div>

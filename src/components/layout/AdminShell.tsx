@@ -3,9 +3,11 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronRight, LayoutDashboard, GraduationCap, BookOpen } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { ChevronRight, LayoutDashboard, GraduationCap, BookOpen, ShieldAlert } from 'lucide-react';
 import { AdminSidebar } from './AdminSidebar';
 import { AppHeader } from './AppHeader';
+import { isWebManagerRestrictedRoute } from '@/lib/admin-auth';
 
 interface AdminShellProps {
   children: ReactNode;
@@ -18,6 +20,10 @@ interface AdminShellProps {
 
 export function AdminShell({ children, title, description, breadcrumbs, actions, roleScope }: AdminShellProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const userRole = (session?.user as any)?.role as string | undefined;
+  const isBlockedForWebManager =
+    userRole === 'WEB_MANAGER' && isWebManagerRestrictedRoute(pathname);
   const isStudentScope = roleScope === 'STUDENT' || pathname?.startsWith('/dashboard/student');
   const isFacultyScope = roleScope === 'FACULTY' || pathname?.startsWith('/dashboard/faculty');
 
@@ -30,7 +36,7 @@ export function AdminShell({ children, title, description, breadcrumbs, actions,
   const RootIcon = rootBreadcrumb.icon;
 
   return (
-    <div className="min-h-screen bg-space-900 overflow-x-hidden w-full flex flex-col">
+    <div className="relative z-10 min-h-screen bg-transparent text-foreground overflow-x-hidden w-full flex flex-col">
       {/* 1. Sticky Top Navigation with Universal Mobile Drawer */}
       <AppHeader />
 
@@ -79,7 +85,38 @@ export function AdminShell({ children, title, description, breadcrumbs, actions,
             )}
 
             <div className="w-full overflow-x-hidden">
-              {children}
+              {isBlockedForWebManager ? (
+                <div
+                  role="alert"
+                  className="max-w-xl mx-auto my-12 p-8 rounded-2xl bg-card border border-rose-500/30 text-center space-y-4"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center justify-center mx-auto">
+                    <ShieldAlert className="w-6 h-6" aria-hidden="true" />
+                  </div>
+                  <h2 className="text-xl font-bold text-foreground">
+                    403 — Access Restricted for Web Manager
+                  </h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    Department Web Managers are strictly isolated from User Management, Disciplinary Grievances, Audit Logs, and System Backup controls.
+                  </p>
+                  <div className="pt-2 flex items-center justify-center gap-3">
+                    <Link
+                      href="/admin"
+                      className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition"
+                    >
+                      Return to Web Manager Console
+                    </Link>
+                    <Link
+                      href="/admin/achievements"
+                      className="px-4 py-2 rounded-xl border border-border text-xs font-semibold text-foreground hover:bg-secondary/60 transition"
+                    >
+                      Open Verification Desk
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                children
+              )}
             </div>
           </div>
         </main>

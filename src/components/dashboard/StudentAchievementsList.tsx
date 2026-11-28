@@ -8,6 +8,9 @@ import { Badge, StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { EmptyStatePreset } from '@/components/ui/EmptyState';
 import { DriveFileUploader } from '@/components/drive/DriveFileUploader';
+import { ProofPreview } from '@/components/shared/ProofPreview';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
+import { createCustomCategoryOption } from '@/lib/client-creatable';
 import { formatDate } from '@/lib/utils';
 import {
   Award,
@@ -27,6 +30,7 @@ import {
   Trophy,
   Users,
   Info,
+  Eye,
 } from 'lucide-react';
 
 export interface StudentAchievementItem {
@@ -53,10 +57,12 @@ interface StudentAchievementsListProps {
   categories: { id: string; name: string }[];
 }
 
-export function StudentAchievementsList({ achievements: initialList, categories }: StudentAchievementsListProps) {
+export function StudentAchievementsList({ achievements: initialList, categories: initialCategories }: StudentAchievementsListProps) {
   const router = useRouter();
+  const [categories, setCategories] = useState(initialCategories);
   const [achievements, setAchievements] = useState<StudentAchievementItem[]>(initialList);
   const [filterTab, setFilterTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'NEEDS_CHANGES'>('ALL');
+  const [expandedProofId, setExpandedProofId] = useState<string | null>(null);
   
   // Edit Modal State
   const [editingItem, setEditingItem] = useState<StudentAchievementItem | null>(null);
@@ -331,6 +337,12 @@ export function StudentAchievementsList({ achievements: initialList, categories 
             const isPending = item.status === 'PENDING' || item.status === 'UNDER_REVIEW' || item.status === 'DRAFT';
             const isNeedsChanges = item.status === 'RESUBMISSION_REQUIRED';
             const docUrl = item.googleDriveUrl || item.certificateUrl;
+            const resolvedDocHref = (() => {
+              if (!docUrl) return null;
+              const match = docUrl.match(/\/file\/d\/([A-Za-z0-9_-]+)/) || docUrl.match(/\/api\/drive\/(?:file|document)\/([A-Za-z0-9_-]+)/);
+              if (match?.[1]) return `/api/drive/document/${match[1]}`;
+              return docUrl;
+            })();
 
             return (
               <Card
@@ -424,19 +436,32 @@ export function StudentAchievementsList({ achievements: initialList, categories 
 
                   {/* Right Column: Contextual Action Buttons */}
                   <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
-                    {/* View Certificate / Drive Link */}
-                    {docUrl && (
-                      <a
-                        href={docUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors flex items-center gap-1.5"
-                        title="View Certificate / Proof File in Google Drive"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-cyan-400" />
-                        <span>Document</span>
-                        <ExternalLink className="w-3 h-3 text-slate-400" />
-                      </a>
+                    {/* View Certificate / Drive Link & Card Proof Preview Toggle */}
+                    {resolvedDocHref && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedProofId((prev) => (prev === item.id ? null : item.id))
+                          }
+                          className="px-3 py-1.5 rounded-lg bg-primary/15 hover:bg-primary/25 text-primary border border-primary/30 text-xs font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
+                          title="Toggle inline certificate preview on card"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>{expandedProofId === item.id ? 'Hide Preview' : 'Preview Proof'}</span>
+                        </button>
+                        <a
+                          href={resolvedDocHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition-colors flex items-center gap-1.5"
+                          title="Open Certificate / Proof Document"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>Document</span>
+                          <ExternalLink className="w-3 h-3 text-slate-400" />
+                        </a>
+                      </>
                     )}
 
                     {/* Pending Submissions: EDIT & WITHDRAW */}
@@ -474,6 +499,11 @@ export function StudentAchievementsList({ achievements: initialList, categories 
                     )}
                   </div>
                 </div>
+                {resolvedDocHref && expandedProofId === item.id && (
+                  <div className="mt-4 pt-3 border-t border-slate-800">
+                    <ProofPreview url={resolvedDocHref} title={item.title} heightClass="h-56" />
+                  </div>
+                )}
               </Card>
             );
           })}
@@ -482,17 +512,17 @@ export function StudentAchievementsList({ achievements: initialList, categories 
 
       {/* 4. Interactive Edit Modal for Pending Achievements */}
       {editingItem && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-[#0D0E12]/75 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="glass-sheet liquid-sheet-enter rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
             {/* Modal Header */}
-            <div className="sticky top-0 bg-slate-900/95 backdrop-blur-md px-6 py-4 border-b border-slate-800 flex items-center justify-between z-10">
+            <div className="sticky top-0 bg-card/95 px-6 py-4 border-b border-border flex items-center justify-between z-10">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
                   <Edit3 className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-100">Edit Pending Achievement</h3>
-                  <p className="text-xs text-slate-400">
+                  <h3 className="text-lg font-bold text-foreground">Edit Pending Achievement</h3>
+                  <p className="text-xs text-muted-foreground">
                     Modifying request #{editingItem.id.slice(-6)} • Changes update review queue
                   </p>
                 </div>
@@ -532,35 +562,43 @@ export function StudentAchievementsList({ achievements: initialList, categories 
               {/* Category & Level */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Category *</label>
-                  <select
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Category *</label>
+                  <CreatableSelect
                     required
                     value={editFormData.categoryId}
-                    onChange={(e) => setEditFormData({ ...editFormData, categoryId: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-100 text-sm focus:border-brand-500 focus:outline-none"
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setEditFormData({ ...editFormData, categoryId: val })}
+                    options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                    placeholder="Select Category"
+                    customOptionLabel="+ Custom Category..."
+                    customPlaceholder="Type custom category..."
+                    onCreateCustom={async (name) => {
+                      const created = await createCustomCategoryOption(name, 'ACHIEVEMENT');
+                      if (created) {
+                        setCategories((prev) =>
+                          prev.some((c) => c.id === created.value) ? prev : [...prev, { id: created.value, name: created.label }]
+                        );
+                      }
+                      return created;
+                    }}
+                  />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Level *</label>
-                  <select
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Level *</label>
+                  <CreatableSelect
+                    required
                     value={editFormData.level}
-                    onChange={(e) => setEditFormData({ ...editFormData, level: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-100 text-sm focus:border-brand-500 focus:outline-none"
-                  >
-                    <option value="COLLEGE">College / Intra-Campus</option>
-                    <option value="INTER_COLLEGE">Inter-College</option>
-                    <option value="STATE">State Level</option>
-                    <option value="NATIONAL">National Level</option>
-                    <option value="INTERNATIONAL">International Level</option>
-                  </select>
+                    onChange={(val) => setEditFormData({ ...editFormData, level: val })}
+                    options={[
+                      { value: 'COLLEGE', label: 'College / Intra-Campus' },
+                      { value: 'INTER_COLLEGE', label: 'Inter-College' },
+                      { value: 'STATE', label: 'State Level' },
+                      { value: 'NATIONAL', label: 'National Level' },
+                      { value: 'INTERNATIONAL', label: 'International Level' },
+                    ]}
+                    customOptionLabel="+ Custom Level..."
+                    customPlaceholder="Type custom level..."
+                  />
                 </div>
               </div>
 
@@ -614,22 +652,25 @@ export function StudentAchievementsList({ achievements: initialList, categories 
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">
                     Academic Year *
                   </label>
-                  <select
+                  <CreatableSelect
+                    required
                     value={editFormData.academicYear}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, academicYear: e.target.value })
+                    onChange={(val) =>
+                      setEditFormData({ ...editFormData, academicYear: val })
                     }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-100 text-sm focus:border-brand-500 focus:outline-none"
-                  >
-                    <option value="2026-2027">2026-2027</option>
-                    <option value="2025-2026">2025-2026</option>
-                    <option value="2024-2025">2024-2025</option>
-                    <option value="2023-2024">2023-2024</option>
-                    <option value="2022-2023">2022-2023</option>
-                  </select>
+                    options={[
+                      { value: '2026-2027', label: '2026-2027' },
+                      { value: '2025-2026', label: '2025-2026' },
+                      { value: '2024-2025', label: '2024-2025' },
+                      { value: '2023-2024', label: '2023-2024' },
+                      { value: '2022-2023', label: '2022-2023' },
+                    ]}
+                    customOptionLabel="+ Custom Academic Year..."
+                    customPlaceholder="e.g. 2027-2028"
+                  />
                 </div>
               </div>
 
@@ -695,17 +736,17 @@ export function StudentAchievementsList({ achievements: initialList, categories 
 
       {/* 5. Withdraw Confirmation Modal */}
       {withdrawingItem && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-[#0D0E12]/75 flex items-center justify-center p-4">
+          <div className="glass-sheet liquid-sheet-enter rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4">
             <div className="w-12 h-12 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>
 
             <div className="text-center space-y-1">
-              <h3 className="text-lg font-bold text-slate-100">Withdraw Submission?</h3>
-              <p className="text-xs text-slate-400">
+              <h3 className="text-lg font-bold text-foreground">Withdraw Submission?</h3>
+              <p className="text-xs text-muted-foreground">
                 Are you sure you want to withdraw{' '}
-                <span className="text-slate-200 font-semibold">"{withdrawingItem.title}"</span>?
+                <span className="text-foreground font-semibold">"{withdrawingItem.title}"</span>?
               </p>
               <p className="text-xs text-slate-500 pt-1">
                 This will remove the request from the faculty approval desk. You can always submit a new achievement later.

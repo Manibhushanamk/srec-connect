@@ -123,6 +123,44 @@ export function isLateralEntryRoll(roll?: string | null): boolean {
 export function getBatchLabel(batch?: string | null): string {
   if (!batch) return '';
   const found = ACADEMIC_BATCH_OPTIONS.find((opt) => opt.value === batch);
-  return found ? found.label : batch;
+  return found ? found.label : `${batch} (Custom Cohort)`;
+}
+
+/**
+ * Extracts start/end years from batch strings like "2024-2028" or "2026-30" for Batch table syncing.
+ */
+export function parseBatchYearRange(batch: string): { name: string; startYear: number; endYear: number } {
+  const cleaned = batch.trim().replace(/\s+/g, '');
+  const rangeMatch = cleaned.match(/^(\d{4})[-–](\d{2,4})$/);
+  if (rangeMatch) {
+    const startYear = parseInt(rangeMatch[1], 10);
+    const rawEnd = rangeMatch[2];
+    const endYear = rawEnd.length === 2 ? Math.floor(startYear / 100) * 100 + parseInt(rawEnd, 10) : parseInt(rawEnd, 10);
+    return { name: `${startYear}-${endYear}`, startYear, endYear };
+  }
+  const singleYearMatch = cleaned.match(/(\d{4})/);
+  const startYear = singleYearMatch ? parseInt(singleYearMatch[1], 10) : new Date().getFullYear();
+  return { name: batch.trim(), startYear, endYear: startYear + 4 };
+}
+
+/**
+ * Merges static ACADEMIC_BATCH_OPTIONS with dynamic batches discovered from DB or current state.
+ */
+export function buildMergedBatchOptions(
+  dynamicBatches: Array<string | { name?: string; value?: string }> = []
+): Array<{ value: string; label: string }> {
+  const map = new Map<string, string>();
+  for (const opt of ACADEMIC_BATCH_OPTIONS) {
+    map.set(opt.value, opt.label);
+  }
+  for (const item of dynamicBatches) {
+    const val = (typeof item === 'string' ? item : item?.name || item?.value || '').trim();
+    if (val && !map.has(val)) {
+      map.set(val, `${val} (Custom Cohort)`);
+    }
+  }
+  return Array.from(map.entries())
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([value, label]) => ({ value, label }));
 }
 

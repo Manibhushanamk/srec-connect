@@ -14,6 +14,7 @@ import { EmptyStatePreset } from '@/components/ui/EmptyState';
 import { ProfileHeader } from '@/components/portfolio/ProfileHeader';
 import { AchievementCard } from '@/components/cards/AchievementCard';
 import { FeedCard } from '@/components/social/FeedCard';
+import { resolveAchievementCardProof } from '@/lib/admin-auth';
 import { formatDate } from '@/lib/utils';
 import {
   Award,
@@ -98,13 +99,17 @@ export default async function FacultyProfilePage({ params }: FacultyProfilePageP
 
   const viewerEmail = session?.user?.email?.toLowerCase().trim();
   let isSuperAdminOrAdmin = false;
+  let viewerRecord: { id: string; role: string; departmentId: string | null } | null = null;
   if (viewerEmail) {
     const viewer = await prisma.user.findUnique({
       where: { email: viewerEmail },
-      select: { role: true },
+      select: { id: true, role: true, departmentId: true },
     });
-    if (viewer && ['SUPER_ADMIN', 'ADMIN'].includes(viewer.role)) {
-      isSuperAdminOrAdmin = true;
+    if (viewer) {
+      viewerRecord = viewer;
+      if (['SUPER_ADMIN', 'ADMIN'].includes(viewer.role)) {
+        isSuperAdminOrAdmin = true;
+      }
     }
   }
 
@@ -357,29 +362,40 @@ export default async function FacultyProfilePage({ params }: FacultyProfilePageP
                 />
               ) : (
                 <div className="grid grid-cols-1 2xl:grid-cols-2 gap-5">
-                  {achievements.map((achievement: any) => (
-                    <AchievementCard
-                      key={achievement.id}
-                      id={achievement.id}
-                      title={achievement.title}
-                      description={achievement.description}
-                      categoryName={achievement.category?.name || 'Research Publication'}
-                      level={achievement.level || 'NATIONAL'}
-                      positionRank={achievement.positionRank || 'Faculty Research'}
-                      participationType={achievement.participationType || 'SOLO'}
-                      organizationEventName={achievement.organizationEventName || 'Publisher / Body'}
-                      academicYear={achievement.academicYear || '2025-2026'}
-                      achievementDate={achievement.achievementDate instanceof Date ? achievement.achievementDate.toISOString() : String(achievement.achievementDate)}
-                      personName={faculty.name}
-                      personType="FACULTY"
-                      rollNumber={null}
-                      departmentName={faculty.department?.name || faculty.departmentName || 'CSE (AI & ML)'}
-                      googleDriveUrl={achievement.googleDriveUrl}
-                      certificateUrl={achievement.certificateUrl || achievement.googleDriveUrl}
-                      tags={achievement.tags}
-                      href={`/achievements/${achievement.id}`}
-                    />
-                  ))}
+                  {achievements.map((achievement: any) => {
+                    const proofProps = resolveAchievementCardProof(
+                      {
+                        ...achievement,
+                        faculty: { user: { id: faculty.user?.id } },
+                      },
+                      viewerRecord
+                    );
+                    return (
+                      <AchievementCard
+                        key={achievement.id}
+                        id={achievement.id}
+                        title={achievement.title}
+                        description={achievement.description}
+                        categoryName={achievement.category?.name || 'Research Publication'}
+                        level={achievement.level || 'NATIONAL'}
+                        positionRank={achievement.positionRank || 'Faculty Research'}
+                        participationType={achievement.participationType || 'SOLO'}
+                        organizationEventName={achievement.organizationEventName || 'Publisher / Body'}
+                        academicYear={achievement.academicYear || '2025-2026'}
+                        achievementDate={achievement.achievementDate instanceof Date ? achievement.achievementDate.toISOString() : String(achievement.achievementDate)}
+                        personName={faculty.name}
+                        personType="FACULTY"
+                        rollNumber={null}
+                        departmentName={faculty.department?.name || faculty.departmentName || 'CSE (AI & ML)'}
+                        googleDriveUrl={proofProps.visibleProofUrl}
+                        certificateUrl={proofProps.visibleProofUrl}
+                        coverImageUrl={proofProps.coverImageUrl}
+                        hasPrivateProof={proofProps.hasPrivateProof}
+                        tags={achievement.tags}
+                        href={`/achievements/${achievement.id}`}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </CardContent>

@@ -1,7 +1,10 @@
 import { Suspense } from 'react';
 import { Metadata } from 'next';
 import Link from 'next/link';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { resolveAchievementCardProof } from '@/lib/admin-auth';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Badge, StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -9,6 +12,7 @@ import { EmptyStatePreset } from '@/components/ui/EmptyState';
 import { AchievementsFilterBar } from '@/components/achievements/AchievementsFilterBar';
 import { AchievementCard } from '@/components/cards/AchievementCard';
 import { formatDate } from '@/lib/utils';
+import { buildDateRangePrismaFilter } from '@/lib/timeline';
 import {
   Award,
   Calendar,
@@ -40,14 +44,17 @@ async function getAchievements(searchParams: {
   category?: string;
   department?: string;
   academicYear?: string;
+  timeline?: string;
+  dateFrom?: string;
+  dateTo?: string;
   search?: string;
 }) {
-  const page = parseInt(searchParams.page || '1', 10);
+  const page = Math.max(1, parseInt(searchParams.page || '1', 10) || 1);
   const limit = 12;
   const skip = (page - 1) * limit;
 
   const where: any = {
-    status: 'PUBLISHED',
+    status: { in: ['APPROVED', 'PUBLISHED'] },
     deletedAt: null,
     AND: [
       {
@@ -83,13 +90,23 @@ async function getAchievements(searchParams: {
   if (searchParams.academicYear && searchParams.academicYear !== 'all') {
     where.academicYear = searchParams.academicYear;
   }
+  const dateFilter = buildDateRangePrismaFilter(
+    searchParams.timeline,
+    searchParams.dateFrom,
+    searchParams.dateTo
+  );
+  if (dateFilter) {
+    where.achievementDate = dateFilter;
+  }
   if (searchParams.search) {
-    where.OR = [
-      { title: { contains: searchParams.search, mode: 'insensitive' } },
-      { personName: { contains: searchParams.search, mode: 'insensitive' } },
-      { organizationEventName: { contains: searchParams.search, mode: 'insensitive' } },
-      { primaryStudentRoll: { contains: searchParams.search, mode: 'insensitive' } },
-    ];
+    where.AND.push({
+      OR: [
+        { title: { contains: searchParams.search, mode: 'insensitive' } },
+        { personName: { contains: searchParams.search, mode: 'insensitive' } },
+        { organizationEventName: { contains: searchParams.search, mode: 'insensitive' } },
+        { primaryStudentRoll: { contains: searchParams.search, mode: 'insensitive' } },
+      ],
+    });
   }
 
   try {
@@ -99,8 +116,8 @@ async function getAchievements(searchParams: {
         include: {
           category: true,
           department: true,
-          primaryStudent: true,
-          faculty: true,
+          primaryStudent: { include: { user: { select: { id: true } } } },
+          faculty: { include: { user: { select: { id: true } } } },
           media: { where: { isCover: true }, take: 1 },
         },
         orderBy: { achievementDate: 'desc' },
@@ -108,10 +125,13 @@ async function getAchievements(searchParams: {
         take: limit,
       }),
       prisma.achievement.count({ where }),
-      prisma.category.findMany({ where: { type: { in: ['ACHIEVEMENT', 'BOTH'] }, isActive: true }, orderBy: { displayOrder: 'asc' } }),
+      prisma.category.findMany({
+        where: { type: { in: ['ACHIEVEMENT', 'BOTH'] }, isActive: true, deletedAt: null },
+        orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
+      }),
       prisma.department.findMany({ where: { isActive: true }, orderBy: { displayOrder: 'asc' } }),
       prisma.achievement.findMany({
-        where: { status: 'PUBLISHED', deletedAt: null },
+        where: { status: { in: ['APPROVED', 'PUBLISHED'] }, deletedAt: null },
         select: { academicYear: true },
         distinct: ['academicYear'],
         orderBy: { academicYear: 'desc' },
@@ -172,11 +192,24 @@ export default async function AchievementsPage({
     category?: string;
     department?: string;
     academicYear?: string;
+    timeline?: string;
+    dateFrom?: string;
+    dateTo?: string;
     search?: string;
   }>;
 }) {
   const params = await searchParams;
-  const data = await getAchievements(params);
+  const [data, session] = await Promise.all([
+    getAchievements(params),
+    getServerSession(authOptions).catch(() => null),
+  ]);
+  let viewer: { id: string; role: string; departmentId: string | null } | null = null;
+  if (session?.user?.email) {
+    viewer = await prisma.user.findUnique({
+      where: { email: session.user.email.toLowerCase().trim() },
+      select: { id: true, role: true, departmentId: true },
+    });
+  }
   const currentPage = data.currentPage;
   const totalPages = data.totalPages;
 
@@ -193,10 +226,10 @@ export default async function AchievementsPage({
     <div className="w-full space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
         <div>
-          <Badge variant="emerald" size="md" glow className="mb-3">
-            <Medal className="w-3.5 h-3.5 mr-1.5" />
-            Verified & Published
-          </Badge>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#CA8A04]/15 dark:bg-[#FACC15]/15 text-[#92400E] dark:text-[#FACC15] border border-[#CA8A04]/35 dark:border-[#FACC15]/35 mb-3">
+            <Medal className="w-3.5 h-3.5" />
+            Verified &amp; Published Honors
+          </span>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-foreground tracking-tight">Verified Achievements</h1>
           <p className="mt-2 text-muted-foreground font-medium">
             {data.total} verified {data.total === 1 ? 'honor' : 'honors'} published • Department of Computer Science & Engineering (AI & ML)
@@ -226,28 +259,34 @@ export default async function AchievementsPage({
         ) : (
           <>
             <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-6 mb-8">
-              {data.achievements.map((achievement) => (
-                <AchievementCard
-                  key={achievement.id}
-                  id={achievement.id}
-                  title={achievement.title}
-                  description={achievement.description}
-                  categoryName={achievement.category?.name || 'Honor'}
-                  level={achievement.level}
-                  positionRank={achievement.positionRank}
-                  participationType={achievement.participationType}
-                  organizationEventName={achievement.organizationEventName}
-                  academicYear={achievement.academicYear}
-                  achievementDate={formatDate(achievement.achievementDate)}
-                  personName={achievement.personName}
-                  personType={achievement.personType as any}
-                  rollNumber={achievement.primaryStudentRoll || achievement.primaryStudent?.rollNumber}
-                  departmentName={achievement.department?.name || achievement.departmentName || 'Computer Science & Engineering (AI & ML)'}
-                  googleDriveUrl={achievement.googleDriveUrl || achievement.certificateUrl}
-                  tags={achievement.tags}
-                  href={`/achievements/${achievement.id}`}
-                />
-              ))}
+              {data.achievements.map((achievement) => {
+                const proofProps = resolveAchievementCardProof(achievement, viewer);
+                return (
+                  <AchievementCard
+                    key={achievement.id}
+                    id={achievement.id}
+                    title={achievement.title}
+                    description={achievement.description}
+                    categoryName={achievement.category?.name || 'Honor'}
+                    level={achievement.level}
+                    positionRank={achievement.positionRank}
+                    participationType={achievement.participationType}
+                    organizationEventName={achievement.organizationEventName}
+                    academicYear={achievement.academicYear}
+                    achievementDate={formatDate(achievement.achievementDate)}
+                    personName={achievement.personName}
+                    personType={achievement.personType as any}
+                    rollNumber={achievement.primaryStudentRoll || achievement.primaryStudent?.rollNumber}
+                    departmentName={achievement.department?.name || achievement.departmentName || 'Computer Science & Engineering (AI & ML)'}
+                    googleDriveUrl={proofProps.visibleProofUrl}
+                    certificateUrl={proofProps.visibleProofUrl}
+                    coverImageUrl={proofProps.coverImageUrl}
+                    hasPrivateProof={proofProps.hasPrivateProof}
+                    tags={achievement.tags}
+                    href={`/achievements/${achievement.id}`}
+                  />
+                );
+              })}
             </div>
 
               {totalPages > 1 && (

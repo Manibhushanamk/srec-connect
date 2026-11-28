@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { canAccessAdmin } from '@/lib/rbac';
+import { AnnouncementPatchSchema, parseJsonBody } from '@/lib/schemas';
+import { ensureBatchesRegistered } from '@/lib/category-batch-helpers';
 
 export async function DELETE(
   req: NextRequest,
@@ -61,7 +63,13 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const body = await req.json();
+    const parsed = await parseJsonBody(req, AnnouncementPatchSchema);
+    if (!parsed.success) return parsed.response;
+    const body = parsed.data;
+
+    if (body.batch) {
+      await ensureBatchesRegistered([body.batch]).catch(() => null);
+    }
 
     const notice = await prisma.announcement.findUnique({ where: { id } });
     if (!notice) {

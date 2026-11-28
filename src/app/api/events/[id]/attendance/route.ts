@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { canAccessAdmin } from '@/lib/rbac';
+import { EventAttendanceDeleteSchema, parseJsonBody } from '@/lib/schemas';
 
 export async function GET(
   req: NextRequest,
@@ -140,10 +141,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { userId } = await req.json();
-    if (!userId) {
-      return NextResponse.json({ error: 'userId required' }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(req, EventAttendanceDeleteSchema);
+    if (!parsed.success) return parsed.response;
+    const { userId } = parsed.data;
 
     await prisma.eventAttendance.deleteMany({
       where: { eventId, userId },

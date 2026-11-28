@@ -46,6 +46,8 @@ export default function AdminSettingsPage() {
   const [dryRunData, setDryRunData] = useState<any>(null);
   const [isDryRunning, setIsDryRunning] = useState(false);
   const [confirmationInput, setConfirmationInput] = useState('');
+  const [reauthEmailInput, setReauthEmailInput] = useState('');
+  const [restoreChallengeToken, setRestoreChallengeToken] = useState<string | null>(null);
   const [isLiveRestoring, setIsLiveRestoring] = useState(false);
   const [restoreMessage, setRestoreMessage] = useState<string | null>(null);
 
@@ -126,24 +128,33 @@ export default function AdminSettingsPage() {
     }
   };
 
-  // Dry Run Restore
+  // Dry Run Restore + HMAC Challenge Token fetch
   const handleStartRestoreDryRun = async (backup: any) => {
     setSelectedBackupForRestore(backup);
     setIsDryRunning(true);
     setDryRunData(null);
     setConfirmationInput('');
+    setReauthEmailInput('');
+    setRestoreChallengeToken(null);
     setRestoreMessage(null);
 
     try {
-      const res = await fetch('/api/admin/backup/restore', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          backupId: backup.backupId,
-          driveFileId: backup.driveFileId,
-          dryRun: true,
+      const [challengeRes, res] = await Promise.all([
+        fetch('/api/admin/backup/restore'),
+        fetch('/api/admin/backup/restore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            backupId: backup.backupId,
+            driveFileId: backup.driveFileId,
+            dryRun: true,
+          }),
         }),
-      });
+      ]);
+      const challengeData = await challengeRes.json();
+      if (challengeData.success && challengeData.challengeToken) {
+        setRestoreChallengeToken(challengeData.challengeToken);
+      }
       const data = await res.json();
       if (data.success) {
         setDryRunData(data);
@@ -163,9 +174,20 @@ export default function AdminSettingsPage() {
       alert('Type exact confirmation string: CONFIRM_RESTORE_SREC');
       return;
     }
+    if (!reauthEmailInput.trim()) {
+      setRestoreMessage('Re-enter your active SUPER_ADMIN institutional email for secondary re-authentication.');
+      return;
+    }
 
     setIsLiveRestoring(true);
     try {
+      let activeChallenge = restoreChallengeToken;
+      if (!activeChallenge) {
+        const challengeRes = await fetch('/api/admin/backup/restore');
+        const challengeData = await challengeRes.json();
+        activeChallenge = challengeData.challengeToken || null;
+      }
+
       const res = await fetch('/api/admin/backup/restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -174,6 +196,8 @@ export default function AdminSettingsPage() {
           driveFileId: selectedBackupForRestore.driveFileId,
           dryRun: false,
           confirmationCode: confirmationInput,
+          challengeToken: activeChallenge,
+          reauthEmail: reauthEmailInput.trim(),
         }),
       });
       const data = await res.json();
@@ -649,9 +673,9 @@ export default function AdminSettingsPage() {
 
       {/* RESTORE MODAL */}
       {selectedBackupForRestore && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-space-950/80 backdrop-blur-md overflow-y-auto">
-          <div className="relative w-full max-w-xl bg-space-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden my-8 p-6 space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0D0E12]/75 overflow-y-auto">
+          <div className="relative w-full max-w-xl glass-sheet liquid-sheet-enter rounded-3xl shadow-2xl overflow-hidden my-8 p-6 space-y-5">
+            <div className="flex items-center justify-between border-b border-border pb-3">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-rose-400" />
                 <span>Disaster Recovery & Database Restore</span>
@@ -697,17 +721,32 @@ export default function AdminSettingsPage() {
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="block text-xs font-semibold text-slate-300">
-                Type <code className="text-rose-400">CONFIRM_RESTORE_SREC</code> to authorize:
-              </label>
-              <input
-                type="text"
-                value={confirmationInput}
-                onChange={(e) => setConfirmationInput(e.target.value)}
-                placeholder="CONFIRM_RESTORE_SREC"
-                className="w-full px-3.5 py-2.5 rounded-xl bg-space-950 border border-slate-800 text-xs font-mono text-white focus:outline-none focus:border-rose-500"
-              />
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Secondary Re-Authentication: Re-enter your SUPER_ADMIN email:
+                </label>
+                <input
+                  type="email"
+                  value={reauthEmailInput}
+                  onChange={(e) => setReauthEmailInput(e.target.value)}
+                  placeholder={(session?.user?.email as string) || 'admin@srecnandyal.edu.in'}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-space-950 border border-slate-800 text-xs font-mono text-white focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Type <code className="text-rose-400">CONFIRM_RESTORE_SREC</code> to authorize:
+                </label>
+                <input
+                  type="text"
+                  value={confirmationInput}
+                  onChange={(e) => setConfirmationInput(e.target.value)}
+                  placeholder="CONFIRM_RESTORE_SREC"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-space-950 border border-slate-800 text-xs font-mono text-white focus:outline-none focus:border-rose-500"
+                />
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-3 pt-2">
@@ -720,7 +759,7 @@ export default function AdminSettingsPage() {
               </Button>
               <Button
                 onClick={handleExecuteLiveRestore}
-                disabled={isLiveRestoring || confirmationInput !== 'CONFIRM_RESTORE_SREC'}
+                disabled={isLiveRestoring || confirmationInput !== 'CONFIRM_RESTORE_SREC' || !reauthEmailInput.trim()}
                 className="btn-cyan bg-rose-600 hover:bg-rose-500 px-5 py-2 text-xs font-semibold text-white"
               >
                 {isLiveRestoring ? (

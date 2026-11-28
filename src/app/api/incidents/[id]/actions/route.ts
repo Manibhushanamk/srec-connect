@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { canAccessIncident } from '@/lib/incident-auth';
 import { IncidentOutcome } from '@prisma/client';
+import { IncidentActionSchema, parseJsonBody } from '@/lib/schemas';
 
 export async function POST(
   req: NextRequest,
@@ -10,36 +12,23 @@ export async function POST(
 ) {
   try {
     const { id: incidentId } = await params;
-    const session = await getServerSession(authOptions);
-
-    let actorUser = null;
-    if (session?.user?.email) {
-      actorUser = await prisma.user.findUnique({
-        where: { email: session.user.email.toLowerCase().trim() },
-      });
+    const session = await getServerSession(authOptions).catch(() => null);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { outcome, notes, actorEmail } = body;
-
-    if (!actorUser && actorEmail) {
-      actorUser = await prisma.user.findUnique({
-        where: { email: actorEmail.toLowerCase().trim() },
-      });
-    }
+    const actorUser = await prisma.user.findUnique({
+      where: { email: session.user.email.toLowerCase().trim() },
+      include: { student: true },
+    });
 
     if (!actorUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Role check: Only Faculty, HOD, and Super Admin can record disciplinary actions
-    if (actorUser.role !== 'FACULTY' && actorUser.role !== 'HOD' && actorUser.role !== 'SUPER_ADMIN') {
-      return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
-    }
-
-    if (!outcome) {
-      return NextResponse.json({ error: 'Outcome is required' }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(req, IncidentActionSchema);
+    if (!parsed.success) return parsed.response;
+    const { outcome, notes } = parsed.data;
 
     // Formal action restriction: ONLY HOD and SUPER_ADMIN can issue FORMAL_ACTION
     if (outcome === 'FORMAL_ACTION' && actorUser.role !== 'HOD' && actorUser.role !== 'SUPER_ADMIN') {
@@ -53,8 +42,13 @@ export async function POST(
       where: { id: incidentId },
     });
 
-    if (!incident) {
+    if (!incident || incident.deletedAt !== null) {
       return NextResponse.json({ error: 'Incident not found' }, { status: 404 });
+    }
+
+    const decision = canAccessIncident(actorUser, incident);
+    if (!decision.allowed) {
+      return NextResponse.json({ error: decision.reason || 'Forbidden' }, { status: 403 });
     }
 
     const action = await prisma.incidentAction.create({

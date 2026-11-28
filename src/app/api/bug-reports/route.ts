@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { sanitizeText, sanitizeSafeUrl } from '@/lib/sanitize';
 import { BugCategory, BugSeverity, BugStatus, Role } from '@prisma/client';
+import { BugReportCreateSchema, parseJsonBody } from '@/lib/schemas';
 
 export const runtime = 'nodejs';
 
@@ -108,38 +109,35 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
+    const parsed = await parseJsonBody(req, BugReportCreateSchema);
+    if (!parsed.success) return parsed.response;
+
     const {
       title,
       description,
-      category = 'OTHER',
-      severity = 'MEDIUM',
+      category,
+      customCategory,
+      severity,
       stepsToReproduce,
       expectedBehavior,
       actualBehavior,
       route,
       deviceInfo,
       screenshotUrl,
-    } = body;
+    } = parsed.data;
 
-    // Validation
-    if (!title || typeof title !== 'string' || title.trim().length < 5) {
-      return NextResponse.json(
-        { error: 'A clear bug title of at least 5 characters is required.' },
-        { status: 400 }
-      );
-    }
-
-    if (!description || typeof description !== 'string' || description.trim().length < 10) {
-      return NextResponse.json(
-        { error: 'A detailed description of at least 10 characters is required.' },
-        { status: 400 }
-      );
-    }
-
-    // Sanitize Category & Severity
-    const validCategory = Object.values(BugCategory).includes(category) ? category : BugCategory.OTHER;
-    const validSeverity = Object.values(BugSeverity).includes(severity) ? severity : BugSeverity.MEDIUM;
+    // Resolve enum + optional custom category cleanly
+    const validCategory = Object.values(BugCategory).includes(category as BugCategory)
+      ? (category as BugCategory)
+      : BugCategory.OTHER;
+    const resolvedCustomCategory = customCategory
+      ? sanitizeText(customCategory).slice(0, 80)
+      : !Object.values(BugCategory).includes(category as BugCategory) && category
+      ? sanitizeText(category).slice(0, 80)
+      : null;
+    const validSeverity = Object.values(BugSeverity).includes(severity as BugSeverity)
+      ? (severity as BugSeverity)
+      : BugSeverity.MEDIUM;
 
     // Collect Safe Diagnostics
     const userAgent = req.headers.get('user-agent') || 'Unknown';
@@ -165,6 +163,7 @@ export async function POST(req: NextRequest) {
         title: sanitizeText(title),
         description: sanitizeText(description),
         category: validCategory,
+        customCategory: resolvedCustomCategory,
         severity: validSeverity,
         status: BugStatus.NEW,
         stepsToReproduce: stepsToReproduce ? sanitizeText(stepsToReproduce) : null,

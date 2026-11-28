@@ -8,6 +8,8 @@ import { getServerSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { Role } from '@prisma/client';
 import { canAccessAdmin } from '@/lib/rbac';
+import { resolveScopedDepartmentId } from '@/lib/admin-auth';
+import { HodPendingApprovalsWidget } from '@/components/admin/HodPendingApprovalsWidget';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -60,33 +62,119 @@ const QUICK_STATS = [
 ];
 
 const MODULES = [
-  { key: 'departments', label: '11 Departments Registry', icon: Building2, href: '/admin/departments', description: 'College-wide control across all 11 departments, add, configure or remove', roles: ['ROOT', 'DEPARTMENT'] },
-  { key: 'users', label: 'User Management', icon: Users, href: '/admin/users', description: 'Manage admins, faculty & students', roles: ['ROOT'] },
-  { key: 'bulk-upload', label: 'Bulk Ingestion', icon: Upload, href: '/admin/bulk-upload', description: 'Excel/CSV student provisioning', roles: ['ROOT', 'DEPARTMENT'] },
-  { key: 'achievements', label: 'Achievements Desk', icon: Award, href: '/admin/achievements', description: 'Multi-tier verification & moderation', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
-  { key: 'events', label: 'Events & Attendance', icon: Calendar, href: '/admin/events', description: 'Symposiums, waitlists & QR check-in', roles: ['ROOT', 'DEPARTMENT'] },
+  { key: 'departments', label: '11 Departments Registry', icon: Building2, href: '/admin/departments', description: 'Institutional directory across SREC academic departments', roles: ['ROOT', 'DEPARTMENT'] },
+  { key: 'users', label: 'User Management', icon: Users, href: '/admin/users', description: 'Manage faculty & students within department scope', roles: ['ROOT', 'DEPARTMENT'] },
+  { key: 'bulk-upload', label: 'Bulk Ingestion', icon: Upload, href: '/admin/bulk-upload', description: 'Excel/CSV student & faculty provisioning (Dept-scoped)', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
+  { key: 'achievements', label: 'Verification Desk', icon: Award, href: '/admin/achievements', description: 'Split-screen 6-state verification & moderation desk', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
+  { key: 'events', label: 'Events & Attendance', icon: Calendar, href: '/admin/events', description: 'Symposiums, waitlists & QR check-in', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
   { key: 'discipline', label: 'Discipline & Grievances', icon: Shield, href: '/admin/discipline', description: 'Confidential HOD dossiers & timelines', roles: ['ROOT', 'DEPARTMENT'] },
-  { key: 'notices', label: 'Notices & Circulars', icon: Zap, href: '/admin/notices', description: 'Audience announcements & broadcasts', roles: ['ROOT', 'DEPARTMENT'] },
-  { key: 'analytics', label: 'Analytics Hub', icon: BarChart3, href: '/admin/analytics', description: 'Momentum, trends & department comparisons', roles: ['ROOT'] },
-  { key: 'students', label: 'Student Portfolios', icon: GraduationCap, href: '/students', description: 'Verified academic portfolios', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
-  { key: 'faculty', label: 'Faculty Directory', icon: Briefcase, href: '/faculty', description: 'Faculty profiles & research areas', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
-  { key: 'trash', label: 'Trash & System Recovery', icon: Trash2, href: '/admin/trash', description: 'Soft-deleted entities, recovery & permanent hard purge', roles: ['ROOT'] },
-  { key: 'settings', label: 'Profile & Settings', icon: Crown, href: '/profile', description: 'Admin profile & institutional settings', roles: ['ROOT'] },
+  { key: 'notices', label: 'Notices & Circulars', icon: Zap, href: '/admin/notices', description: 'Audience announcements & broadcasts', roles: ['ROOT', 'DEPARTMENT', 'MANAGER'] },
+  { key: 'analytics', label: 'Analytics Hub', icon: BarChart3, href: '/admin/analytics', description: 'Momentum, trends & department metrics', roles: ['ROOT', 'DEPARTMENT'] },
+  { key: 'students', label: 'Student Portfolios', icon: GraduationCap, href: '/students', description: 'Verified academic portfolios', roles: ['ROOT', 'DEPARTMENT'] },
+  { key: 'faculty', label: 'Faculty Directory', icon: Briefcase, href: '/faculty', description: 'Faculty profiles & research areas', roles: ['ROOT', 'DEPARTMENT'] },
+  { key: 'trash', label: 'Trash & System Recovery', icon: Trash2, href: '/admin/trash', description: 'Soft-deleted entities, recovery & hard purge', roles: ['ROOT'] },
+  { key: 'settings', label: 'Backups & System Settings', icon: Crown, href: '/admin/settings', description: 'AES-256-GCM backups, Drive & restoration', roles: ['ROOT'] },
 ];
 
-async function getStats(userId: string, isSuperAdmin: boolean, departmentId: string | null) {
-  const where = isSuperAdmin ? { deletedAt: null } : { departmentId, deletedAt: null };
+async function getStats(userRole: string, isSuperAdmin: boolean, departmentId: string | null) {
+  const scopedDeptId = resolveScopedDepartmentId(userRole, departmentId);
+  const where = scopedDeptId ? { departmentId: scopedDeptId, deletedAt: null } : { deletedAt: null };
+  const userWhere = scopedDeptId
+    ? { status: 'ACTIVE' as const, deletedAt: null, departmentId: scopedDeptId }
+    : { status: 'ACTIVE' as const, deletedAt: null };
+  const isolateGrievances = userRole === 'WEB_MANAGER' || userRole === 'FACULTY';
 
-  const [users, departments, achievements, events, pendingAchievements, upcomingEvents] = await Promise.all([
-    prisma.user.count({ where: { status: 'ACTIVE', deletedAt: null } }),
-    prisma.department.count({ where: { isActive: true } }),
+  const [
+    users,
+    departments,
+    achievements,
+    events,
+    pendingAchievements,
+    upcomingEvents,
+    departmentGrievances,
+    hodApprovalQueue,
+    deptInfo,
+  ] = await Promise.all([
+    userRole === 'WEB_MANAGER' ? Promise.resolve(0) : prisma.user.count({ where: userWhere }),
+    prisma.department.count({
+      where: scopedDeptId ? { id: scopedDeptId, isActive: true } : { isActive: true },
+    }),
     prisma.achievement.count({ where: { ...where, status: 'PUBLISHED' } }),
     prisma.event.count({ where: { ...where, status: 'UPCOMING' } }),
-    prisma.achievement.count({ where: { ...where, status: 'PENDING' } }),
+    prisma.achievement.count({
+      where: { ...where, status: { in: ['PENDING', 'UNDER_REVIEW', 'APPROVED'] } },
+    }),
     prisma.event.count({ where: { ...where, status: 'UPCOMING', startDate: { gte: new Date() } } }),
+    isolateGrievances
+      ? Promise.resolve(0)
+      : prisma.incident.count({
+          where: scopedDeptId
+            ? {
+                deletedAt: null,
+                status: {
+                  in: [
+                    'REPORTED',
+                    'UNDER_REVIEW',
+                    'AWAITING_STUDENT_RESPONSE',
+                    'ACTION_REQUIRED',
+                    'ESCALATED_TO_HOD',
+                  ],
+                },
+                OR: [
+                  { student: { departmentId: scopedDeptId } },
+                  { reporter: { departmentId: scopedDeptId } },
+                ],
+              }
+            : {
+                deletedAt: null,
+                status: {
+                  in: [
+                    'REPORTED',
+                    'UNDER_REVIEW',
+                    'AWAITING_STUDENT_RESPONSE',
+                    'ACTION_REQUIRED',
+                    'ESCALATED_TO_HOD',
+                  ],
+                },
+              },
+        }),
+    prisma.achievement.findMany({
+      where: {
+        ...where,
+        status: { in: ['APPROVED', 'UNDER_REVIEW', 'PENDING'] },
+      },
+      orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+      take: 6,
+      select: {
+        id: true,
+        title: true,
+        personName: true,
+        primaryStudentRoll: true,
+        status: true,
+        level: true,
+        createdById: true,
+        organizationEventName: true,
+      },
+    }),
+    scopedDeptId
+      ? prisma.department.findUnique({
+          where: { id: scopedDeptId },
+          select: { name: true, code: true },
+        })
+      : Promise.resolve(null),
   ]);
 
-  return { users, departments, achievements, events, pendingAchievements, upcomingEvents };
+  return {
+    users,
+    departments,
+    achievements,
+    events,
+    pendingAchievements,
+    upcomingEvents,
+    departmentGrievances,
+    hodApprovalQueue,
+    departmentLabel: deptInfo ? `${deptInfo.name} (${deptInfo.code})` : 'All 11 Departments',
+  };
 }
 
 function ModuleCard({ module, isAccessible, isRoot, userDepartmentId }: { module: typeof MODULES[0]; isAccessible: boolean; isRoot: boolean; userDepartmentId: string | null }) {
@@ -140,7 +228,12 @@ export default async function AdminPage() {
   const userName = session.user?.name || 'Admin';
   const userEmail = session.user?.email || '';
 
-  const stats = await getStats(user.id, isSuperAdmin, userDepartmentId);
+  const stats = await getStats(userRole, isSuperAdmin, userDepartmentId);
+
+  const visibleQuickStats =
+    userRole === 'WEB_MANAGER'
+      ? QUICK_STATS.filter((s) => s.href !== '/admin/users')
+      : QUICK_STATS;
 
   const accessibleModules = MODULES.filter((m) => {
     if (isRoot) return true;
@@ -151,29 +244,39 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-slate-800 pb-5">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-          Executive Command Center
+      <div className="border-b border-border pb-5">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">
+          {userAdminType === 'DEPARTMENT'
+            ? 'HOD Department Command Center'
+            : userAdminType === 'MANAGER'
+            ? 'Web Manager Communications Console'
+            : 'Executive Command Center'}
         </h1>
-        <p className="mt-1 text-slate-400 text-xs sm:text-sm">
-          {isRoot ? 'Sovereign institutional oversight across all 11 departments' : `Scoped to your department • ${userAdminType}`}
+        <p className="mt-1 text-muted-foreground text-xs sm:text-sm">
+          {isRoot
+            ? 'Sovereign institutional oversight across all 11 departments'
+            : `Strictly scoped to ${stats.departmentLabel} • ${userAdminType}`}
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {QUICK_STATS.map((stat) => (
+        {visibleQuickStats.map((stat) => (
           <Link key={stat.label} href={stat.href} className="block group">
-            <Card variant="bento" hover className="h-full group-hover:border-slate-600 transition-all">
+            <Card variant="bento" hover className="h-full group-hover:border-primary/40 transition-all">
               <CardContent className="p-5">
                 <div className="flex items-center justify-between">
                   <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-105', `bg-${stat.color}-500/20 text-${stat.color}-400`)}>
                     <stat.icon className="w-5 h-5" />
                   </div>
-                  <Badge variant={stat.color as any} size="sm" glow>{stat.getValue(stats)}</Badge>
+                  <Badge variant={stat.color as any} size="sm">{stat.getValue(stats)}</Badge>
                 </div>
                 <div className="mt-4">
-                  <div className="text-2xl font-bold text-slate-100">{stat.getValue(stats)}</div>
-                  <div className="text-sm text-slate-400 group-hover:text-cyan-400 transition-colors flex items-center justify-between">
-                    <span>{stat.label}</span>
+                  <div className="text-2xl font-bold text-foreground">{stat.getValue(stats)}</div>
+                  <div className="text-sm text-muted-foreground group-hover:text-primary transition-colors flex items-center justify-between">
+                    <span>
+                      {stat.href === '/admin/departments' && !isRoot
+                        ? 'Bound Department'
+                        : stat.label}
+                    </span>
                     <span className="text-xs opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
                   </div>
                 </div>
@@ -182,6 +285,15 @@ export default async function AdminPage() {
           </Link>
         ))}
       </div>
+
+      {(userRole === 'HOD' || isRoot) && (
+        <HodPendingApprovalsWidget
+          items={stats.hodApprovalQueue}
+          currentUserId={String(user.id || '')}
+          currentUserRole={userRole}
+          departmentLabel={stats.departmentLabel}
+        />
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
         {accessibleModules.map((module) => (
@@ -196,7 +308,7 @@ export default async function AdminPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card variant="glass">
+        <Card variant="bento">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-amber-400" />
@@ -205,47 +317,49 @@ export default async function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <Link href="/admin/achievements?status=PENDING" className="flex items-center justify-between p-3 rounded-xl bg-space-800/50 hover:bg-space-700/50 transition-colors">
+              <Link href="/admin/achievements?status=SUBMITTED" className="flex items-center justify-between p-3 rounded-xl bg-background border border-border hover:border-primary/40 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
                     <Award className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-100">Pending Achievements</p>
-                    <p className="text-sm text-slate-400">{stats.pendingAchievements} awaiting review</p>
+                    <p className="font-medium text-foreground">Pending Achievements</p>
+                    <p className="text-sm text-muted-foreground">{stats.pendingAchievements} awaiting review</p>
                   </div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-slate-500" />
+                <ArrowRight className="w-5 h-5 text-muted-foreground" />
               </Link>
-              <Link href="/admin/events?status=UPCOMING" className="flex items-center justify-between p-3 rounded-xl bg-space-800/50 hover:bg-space-700/50 transition-colors">
+              <Link href="/admin/events?status=UPCOMING" className="flex items-center justify-between p-3 rounded-xl bg-background border border-border hover:border-primary/40 transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
                     <Calendar className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="font-medium text-slate-100">Upcoming Events</p>
-                    <p className="text-sm text-slate-400">{stats.upcomingEvents} scheduled</p>
+                    <p className="font-medium text-foreground">Upcoming Events</p>
+                    <p className="text-sm text-muted-foreground">{stats.upcomingEvents} scheduled</p>
                   </div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-slate-500" />
+                <ArrowRight className="w-5 h-5 text-muted-foreground" />
               </Link>
-              <Link href="/admin/bulk-review" className="flex items-center justify-between p-3 rounded-xl bg-space-800/50 hover:bg-space-700/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center">
-                    <Search className="w-5 h-5" />
+              {userRole !== 'WEB_MANAGER' && (
+                <Link href="/admin/discipline" className="flex items-center justify-between p-3 rounded-xl bg-background border border-border hover:border-primary/40 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
+                      <Shield className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Active Department Grievances</p>
+                      <p className="text-sm text-muted-foreground">{stats.departmentGrievances} open / investigating</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-slate-100">Bulk Review Queue</p>
-                    <p className="text-sm text-slate-400">Check staged batches</p>
-                  </div>
-                </div>
-                <ArrowRight className="w-5 h-5 text-slate-500" />
-              </Link>
+                  <ArrowRight className="w-5 h-5 text-muted-foreground" />
+                </Link>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        <Card variant="glass">
+        <Card variant="bento">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="w-5 h-5 text-emerald-400" />
@@ -254,26 +368,34 @@ export default async function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
-              <Link href="/admin/achievements?status=PENDING" className="p-4 rounded-xl bg-space-800/50 border border-slate-700/30 hover:bg-space-700/50 hover:border-brand-500/30 transition-all text-center group">
+              <Link href="/admin/achievements?status=SUBMITTED" className="p-4 rounded-xl bg-background border border-border hover:border-primary/40 transition-all text-center group">
                 <Award className="w-8 h-8 text-amber-400 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                <p className="font-medium text-slate-100">Review Honors</p>
-                <p className="text-xs text-slate-500">{stats.pendingAchievements} pending</p>
+                <p className="font-medium text-foreground">Verification Desk</p>
+                <p className="text-xs text-muted-foreground">{stats.pendingAchievements} pending</p>
               </Link>
-              <Link href="/admin/bulk-upload" className="p-4 rounded-xl bg-space-800/50 border border-slate-700/30 hover:bg-space-700/50 hover:border-cyan-500/30 transition-all text-center group">
-                <Upload className="w-8 h-8 text-cyan-400 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                <p className="font-medium text-slate-100">Bulk Upload</p>
-                <p className="text-xs text-slate-500">Excel/CSV import</p>
+              <Link href="/admin/bulk-upload" className="p-4 rounded-xl bg-background border border-border hover:border-primary/40 transition-all text-center group">
+                <Upload className="w-8 h-8 text-primary mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                <p className="font-medium text-foreground">Bulk Upload</p>
+                <p className="text-xs text-muted-foreground">Excel/CSV import</p>
               </Link>
-              <Link href="/admin/export" className="p-4 rounded-xl bg-space-800/50 border border-slate-700/30 hover:bg-space-700/50 hover:border-emerald-500/30 transition-all text-center group">
+              <Link href="/admin/export" className="p-4 rounded-xl bg-background border border-border hover:border-emerald-500/40 transition-all text-center group">
                 <Download className="w-8 h-8 text-emerald-400 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                <p className="font-medium text-slate-100">Export Data</p>
-                <p className="text-xs text-slate-500">Multi-format</p>
+                <p className="font-medium text-foreground">Export Data</p>
+                <p className="text-xs text-muted-foreground">Multi-format</p>
               </Link>
-              <Link href="/admin/deduplication" className="p-4 rounded-xl bg-space-800/50 border border-slate-700/30 hover:bg-space-700/50 hover:border-rose-500/30 transition-all text-center group">
-                <AlertTriangle className="w-8 h-8 text-rose-400 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-                <p className="font-medium text-slate-100">Deduplication</p>
-                <p className="text-xs text-slate-500">Collision radar</p>
-              </Link>
+              {userRole === 'WEB_MANAGER' ? (
+                <Link href="/admin/notices" className="p-4 rounded-xl bg-background border border-border hover:border-primary/40 transition-all text-center group">
+                  <Zap className="w-8 h-8 text-primary mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                  <p className="font-medium text-foreground">Broadcast Notice</p>
+                  <p className="text-xs text-muted-foreground">Circulars &amp; Updates</p>
+                </Link>
+              ) : (
+                <Link href="/admin/deduplication" className="p-4 rounded-xl bg-background border border-border hover:border-rose-500/40 transition-all text-center group">
+                  <AlertTriangle className="w-8 h-8 text-rose-400 mx-auto mb-2 group-hover:scale-110 transition-transform" />
+                  <p className="font-medium text-foreground">Deduplication</p>
+                  <p className="text-xs text-muted-foreground">Collision radar</p>
+                </Link>
+              )}
             </div>
           </CardContent>
         </Card>

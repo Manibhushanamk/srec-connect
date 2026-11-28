@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { PostReportSchema, parseJsonBody } from '@/lib/schemas';
 
 export async function POST(
   req: NextRequest,
@@ -23,8 +24,9 @@ export async function POST(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const body = await req.json();
-    const reason = typeof body.reason === 'string' ? body.reason.trim() : 'Inappropriate content';
+    const parsed = await parseJsonBody(req, PostReportSchema);
+    if (!parsed.success) return parsed.response;
+    const reason = parsed.data.reason || 'Inappropriate content';
 
     const report = await prisma.contentReport.create({
       data: {

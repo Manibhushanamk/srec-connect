@@ -52,6 +52,20 @@ export function EventRegistrationBox({
         setUserRegistration(data.userRegistration);
         setUserAttendance(data.userAttendance);
         setIsOrganizerOrAdmin(data.isOrganizerOrAdmin);
+        if (data.userRegistration?.status === 'REGISTERED') {
+          try {
+            const QRCode = (await import('qrcode')).default;
+            const qrPayload = JSON.stringify({
+              type: 'EVENT_CHECKIN_PASS',
+              eventId,
+              registrationId: data.userRegistration.id,
+            });
+            const url = await QRCode.toDataURL(qrPayload, { width: 180, margin: 1 });
+            setQrDataUrl(url);
+          } catch {
+            // ignore QR generation fallback
+          }
+        }
       }
     } catch (e) {
       console.error(e);
@@ -126,7 +140,7 @@ export function EventRegistrationBox({
   }
 
   return (
-    <div className="bg-slate-900/80 border border-slate-800/80 rounded-2xl p-6 shadow-xl backdrop-blur-md space-y-6">
+    <div className="bg-card border border-border rounded-2xl p-6 shadow-subtle space-y-6">
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs font-semibold">
           <span className="text-slate-400 uppercase tracking-wider">Seat Availability</span>
@@ -213,7 +227,29 @@ export function EventRegistrationBox({
                     <Clock className="w-3.5 h-3.5 text-amber-400" />
                     Attendance: Not Checked In
                   </span>
-                  <span className="text-[11px] text-cyan-400 font-medium">Show Pass at Venue</span>
+                  <span className="text-[11px] text-cyan-400 font-medium">Event Check-In Pass Ready</span>
+                </div>
+              )}
+
+              {/* Check-In-Only QR Pass (Not an institutional student ID) */}
+              {qrDataUrl && (
+                <div className="p-3 bg-card border border-border rounded-xl flex items-center gap-3">
+                  <img
+                    src={qrDataUrl}
+                    alt="Event Check-In Pass QR"
+                    width={76}
+                    height={76}
+                    className="rounded-lg bg-white p-1 shrink-0"
+                  />
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <QrCode className="w-3.5 h-3.5 text-primary" />
+                      Event Check-In Pass
+                    </p>
+                    <p className="text-[11px] text-muted-foreground leading-snug">
+                      For venue entry scanning at this event only (not an institutional student ID).
+                    </p>
+                  </div>
                 </div>
               )}
 

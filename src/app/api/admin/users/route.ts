@@ -9,16 +9,18 @@ import {
   canManageTargetUser,
   isSuperAdmin,
   isHOD,
-  isWebManager,
 } from '@/lib/rbac';
+import { canAccessAdminUsersApi } from '@/lib/admin-auth';
 import { Role, UserStatus } from '@prisma/client';
 import { parseRollNumber } from '@/lib/studentHelper';
+import { AdminUserCreateSchema, AdminUserUpdateSchema, parseJsonBody } from '@/lib/schemas';
+import { ensureBatchesRegistered, getAllAvailableBatches } from '@/lib/category-batch-helpers';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email || !canAccessAdmin(session.user as any)) {
-      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
+    const session = await getServerSession().catch(() => null);
+    if (!session?.user?.email || !canAccessAdmin(session.user as any) || !canAccessAdminUsersApi((session.user as any).role)) {
+      return NextResponse.json({ error: 'Forbidden: Super Admin or HOD privileges required for User Management' }, { status: 403 });
     }
 
     // Resolve authoritative live actor from database
@@ -27,8 +29,8 @@ export async function GET(req: NextRequest) {
       include: { department: true },
     });
 
-    if (!actor || !canAccessAdmin(actor as any)) {
-      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
+    if (!actor || !canAccessAdmin(actor as any) || !canAccessAdminUsersApi(actor.role)) {
+      return NextResponse.json({ error: 'Forbidden: Super Admin or HOD privileges required for User Management' }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -67,7 +69,7 @@ export async function GET(req: NextRequest) {
       ];
     }
 
-    const [users, total, departments] = await Promise.all([
+    const [users, total, departments, batches] = await Promise.all([
       prisma.user.findMany({
         where,
         include: {
@@ -118,6 +120,7 @@ export async function GET(req: NextRequest) {
         : actor.department
         ? [{ id: actor.department.id, name: actor.department.name, code: actor.department.code }]
         : [],
+      getAllAvailableBatches(),
     ]);
 
     return NextResponse.json({
@@ -126,6 +129,7 @@ export async function GET(req: NextRequest) {
       page,
       totalPages: Math.ceil(total / limit),
       departments,
+      batches,
       currentActor: {
         id: actor.id,
         name: actor.name,
@@ -137,7 +141,7 @@ export async function GET(req: NextRequest) {
         allowedAssignableRoles: getAllowedAssignableRoles(actor.role),
         isSuperAdmin: isSuperAdmin(actor.role),
         isHOD: isHOD(actor.role),
-        isWebManager: isWebManager(actor.role),
+        isWebManager: false,
       },
     });
   } catch (error: any) {
@@ -148,9 +152,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email || !canAccessAdmin(session.user as any)) {
-      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
+    const session = await getServerSession().catch(() => null);
+    if (!session?.user?.email || !canAccessAdmin(session.user as any) || !canAccessAdminUsersApi((session.user as any).role)) {
+      return NextResponse.json({ error: 'Forbidden: Super Admin or HOD privileges required for User Management' }, { status: 403 });
     }
 
     const actor = await prisma.user.findUnique({
@@ -158,11 +162,12 @@ export async function POST(req: NextRequest) {
       include: { department: true },
     });
 
-    if (!actor || !canAccessAdmin(actor as any)) {
-      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
+    if (!actor || !canAccessAdmin(actor as any) || !canAccessAdminUsersApi(actor.role)) {
+      return NextResponse.json({ error: 'Forbidden: Super Admin or HOD privileges required for User Management' }, { status: 403 });
     }
 
-    const body = await req.json();
+    const parsedCreate = await parseJsonBody(req, AdminUserCreateSchema);
+    if (!parsedCreate.success) return parsedCreate.response;
     const {
       email,
       name,
@@ -181,11 +186,7 @@ export async function POST(req: NextRequest) {
       experience,
       cabin,
       specialization,
-    } = body;
-
-    if (!email || !name || !role) {
-      return NextResponse.json({ error: 'Email, Name, and Role are mandatory' }, { status: 400 });
-    }
+    } = parsedCreate.data;
 
     // Role hierarchy verification
     const allowedRoles = getAllowedAssignableRoles(actor.role);
@@ -260,9 +261,10 @@ export async function POST(req: NextRequest) {
         calculatedBatch = parsedRoll.batchYear;
       } else if (parsedRoll.isValid && parsedRoll.isLateralEntry && parsedRoll.admissionYear && calculatedBatch === `${parsedRoll.admissionYear}-${parsedRoll.admissionYear + 4}`) {
         // Correct accidentally assigned 4-year span for lateral entry student
-        calculatedBatch = parsedRoll.batchYear;
+        calculatedBatch = parsedRoll.batchYear || calculatedBatch;
       }
       if (!calculatedBatch) calculatedBatch = '2024-2028';
+      await ensureBatchesRegistered([calculatedBatch]).catch(() => null);
 
       studentRecord = await prisma.student.create({
         data: {
@@ -331,9 +333,9 @@ export async function POST(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email || !canAccessAdmin(session.user as any)) {
-      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
+    const session = await getServerSession().catch(() => null);
+    if (!session?.user?.email || !canAccessAdmin(session.user as any) || !canAccessAdminUsersApi((session.user as any).role)) {
+      return NextResponse.json({ error: 'Forbidden: Super Admin or HOD privileges required for User Management' }, { status: 403 });
     }
 
     const actor = await prisma.user.findUnique({
@@ -341,11 +343,12 @@ export async function PATCH(req: NextRequest) {
       include: { department: true },
     });
 
-    if (!actor || !canAccessAdmin(actor as any)) {
-      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
+    if (!actor || !canAccessAdmin(actor as any) || !canAccessAdminUsersApi(actor.role)) {
+      return NextResponse.json({ error: 'Forbidden: Super Admin or HOD privileges required for User Management' }, { status: 403 });
     }
 
-    const body = await req.json();
+    const parsedPatch = await parseJsonBody(req, AdminUserUpdateSchema);
+    if (!parsedPatch.success) return parsedPatch.response;
     const {
       userId,
       name,
@@ -362,11 +365,7 @@ export async function PATCH(req: NextRequest) {
       linkedinUrl,
       student,
       faculty,
-    } = body;
-
-    if (!userId) {
-      return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-    }
+    } = parsedPatch.data;
 
     const targetUser = await prisma.user.findUnique({
       where: { id: userId },
@@ -431,8 +430,8 @@ export async function PATCH(req: NextRequest) {
     }
 
     // 3. Name handling
-    const trimmedName = name !== undefined ? name.trim() : targetUser.name;
-    if (name !== undefined) {
+    const trimmedName = typeof name === 'string' ? name.trim() : targetUser.name;
+    if (typeof name === 'string') {
       userUpdateData.name = trimmedName;
     }
 
@@ -467,7 +466,12 @@ export async function PATCH(req: NextRequest) {
           studentUpdateData.departmentId = departmentId || null;
           studentUpdateData.departmentName = deptName;
         }
-        if (student?.batch !== undefined) studentUpdateData.batch = student.batch;
+        if (student?.batch !== undefined) {
+          studentUpdateData.batch = student.batch || null;
+          if (student.batch) {
+            await ensureBatchesRegistered([student.batch]).catch(() => null);
+          }
+        }
         if (student?.section !== undefined) studentUpdateData.section = student.section;
         if (student?.headline !== undefined) {
           studentUpdateData.headline = student.headline;
@@ -524,7 +528,7 @@ export async function PATCH(req: NextRequest) {
         if (!studentBatch && parsedFallback.isValid && parsedFallback.batchYear) {
           studentBatch = parsedFallback.batchYear;
         } else if (parsedFallback.isValid && parsedFallback.isLateralEntry && parsedFallback.admissionYear && studentBatch === `${parsedFallback.admissionYear}-${parsedFallback.admissionYear + 4}`) {
-          studentBatch = parsedFallback.batchYear;
+          studentBatch = parsedFallback.batchYear || studentBatch;
         }
         if (!studentBatch) studentBatch = '2024-2028';
 
@@ -701,17 +705,17 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email || !canAccessAdmin(session.user as any)) {
-      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
+    const session = await getServerSession().catch(() => null);
+    if (!session?.user?.email || !canAccessAdmin(session.user as any) || !canAccessAdminUsersApi((session.user as any).role)) {
+      return NextResponse.json({ error: 'Forbidden: Super Admin or HOD privileges required for User Management' }, { status: 403 });
     }
 
     const actor = await prisma.user.findUnique({
       where: { email: session.user.email.toLowerCase().trim() },
       include: { department: true },
     });
-    if (!actor || !canAccessAdmin(actor as any)) {
-      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 403 });
+    if (!actor || !canAccessAdmin(actor as any) || !canAccessAdminUsersApi(actor.role)) {
+      return NextResponse.json({ error: 'Forbidden: Super Admin or HOD privileges required for User Management' }, { status: 403 });
     }
 
     const { searchParams } = new URL(req.url);

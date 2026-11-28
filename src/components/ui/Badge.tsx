@@ -13,13 +13,13 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
     
     const variants = {
       default: 'bg-muted text-muted-foreground border border-border',
-      brand: 'bg-primary/10 text-primary border border-primary/20',
-      cyan: 'bg-cyan-500/10 text-cyan-500 dark:text-cyan-400 border border-cyan-500/30',
-      emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30',
-      amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30',
-      rose: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30',
-      violet: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/30',
-      slate: 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border border-slate-500/20',
+      brand: 'bg-primary/12 text-[#C2410C] dark:text-[#FB923C] border border-primary/30',
+      cyan: 'bg-primary/15 text-[#C2410C] dark:text-[#F97316] border border-primary/35',
+      emerald: 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30',
+      amber: 'bg-[#CA8A04]/15 text-[#92400E] dark:bg-[#FACC15]/15 dark:text-[#FACC15] border border-[#CA8A04]/35 dark:border-[#FACC15]/35',
+      rose: 'bg-rose-500/12 text-rose-700 dark:text-rose-400 border border-rose-500/30',
+      violet: 'bg-violet-500/12 text-violet-700 dark:text-violet-400 border border-violet-500/30',
+      slate: 'bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 border border-zinc-500/20',
     };
 
     const sizes = {

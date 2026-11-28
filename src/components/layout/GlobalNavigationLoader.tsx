@@ -70,10 +70,10 @@ export function GlobalNavigationLoader() {
 
   return (
     <>
-      {/* 1. Sleek Top Progress Bar */}
-      <div className="fixed top-0 left-0 right-0 z-[99999] pointer-events-none h-[3.5px] bg-transparent">
+      {/* 1. Sleek Top Progress Bar (Option 4 Sunset Coral -> Solar Gold) */}
+      <div className="fixed top-0 left-0 right-0 z-[99999] pointer-events-none h-[3px] bg-transparent">
         <div
-          className="h-full bg-gradient-to-r from-primary via-cyan-400 to-indigo-500 shadow-[0_0_12px_rgba(59,130,246,0.9)] transition-all duration-300 ease-out"
+          className="h-full bg-gradient-to-r from-[#EA580C] via-[#F97316] to-[#FACC15] shadow-[0_0_12px_rgba(249,115,22,0.75)] transition-all duration-300 ease-out"
           style={{
             width: `${progress}%`,
             opacity: progress === 100 ? 0 : 1,
@@ -84,7 +84,7 @@ export function GlobalNavigationLoader() {
 
       {/* 2. Floating Quick Response Indicator when transition takes > 250ms */}
       {showBackdrop && (
-        <div className="fixed bottom-6 right-6 z-[99998] pointer-events-none flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-card/95 backdrop-blur-xl border border-primary/30 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="fixed bottom-6 right-6 z-[99998] pointer-events-none flex items-center gap-3 px-4 py-2.5 rounded-2xl glass-popover liquid-sheet-enter border-primary/30 shadow-2xl">
           <img src="/images/srec-logo.png" alt="SREC Loading" className="w-6 h-6 object-contain animate-spin" />
           <div className="text-left">
             <p className="text-xs font-bold text-foreground">Loading SREC Connect...</p>

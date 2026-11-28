@@ -3,6 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from '@/lib/auth';
 import { canAccessAdmin, isSuperAdmin } from '@/lib/rbac';
+import { DepartmentCreateSchema, parseJsonBody } from '@/lib/schemas';
 
 export async function GET(req: NextRequest) {
   try {
@@ -72,7 +73,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = await req.json();
+    const parsed = await parseJsonBody(req, DepartmentCreateSchema);
+    if (!parsed.success) return parsed.response;
     const {
       code,
       name,
@@ -88,11 +90,7 @@ export async function POST(req: NextRequest) {
       intake,
       established,
       displayOrder,
-    } = body;
-
-    if (!code || !name) {
-      return NextResponse.json({ error: 'Department Code and Name are mandatory' }, { status: 400 });
-    }
+    } = parsed.data;
 
     const normalizedCode = code.trim().toUpperCase();
 

@@ -1,42 +1,65 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Filter, RotateCcw, Award, Calendar, Building2 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { Search, Filter, RotateCcw, Award, Calendar, Clock, Building2 } from 'lucide-react';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
+import { FilteredExportActions } from '@/components/shared/FilteredExportActions';
+import { canManageCategories } from '@/lib/admin-auth';
+import { createCustomCategoryOption, removeCategoryOption } from '@/lib/client-creatable';
+import { ACHIEVEMENT_TIMELINE_PRESETS } from '@/lib/timeline';
 
 interface AchievementsFilterBarProps {
   levels: readonly string[];
-  categories: { name: string }[];
-  departments: { code: string; name: string }[];
+  categories: { id?: string; name: string }[];
+  departments: { id?: string; code: string; name: string }[];
   academicYears: string[];
 }
 
 export function AchievementsFilterBar({
   levels,
-  categories,
+  categories: initialCategories,
   departments,
   academicYears,
 }: AchievementsFilterBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
+  const isCategoryAdmin = canManageCategories((session?.user as any)?.role);
+
+  const [categories, setCategories] = useState(initialCategories);
+  useEffect(() => {
+    setCategories(initialCategories);
+  }, [initialCategories]);
 
   const currentSearch = searchParams.get('search') || '';
   const currentLevel = searchParams.get('level') || 'all';
   const currentCategory = searchParams.get('category') || 'all';
   const currentDepartment = searchParams.get('department') || 'all';
   const currentAcademicYear = searchParams.get('academicYear') || 'all';
+  const currentTimeline = searchParams.get('timeline') || 'ALL';
+  const currentDateFrom = searchParams.get('dateFrom') || '';
+  const currentDateTo = searchParams.get('dateTo') || '';
 
   const hasActiveFilters =
     Boolean(currentSearch) ||
     currentLevel !== 'all' ||
     currentCategory !== 'all' ||
     currentDepartment !== 'all' ||
-    currentAcademicYear !== 'all';
+    currentAcademicYear !== 'all' ||
+    (currentTimeline !== 'ALL' && Boolean(currentTimeline)) ||
+    Boolean(currentDateFrom) ||
+    Boolean(currentDateTo);
 
   const updateFilter = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    if (!value || value === 'all') {
+    if (!value || value === 'all' || value === 'ALL') {
       params.delete(key);
+      if (key === 'timeline') {
+        params.delete('dateFrom');
+        params.delete('dateTo');
+      }
     } else {
       params.set(key, value);
     }
@@ -81,7 +104,7 @@ export function AchievementsFilterBar({
           <button
             type="button"
             onClick={clearFilters}
-            className="self-end md:self-auto px-3.5 py-2 text-xs font-semibold rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center gap-1.5 transition-colors shrink-0"
+            className="self-end md:self-auto px-3.5 py-2 text-xs font-semibold rounded-xl border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer"
           >
             <RotateCcw className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Reset Filters</span>
@@ -90,22 +113,97 @@ export function AchievementsFilterBar({
       </div>
 
       {/* Select Dropdowns Toolbar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-border">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-3 border-t border-border">
         {/* Category */}
         <div>
           <label htmlFor="category" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
             <Award className="w-3 h-3 text-primary" />
             <span>Category</span>
           </label>
-          <select
+          <CreatableSelect
             id="category"
-            value={currentCategory}
-            className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-            onChange={(e) => updateFilter('category', e.target.value)}
+            value={currentCategory === 'all' ? '' : currentCategory}
+            onChange={(val) => updateFilter('category', val || 'all')}
+            options={categories.map((cat) => ({ value: cat.name, label: cat.name }))}
+            placeholder="All Categories"
+            customOptionLabel={isCategoryAdmin ? '+ Add Website Category...' : '+ Filter Custom Category...'}
+            customPlaceholder="Type category name..."
+            onCreateCustom={
+              isCategoryAdmin
+                ? async (name) => {
+                    const created = await createCustomCategoryOption(name, 'ACHIEVEMENT');
+                    if (created) {
+                      setCategories((prev) =>
+                        prev.some((c) => c.name.toLowerCase() === created.label.toLowerCase())
+                          ? prev
+                          : [...prev, { id: created.value, name: created.label }]
+                      );
+                      router.refresh();
+                      return { value: created.label, label: created.label };
+                    }
+                    return null;
+                  }
+                : undefined
+            }
+            onRemoveOption={
+              isCategoryAdmin
+                ? async (opt) => {
+                    const matched = categories.find((c) => c.name === opt.value);
+                    const ok = await removeCategoryOption({
+                      value: matched?.id || opt.value,
+                      label: opt.label,
+                    });
+                    if (ok) {
+                      setCategories((prev) => prev.filter((c) => c.name !== opt.value));
+                      if (currentCategory === opt.value) {
+                        updateFilter('category', 'all');
+                      }
+                      router.refresh();
+                    }
+                    return ok;
+                  }
+                : undefined
+            }
+          />
+        </div>
+
+        {/* Time Period / Timeline */}
+        <div>
+          <label htmlFor="timeline" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+            <Clock className="w-3 h-3 text-primary" />
+            <span>Timeline Period</span>
+          </label>
+          <select
+            id="timeline"
+            value={currentTimeline}
+            onChange={(e) => updateFilter('timeline', e.target.value)}
+            className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
           >
-            <option value="all" className="bg-card text-foreground">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat.name} value={cat.name} className="bg-card text-foreground">{cat.name}</option>
+            {ACHIEVEMENT_TIMELINE_PRESETS.map((preset) => (
+              <option key={preset.value} value={preset.value}>
+                {preset.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Department */}
+        <div>
+          <label htmlFor="department" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1">
+            <Building2 className="w-3 h-3 text-primary" />
+            <span>Department</span>
+          </label>
+          <select
+            id="department"
+            value={currentDepartment}
+            onChange={(e) => updateFilter('department', e.target.value)}
+            className="w-full px-3 py-2 text-xs sm:text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+          >
+            <option value="all">All Departments</option>
+            {departments.map((dept) => (
+              <option key={dept.code} value={dept.code}>
+                {dept.code} — {dept.name}
+              </option>
             ))}
           </select>
         </div>
@@ -116,17 +214,15 @@ export function AchievementsFilterBar({
             <Filter className="w-3 h-3 text-primary" />
             <span>Recognition Level</span>
           </label>
-          <select
+          <CreatableSelect
             id="level"
-            value={currentLevel}
-            className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-            onChange={(e) => updateFilter('level', e.target.value)}
-          >
-            <option value="all" className="bg-card text-foreground">All Levels</option>
-            {levels.map((lvl) => (
-              <option key={lvl} value={lvl} className="bg-card text-foreground">{lvl}</option>
-            ))}
-          </select>
+            value={currentLevel === 'all' ? '' : currentLevel}
+            onChange={(val) => updateFilter('level', val || 'all')}
+            options={levels.map((lvl) => ({ value: lvl, label: lvl }))}
+            placeholder="All Levels"
+            customOptionLabel="+ Filter Custom Level..."
+            customPlaceholder="Type custom level..."
+          />
         </div>
 
         {/* Academic Year */}
@@ -135,19 +231,65 @@ export function AchievementsFilterBar({
             <Calendar className="w-3 h-3 text-primary" />
             <span>Academic Year</span>
           </label>
-          <select
+          <CreatableSelect
             id="academicYear"
-            value={currentAcademicYear}
-            className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-            onChange={(e) => updateFilter('academicYear', e.target.value)}
-          >
-            <option value="all" className="bg-card text-foreground">All Academic Years</option>
-            {academicYears.map((year) => (
-              <option key={year} value={year} className="bg-card text-foreground">{year}</option>
-            ))}
-          </select>
+            value={currentAcademicYear === 'all' ? '' : currentAcademicYear}
+            onChange={(val) => updateFilter('academicYear', val || 'all')}
+            options={academicYears.map((year) => ({ value: year, label: year }))}
+            placeholder="All Academic Years"
+            customOptionLabel="+ Custom Academic Year..."
+            customPlaceholder="e.g. 2027-2028"
+          />
         </div>
       </div>
+
+      {/* Custom Date Window when CUSTOM timeline selected */}
+      {(currentTimeline === 'CUSTOM' || currentDateFrom || currentDateTo) && (
+        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-border/60">
+          <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Custom Date Range:
+          </span>
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span>From</span>
+            <input
+              type="date"
+              value={currentDateFrom}
+              onChange={(e) => updateFilter('dateFrom', e.target.value)}
+              className="px-2.5 py-1.5 rounded-lg border border-border bg-background text-xs text-foreground dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </label>
+          <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span>To</span>
+            <input
+              type="date"
+              value={currentDateTo}
+              onChange={(e) => updateFilter('dateTo', e.target.value)}
+              className="px-2.5 py-1.5 rounded-lg border border-border bg-background text-xs text-foreground dark:[color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </label>
+        </div>
+      )}
+
+      {/* Export Listed Achievements (Visible to Web Manager, HOD, Faculty, Admin, Super Admin) */}
+      <FilteredExportActions
+        domain="ACHIEVEMENTS"
+        filters={{
+          status: 'VERIFIED',
+          achievementCategoryId: currentCategory !== 'all' ? currentCategory : undefined,
+          level: currentLevel !== 'all' ? currentLevel : undefined,
+          departmentId:
+            currentDepartment !== 'all'
+              ? departments.find((d) => d.code === currentDepartment)?.id
+              : undefined,
+          academicYear: currentAcademicYear !== 'all' ? currentAcademicYear : undefined,
+          timeline: currentTimeline !== 'ALL' ? currentTimeline : undefined,
+          dateFrom: currentDateFrom || undefined,
+          dateTo: currentDateTo || undefined,
+          search: currentSearch || undefined,
+        }}
+        timelineLabel={ACHIEVEMENT_TIMELINE_PRESETS.find((t) => t.value === currentTimeline)?.label}
+        className="pt-3 border-t border-border/60"
+      />
     </div>
   );
 }

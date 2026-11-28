@@ -11,8 +11,39 @@ import {
 import { downloadDriveFile } from '@/lib/drive';
 import { prisma } from '@/lib/prisma';
 import { checkRateLimit } from '@/lib/rate-limit';
+import {
+  issueRestoreChallengeToken,
+  verifyRestoreChallengeToken,
+  RESTORE_CHALLENGE_TTL_SECONDS,
+} from '@/lib/restore-challenge';
 
 export const runtime = 'nodejs';
+
+/**
+ * GET /api/admin/backup/restore
+ * Issues a short-lived HMAC challenge token bound to the authenticated SUPER_ADMIN session.
+ */
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions).catch(() => null);
+    const userRole = (session?.user as any)?.role;
+    const userId = (session?.user as any)?.id;
+
+    if (!session?.user || !userId || userRole !== Role.SUPER_ADMIN) {
+      return NextResponse.json({ error: 'Forbidden. Super Admin authorization required.' }, { status: 403 });
+    }
+
+    const challengeToken = issueRestoreChallengeToken(String(userId));
+    return NextResponse.json({
+      success: true,
+      challengeToken,
+      expiresInSeconds: RESTORE_CHALLENGE_TTL_SECONDS,
+    });
+  } catch (error: any) {
+    console.error('[Admin Backup Challenge Error]', error);
+    return NextResponse.json({ error: error.message || 'Failed to issue restore challenge' }, { status: 500 });
+  }
+}
 
 /**
  * POST /api/admin/backup/restore
@@ -21,7 +52,7 @@ export const runtime = 'nodejs';
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions).catch(() => null);
     const userRole = (session?.user as any)?.role;
     const userEmail = session?.user?.email || 'admin@srecnandyal.edu.in';
 
@@ -38,7 +69,14 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { backupId, driveFileId, dryRun = true, confirmationCode } = body;
+    const {
+      backupId,
+      driveFileId,
+      dryRun = true,
+      confirmationCode,
+      challengeToken,
+      reauthEmail,
+    } = body;
 
     let packageBuffer: Buffer;
 
@@ -68,13 +106,42 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 2. Destructive live restore guard
+    // 2. Destructive live restore guard (requires short-lived session-bound HMAC token + secondary re-auth + DB active SUPER_ADMIN check)
+    const userId = String((session.user as any)?.id || '');
+    const normalizedSessionEmail = userEmail.toLowerCase().trim();
+    const normalizedReauthEmail = typeof reauthEmail === 'string' ? reauthEmail.toLowerCase().trim() : '';
+
     if (confirmationCode !== 'CONFIRM_RESTORE_SREC') {
       return NextResponse.json(
-        {
-          error: 'Explicit confirmation required. Send confirmationCode: "CONFIRM_RESTORE_SREC" to execute live restore.',
-        },
+        { error: 'Explicit confirmation required to execute live restore.' },
         { status: 400 }
+      );
+    }
+
+    if (!verifyRestoreChallengeToken(challengeToken, userId)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Missing or expired session-bound HMAC restore challenge token.' },
+        { status: 403 }
+      );
+    }
+
+    const verifiedAdmin = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, role: true, status: true, deletedAt: true },
+    });
+
+    if (
+      !verifiedAdmin ||
+      verifiedAdmin.deletedAt !== null ||
+      verifiedAdmin.status !== 'ACTIVE' ||
+      verifiedAdmin.role !== Role.SUPER_ADMIN ||
+      !normalizedReauthEmail ||
+      normalizedReauthEmail !== normalizedSessionEmail ||
+      verifiedAdmin.email.toLowerCase().trim() !== normalizedSessionEmail
+    ) {
+      return NextResponse.json(
+        { error: 'Forbidden: Secondary SUPER_ADMIN identity re-authentication failed.' },
+        { status: 403 }
       );
     }
 

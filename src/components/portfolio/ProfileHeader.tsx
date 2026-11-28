@@ -56,16 +56,16 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const [activeTab, setActiveTab] = useState<'PORTFOLIO' | 'FEED' | 'ACHIEVEMENTS'>('PORTFOLIO');
 
   return (
-    <div className="w-full bg-card rounded-3xl border border-border overflow-hidden shadow-subtle mb-6">
+    <div className="w-full glass-card rounded-3xl overflow-hidden mb-6">
       {/* 1. LinkedIn Cover Banner */}
-      <div className="h-44 sm:h-52 w-full relative bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 overflow-hidden">
+      <div className="h-44 sm:h-52 w-full relative bg-gradient-to-r from-[#181A20] via-[#272A35] to-[#0D0E12] overflow-hidden">
         {bannerUrl ? (
           <img src={bannerUrl} alt="Cover Banner" className="w-full h-full object-cover" />
         ) : (
           <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
         )}
         <div className="absolute top-3 right-3 flex gap-2">
-          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-black/40 backdrop-blur-md text-white border border-white/10">
+          <span className="px-3 py-1 rounded-full text-xs font-semibold bg-black/65 text-white border border-white/15">
             {department}
           </span>
         </div>

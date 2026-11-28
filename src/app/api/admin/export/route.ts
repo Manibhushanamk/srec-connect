@@ -2,7 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
-import { canAccessAdmin, isSuperAdmin } from '@/lib/rbac';
+import { canAccessAdmin } from '@/lib/rbac';
+import {
+  canExportCategory,
+  IQAC_EXPORT_NOTICE,
+  JNTUA_5A_NOTICE,
+  resolveScopedDepartmentId,
+} from '@/lib/admin-auth';
+import { AdminExportQuerySchema, parseQueryParams } from '@/lib/schemas';
+import { buildDateRangePrismaFilter, resolveTimelineDateRange } from '@/lib/timeline';
 import {
   generateExcelBuffer,
   generateCsvWithBom,
@@ -18,7 +26,7 @@ export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions).catch(() => null);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -36,23 +44,39 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const category = (searchParams.get('category')?.toUpperCase() || 'ACHIEVEMENTS') as string;
-    const format = (searchParams.get('format')?.toLowerCase() || 'xlsx') as 'xlsx' | 'csv' | 'html' | 'json';
-    const isPreview = searchParams.get('preview') === 'true';
+    const parsedQuery = parseQueryParams(searchParams, AdminExportQuerySchema);
+    if (!parsedQuery.success) return parsedQuery.response;
 
-    let departmentId = searchParams.get('departmentId');
-    const academicYear = searchParams.get('academicYear');
-    const batch = searchParams.get('batch');
-    const statusParam = searchParams.get('status');
-    const dateFrom = searchParams.get('dateFrom');
-    const dateTo = searchParams.get('dateTo');
+    const {
+      category,
+      format,
+      preview,
+      departmentId: requestedDepartmentId,
+      academicYear,
+      batch,
+      status: statusParam,
+      timeline,
+      dateFrom,
+      dateTo,
+      achievementCategoryId,
+      level,
+      search,
+    } = parsedQuery.data;
 
-    // Scoping: HOD and Web Manager can only export their own department
-    if (!isSuperAdmin(user.role)) {
-      departmentId = user.departmentId || 'unassigned_dept';
-    } else if (departmentId === 'ALL') {
-      departmentId = null;
+    const isPreview = preview === 'true';
+
+    if (!canExportCategory(user.role, category)) {
+      return NextResponse.json(
+        { error: `Forbidden: Role ${user.role} is not authorized to export ${category}.` },
+        { status: 403 }
+      );
     }
+
+    const departmentId = resolveScopedDepartmentId(
+      user.role,
+      user.departmentId,
+      requestedDepartmentId
+    );
 
     let departmentInfo: { id: string; name: string; code: string } | null = null;
     if (departmentId) {
@@ -64,109 +88,126 @@ export async function GET(req: NextRequest) {
 
     const deptName = departmentInfo ? `${departmentInfo.name} (${departmentInfo.code})` : 'All 11 Departments';
     const acYearLabel = academicYear && academicYear !== 'ALL' ? academicYear : 'All Academic Years';
+    const resolvedTimeline = resolveTimelineDateRange(timeline, dateFrom, dateTo);
+    const dateFilter = buildDateRangePrismaFilter(timeline, dateFrom, dateTo);
 
-    // 1. Query Data
-    let achievements: any[] = [];
-    let students: any[] = [];
-    let faculty: any[] = [];
-    let events: any[] = [];
-    let incidents: any[] = [];
+    const wantAchievements = category === 'ACHIEVEMENTS' || category === 'COMPLETE_INSTITUTIONAL_DUMP';
+    const wantStudents = category === 'STUDENTS' || category === 'COMPLETE_INSTITUTIONAL_DUMP';
+    const wantFaculty = category === 'FACULTY' || category === 'COMPLETE_INSTITUTIONAL_DUMP';
+    const wantEvents = category === 'EVENTS' || category === 'COMPLETE_INSTITUTIONAL_DUMP';
+    const wantIncidents = category === 'INCIDENTS' || category === 'COMPLETE_INSTITUTIONAL_DUMP';
 
-    // Helper date filter
-    const dateFilter: any = {};
-    if (dateFrom) dateFilter.gte = new Date(dateFrom);
-    if (dateTo) dateFilter.lte = new Date(`${dateTo}T23:59:59.999Z`);
-
-    if (category === 'ACHIEVEMENTS' || category === 'COMPLETE_INSTITUTIONAL_DUMP') {
-      const achWhere: any = { deletedAt: null };
-      if (departmentId) achWhere.departmentId = departmentId;
-      if (academicYear && academicYear !== 'ALL') achWhere.academicYear = academicYear;
-      if (statusParam && statusParam !== 'ALL') {
+    const achWhere: any = { deletedAt: null };
+    if (departmentId) achWhere.departmentId = departmentId;
+    if (academicYear && academicYear !== 'ALL') achWhere.academicYear = academicYear;
+    if (statusParam && statusParam !== 'ALL') {
+      if (statusParam === 'SUBMITTED') {
+        achWhere.status = { in: ['DRAFT', 'PENDING'] };
+      } else if (statusParam === 'VERIFIED') {
+        achWhere.status = { in: ['APPROVED', 'PUBLISHED'] };
+      } else {
         achWhere.status = statusParam;
       }
-      if (Object.keys(dateFilter).length > 0) {
-        achWhere.achievementDate = dateFilter;
-      }
-
-      achievements = await prisma.achievement.findMany({
-        where: achWhere,
-        include: {
-          category: true,
-          department: true,
-          teamMembers: true,
-          primaryStudent: true,
-        },
-        orderBy: { achievementDate: 'desc' },
-      });
+    }
+    if (dateFilter) achWhere.achievementDate = dateFilter;
+    if (achievementCategoryId && achievementCategoryId !== 'ALL') {
+      const looksLikeName = achievementCategoryId.includes(' ') || achievementCategoryId.length < 20;
+      achWhere.category = looksLikeName
+        ? { name: { equals: achievementCategoryId, mode: 'insensitive' } }
+        : { id: achievementCategoryId };
+    }
+    if (level && level !== 'ALL') {
+      achWhere.level = level;
+    }
+    if (search) {
+      achWhere.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { personName: { contains: search, mode: 'insensitive' } },
+        { primaryStudentRoll: { contains: search, mode: 'insensitive' } },
+        { organizationEventName: { contains: search, mode: 'insensitive' } },
+      ];
     }
 
-    if (category === 'STUDENTS' || category === 'COMPLETE_INSTITUTIONAL_DUMP') {
-      const stuWhere: any = { deletedAt: null };
-      if (departmentId) stuWhere.departmentId = departmentId;
-      if (batch && batch !== 'ALL') stuWhere.batch = batch;
-      if (statusParam === 'ACTIVE') stuWhere.isActive = true;
-      if (statusParam === 'INACTIVE') stuWhere.isActive = false;
+    const stuWhere: any = { deletedAt: null };
+    if (departmentId) stuWhere.departmentId = departmentId;
+    if (batch && batch !== 'ALL') stuWhere.batch = batch;
+    if (statusParam === 'ACTIVE') stuWhere.isActive = true;
+    if (statusParam === 'INACTIVE') stuWhere.isActive = false;
 
-      students = await prisma.student.findMany({
-        where: stuWhere,
-        include: {
-          department: true,
-          user: true,
-        },
-        orderBy: [{ batch: 'desc' }, { rollNumber: 'asc' }],
-      });
+    const facWhere: any = { deletedAt: null };
+    if (departmentId) facWhere.departmentId = departmentId;
+    if (statusParam === 'ACTIVE') facWhere.isActive = true;
+    if (statusParam === 'INACTIVE') facWhere.isActive = false;
+
+    const evtWhere: any = { deletedAt: null };
+    if (departmentId) evtWhere.departmentId = departmentId;
+    if (academicYear && academicYear !== 'ALL') evtWhere.academicYear = academicYear;
+    if (statusParam && statusParam !== 'ALL') evtWhere.status = statusParam;
+    if (dateFilter) evtWhere.startDate = dateFilter;
+    if (achievementCategoryId && achievementCategoryId !== 'ALL') {
+      const looksLikeName = achievementCategoryId.includes(' ') || achievementCategoryId.length < 20;
+      evtWhere.category = looksLikeName
+        ? { name: { equals: achievementCategoryId, mode: 'insensitive' } }
+        : { id: achievementCategoryId };
+    }
+    if (search) {
+      evtWhere.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { venue: { contains: search, mode: 'insensitive' } },
+        { organizer: { contains: search, mode: 'insensitive' } },
+        { speaker: { contains: search, mode: 'insensitive' } },
+        { speakerResourcePerson: { contains: search, mode: 'insensitive' } },
+      ];
     }
 
-    if (category === 'FACULTY' || category === 'COMPLETE_INSTITUTIONAL_DUMP') {
-      const facWhere: any = { deletedAt: null };
-      if (departmentId) facWhere.departmentId = departmentId;
-      if (statusParam === 'ACTIVE') facWhere.isActive = true;
-      if (statusParam === 'INACTIVE') facWhere.isActive = false;
-
-      faculty = await prisma.faculty.findMany({
-        where: facWhere,
-        include: {
-          department: true,
-          user: true,
-        },
-        orderBy: [{ designation: 'asc' }, { name: 'asc' }],
-      });
+    const incWhere: any = { deletedAt: null };
+    if (departmentId) {
+      incWhere.OR = [
+        { student: { departmentId } },
+        { reporter: { departmentId } },
+      ];
     }
+    if (statusParam && statusParam !== 'ALL') incWhere.status = statusParam;
+    if (dateFilter) incWhere.createdAt = dateFilter;
 
-    if (category === 'EVENTS' || category === 'COMPLETE_INSTITUTIONAL_DUMP') {
-      const evtWhere: any = { deletedAt: null };
-      if (departmentId) evtWhere.departmentId = departmentId;
-      if (academicYear && academicYear !== 'ALL') evtWhere.academicYear = academicYear;
-      if (statusParam && statusParam !== 'ALL') evtWhere.status = statusParam;
-      if (Object.keys(dateFilter).length > 0) evtWhere.startDate = dateFilter;
+    const [achievements, students, faculty, events, incidents] = await Promise.all([
+      wantAchievements
+        ? prisma.achievement.findMany({
+            where: achWhere,
+            include: { category: true, department: true, teamMembers: true, primaryStudent: true },
+            orderBy: { achievementDate: 'desc' },
+          })
+        : Promise.resolve([]),
+      wantStudents
+        ? prisma.student.findMany({
+            where: stuWhere,
+            include: { department: true, user: true },
+            orderBy: [{ batch: 'desc' }, { rollNumber: 'asc' }],
+          })
+        : Promise.resolve([]),
+      wantFaculty
+        ? prisma.faculty.findMany({
+            where: facWhere,
+            include: { department: true, user: true },
+            orderBy: [{ designation: 'asc' }, { name: 'asc' }],
+          })
+        : Promise.resolve([]),
+      wantEvents
+        ? prisma.event.findMany({
+            where: evtWhere,
+            include: { category: true, department: true, _count: { select: { registrations: true } } },
+            orderBy: { startDate: 'desc' },
+          })
+        : Promise.resolve([]),
+      wantIncidents
+        ? prisma.incident.findMany({
+            where: incWhere,
+            include: { student: true, reporter: true, actions: { take: 1, orderBy: { createdAt: 'desc' } } },
+            orderBy: { createdAt: 'desc' },
+          })
+        : Promise.resolve([]),
+    ]);
 
-      events = await prisma.event.findMany({
-        where: evtWhere,
-        include: {
-          category: true,
-          department: true,
-          _count: { select: { registrations: true } },
-        },
-        orderBy: { startDate: 'desc' },
-      });
-    }
-
-    if (category === 'INCIDENTS' || category === 'COMPLETE_INSTITUTIONAL_DUMP') {
-      const incWhere: any = { deletedAt: null };
-      if (statusParam && statusParam !== 'ALL') incWhere.status = statusParam;
-
-      incidents = await prisma.incident.findMany({
-        where: incWhere,
-        include: {
-          student: true,
-          reporter: true,
-          actions: { take: 1, orderBy: { createdAt: 'desc' } },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-    }
-
-    // 2. Format Rows for Target Category
     let targetRows: Record<string, any>[] = [];
     if (category === 'ACHIEVEMENTS') {
       targetRows = formatAchievementRows(achievements);
@@ -182,22 +223,27 @@ export async function GET(req: NextRequest) {
       targetRows = formatAchievementRows(achievements);
     }
 
-    // 3. If preview mode, return JSON sample
     if (isPreview) {
       return NextResponse.json({
         success: true,
         category,
         totalCount: targetRows.length,
+        actorRole: user.role,
+        scopedDepartmentId: departmentId,
+        scopedDepartment: departmentInfo,
         departmentName: deptName,
         academicYear: acYearLabel,
+        timelinePreset: resolvedTimeline.preset,
+        timelineLabel: resolvedTimeline.label,
+        iqacNotice: IQAC_EXPORT_NOTICE,
+        jntua5aNotice: JNTUA_5A_NOTICE,
         headers: targetRows.length > 0 ? Object.keys(targetRows[0]) : [],
         sample: targetRows.slice(0, 5),
       });
     }
 
-    // Audit Log entry
-    try {
-      await prisma.auditLog.create({
+    await prisma.auditLog
+      .create({
         data: {
           action: 'INSTITUTIONAL_DATA_EXPORTED',
           entityType: category,
@@ -209,26 +255,25 @@ export async function GET(req: NextRequest) {
             format,
             department: deptName,
             academicYear: acYearLabel,
+            timeline: resolvedTimeline.label,
             recordCount: targetRows.length,
             timestamp: new Date().toISOString(),
           }),
         },
-      });
-    } catch (auditErr) {
-      console.warn('[Export Audit Log Warning]:', auditErr);
-    }
+      })
+      .catch(() => null);
 
     const timestampStr = new Date().toISOString().split('T')[0];
     const deptTag = departmentInfo?.code || 'COLLEGE';
     const baseFilename = `SREC_${deptTag}_${category}_${timestampStr}`;
 
-    // 4. Return Requested Format
     if (format === 'xlsx') {
       const excelBuffer = generateExcelBuffer(
         {
           departmentCode: departmentInfo?.code,
           departmentName: deptName,
           academicYear: acYearLabel,
+          timelineLabel: resolvedTimeline.label,
           generatedBy: `${user.name} (${user.role})`,
           achievements,
           students,
@@ -263,11 +308,11 @@ export async function GET(req: NextRequest) {
 
     if (format === 'html') {
       const htmlString = generatePrintableHtml({
-        title: `${category.replace(/_/g, ' ')} Compliance Dossier`,
+        title: `${category.replace(/_/g, ' ')} Compliance Dossier (${resolvedTimeline.label})`,
         subtitle: `Official Academic & Institutional Record Audit`,
         category: category.replace(/_/g, ' '),
         departmentName: deptName,
-        academicYear: acYearLabel,
+        academicYear: `${acYearLabel} • ${resolvedTimeline.label}`,
         rows: targetRows,
       });
 
@@ -275,12 +320,12 @@ export async function GET(req: NextRequest) {
         status: 200,
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
+          'Content-Disposition': `inline; filename="${baseFilename}.html"`,
           'Cache-Control': 'no-store',
         },
       });
     }
 
-    // Default JSON with manifest
     const jsonOutput = {
       institutionalManifest: {
         institution: 'Santhiram Engineering College (Autonomous), Nandyal',
@@ -288,6 +333,7 @@ export async function GET(req: NextRequest) {
         accreditation: 'NAAC "A+" Grade Accredited | NBA Tier-1 Compliant',
         department: deptName,
         academicYear: acYearLabel,
+        timeline: resolvedTimeline.label,
         category,
         totalRecords: targetRows.length,
         extractedAt: new Date().toISOString(),

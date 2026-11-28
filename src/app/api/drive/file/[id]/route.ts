@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { getStoredDriveTokens, getUserDriveTokens, saveUserDriveTokens } from '@/lib/drive';
+import {
+  getStoredDriveTokens,
+  getUserDriveTokens,
+  saveUserDriveTokens,
+  verifyDriveAssetAccess,
+} from '@/lib/drive';
 import { getCachedMedia, setCachedMedia } from '@/lib/media-cache';
 import { google } from 'googleapis';
 import path from 'path';
@@ -22,6 +27,15 @@ export async function GET(
 
   // Strip query artifacts or prefixes if any
   const fileId = rawId.trim();
+
+  // Security Boundary (ISS-01): Reject private certificates & grievance attachments on the public CDN route
+  const assetCheck = await verifyDriveAssetAccess(fileId, null).catch(() => null);
+  if (assetCheck?.isPrivateDocument) {
+    return NextResponse.json(
+      { error: 'Forbidden: Private documents must be accessed via authenticated /api/drive/document/[id]' },
+      { status: 403, headers: { 'Cache-Control': 'private, no-store' } }
+    );
+  }
 
   // Query parameters for dynamic CDN image resizing (like Cloudflare Image Resizing / S3 CloudFront)
   const { searchParams } = new URL(req.url);
@@ -152,34 +166,6 @@ export async function GET(
                   }
                 } catch (rfErr) {
                   console.warn(`[Drive Stream] Author token auto-refresh failed for ${authorUserId}:`, rfErr);
-                }
-              }
-            } else {
-              // Try finding certificate media
-              const achMedia = await prisma.achievementMedia.findFirst({
-                where: { url: { contains: fileId } },
-                include: { achievement: { select: { primaryStudent: { select: { user: { select: { id: true } } } } } } },
-              });
-              const studentUserId = achMedia?.achievement?.primaryStudent?.user?.id;
-              if (studentUserId) {
-                authorUserId = studentUserId;
-                const studentTokens = await getUserDriveTokens(studentUserId);
-                if (studentTokens?.access_token) systemToken = studentTokens.access_token;
-                if ((!systemToken || (studentTokens?.expiry_date && Date.now() >= studentTokens.expiry_date)) && studentTokens?.refresh_token) {
-                  try {
-                    const oauth2Client = new google.auth.OAuth2(
-                      process.env.GOOGLE_CLIENT_ID,
-                      process.env.GOOGLE_CLIENT_SECRET
-                    );
-                    oauth2Client.setCredentials({ refresh_token: studentTokens.refresh_token });
-                    const { token } = await oauth2Client.getAccessToken();
-                    if (token) {
-                      systemToken = token;
-                      await saveUserDriveTokens(studentUserId, { access_token: token });
-                    }
-                  } catch (rfErr) {
-                    console.warn(`[Drive Stream] Student token auto-refresh failed for ${studentUserId}:`, rfErr);
-                  }
                 }
               }
             }

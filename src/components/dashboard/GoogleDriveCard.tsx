@@ -129,7 +129,7 @@ export const GoogleDriveCard: React.FC<GoogleDriveCardProps> = ({ className = ''
   }
 
   return (
-    <div className={`rounded-2xl border border-border/80 bg-card/70 backdrop-blur-md p-5 shadow-subtle transition-all duration-200 ${className}`}>
+    <div className={`glass-card p-5 ${className}`}>
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-4">
         <div className="flex items-center gap-3">

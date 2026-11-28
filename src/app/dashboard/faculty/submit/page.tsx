@@ -24,9 +24,15 @@ import {
   Plus,
 } from 'lucide-react';
 import { DriveFileUploader } from '@/components/drive/DriveFileUploader';
+import { useSession } from 'next-auth/react';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
+import { createCustomCategoryOption, removeCategoryOption } from '@/lib/client-creatable';
+import { canManageCategories } from '@/lib/admin-auth';
 
 export default function FacultySubmitRecordPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const canDeleteCategory = canManageCategories((session?.user as any)?.role);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -282,35 +288,56 @@ export default function FacultySubmitRecordPage() {
                 <label htmlFor="categoryId" className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
                   Category *
                 </label>
-                <select
+                <CreatableSelect
                   id="categoryId"
+                  required
                   value={formData.categoryId}
-                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-background border border-border rounded-xl text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormData({ ...formData, categoryId: val })}
+                  options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                  placeholder="Select category..."
+                  customOptionLabel="+ Custom Category..."
+                  customPlaceholder="Type custom category..."
+                  onCreateCustom={async (name) => {
+                    const created = await createCustomCategoryOption(name, 'ACHIEVEMENT');
+                    if (created) {
+                      setCategories((prev) =>
+                        prev.some((c) => c.id === created.value) ? prev : [...prev, { id: created.value, name: created.label }]
+                      );
+                    }
+                    return created;
+                  }}
+                  onRemoveOption={
+                    canDeleteCategory
+                      ? async (opt) => {
+                          const ok = await removeCategoryOption(opt);
+                          if (ok) {
+                            setCategories((prev) => prev.filter((c) => c.id !== opt.value));
+                          }
+                          return ok;
+                        }
+                      : undefined
+                  }
+                />
               </div>
 
               <div>
                 <label htmlFor="level" className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
                   Scope / Impact Level *
                 </label>
-                <select
+                <CreatableSelect
                   id="level"
+                  required
                   value={formData.level}
-                  onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-background border border-border rounded-xl text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-                >
-                  <option value="INTERNATIONAL">International (Scopus / SCI / IEEE)</option>
-                  <option value="NATIONAL">National (UGC Care / DST / AICTE)</option>
-                  <option value="STATE">State / Regional Level</option>
-                  <option value="COLLEGE">Institutional / College Level</option>
-                </select>
+                  onChange={(val) => setFormData({ ...formData, level: val })}
+                  options={[
+                    { value: 'INTERNATIONAL', label: 'International (Scopus / SCI / IEEE)' },
+                    { value: 'NATIONAL', label: 'National (UGC Care / DST / AICTE)' },
+                    { value: 'STATE', label: 'State / Regional Level' },
+                    { value: 'COLLEGE', label: 'Institutional / College Level' },
+                  ]}
+                  customOptionLabel="+ Custom Level..."
+                  customPlaceholder="Type custom scope level..."
+                />
               </div>
             </div>
 
@@ -364,18 +391,21 @@ export default function FacultySubmitRecordPage() {
                 <label htmlFor="academicYear" className="block text-xs font-semibold text-foreground uppercase tracking-wider mb-2">
                   Academic Year *
                 </label>
-                <select
+                <CreatableSelect
                   id="academicYear"
+                  required
                   value={formData.academicYear}
-                  onChange={(e) => setFormData({ ...formData, academicYear: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-background border border-border rounded-xl text-xs sm:text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-                >
-                  <option value="2026-2027">2026-2027</option>
-                  <option value="2025-2026">2025-2026</option>
-                  <option value="2024-2025">2024-2025</option>
-                  <option value="2023-2024">2023-2024</option>
-                  <option value="2022-2023">2022-2023</option>
-                </select>
+                  onChange={(val) => setFormData({ ...formData, academicYear: val })}
+                  options={[
+                    { value: '2026-2027', label: '2026-2027' },
+                    { value: '2025-2026', label: '2025-2026' },
+                    { value: '2024-2025', label: '2024-2025' },
+                    { value: '2023-2024', label: '2023-2024' },
+                    { value: '2022-2023', label: '2022-2023' },
+                  ]}
+                  customOptionLabel="+ Custom Academic Year..."
+                  customPlaceholder="e.g. 2027-2028"
+                />
               </div>
             </div>
 

@@ -124,7 +124,7 @@ function SignInContent() {
         )}
 
         {/* Main Sign-In Card */}
-        <Card variant="glass" className="border-border/70 shadow-2xl backdrop-blur-xl">
+        <Card variant="glass" className="shadow-2xl">
           <CardContent className="p-6 sm:p-8 space-y-6">
             {/* Google Workspace SSO Primary Action */}
             <div className="space-y-4">

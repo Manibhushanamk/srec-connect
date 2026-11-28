@@ -121,6 +121,7 @@ model User {
   @@index([status])
   @@index([role, departmentId])
   @@index([status, deletedAt])
+  @@index([deletedAt, departmentId, role])
 }
 
 model Department {
@@ -151,6 +152,7 @@ model Department {
   achievements Achievement[]
   events       Event[]
   announcements Announcement[]
+  incidents     Incident[]
   bulkBatches  PendingBulkBatch[]
 
   @@index([code])
@@ -164,6 +166,8 @@ model Batch {
   isActive  Boolean   @default(true)
   students  Student[]
   createdAt DateTime  @default(now())
+
+  @@index([isActive, startYear])
 }
 
 model Section {
@@ -211,6 +215,8 @@ model Student {
   @@index([rollNumber])
   @@index([departmentId])
   @@index([batch])
+  @@index([email])
+  @@index([deletedAt, isActive, departmentId, batch])
 }
 
 model Faculty {
@@ -241,6 +247,8 @@ model Faculty {
 
   @@index([departmentId])
   @@index([roleCategory])
+  @@index([email])
+  @@index([deletedAt, isActive, departmentId, displayOrder])
 }
 
 // ── SOCIAL COMMUNITY & FEED (Instagram-inspired) ──
@@ -277,6 +285,8 @@ model Post {
   @@index([visibility])
   @@index([deletedAt])
   @@index([visibility, deletedAt, createdAt])
+  @@index([deletedAt, isPinned, createdAt])
+  @@index([authorId, deletedAt, createdAt])
 }
 
 model PostMedia {
@@ -395,6 +405,7 @@ model Category {
   events       Event[]
 
   @@index([name])
+  @@index([isActive, deletedAt, type, displayOrder])
 }
 
 model Achievement {
@@ -450,6 +461,7 @@ model Achievement {
   @@index([academicYear])
   @@index([primaryStudentRoll])
   @@index([departmentId, status])
+  @@index([departmentId, status, createdAt])
   @@index([status, deletedAt])
   @@index([createdAt])
 }
@@ -529,6 +541,7 @@ model Event {
   @@index([status])
   @@index([departmentId, status])
   @@index([status, deletedAt])
+  @@index([deletedAt, status, startDate])
 }
 
 model EventMedia {
@@ -621,9 +634,12 @@ model Incident {
   reporter          User               @relation("ReportedIncidents", fields: [reporterId], references: [id], onDelete: Cascade)
   studentId         String?
   student           Student?           @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  departmentId      String?
+  department        Department?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   title             String
   description       String
   category          IncidentCategory   @default(CLASSROOM_DISCIPLINE)
+  customCategory    String?
   priority          IncidentPriority   @default(MEDIUM)
   isConfidentialHOD Boolean            @default(false)
   status            IncidentStatus     @default(REPORTED)
@@ -639,6 +655,7 @@ model Incident {
   @@index([status])
   @@index([isConfidentialHOD])
   @@index([deletedAt])
+  @@index([departmentId, status, deletedAt])
 }
 
 model IncidentResponse {
@@ -802,6 +819,7 @@ model Notification {
   @@index([userId])
   @@index([isRead])
   @@index([createdAt])
+  @@index([userId, isRead, createdAt])
 }
 
 // ── AUDIT LOGS & SETTINGS ──
@@ -823,6 +841,7 @@ model AuditLog {
   @@index([actorId])
   @@index([action])
   @@index([createdAt])
+  @@index([actorId, createdAt])
 }
 
 model SystemSetting {
@@ -874,6 +893,7 @@ model BugReport {
   title              String
   description        String
   category           BugCategory  @default(OTHER)
+  customCategory     String?
   severity           BugSeverity  @default(MEDIUM)
   status             BugStatus    @default(NEW)
   stepsToReproduce   String?

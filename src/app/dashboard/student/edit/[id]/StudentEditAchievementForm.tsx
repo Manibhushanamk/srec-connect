@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { DriveFileUploader } from '@/components/drive/DriveFileUploader';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
+import { createCustomCategoryOption } from '@/lib/client-creatable';
 import {
   ArrowLeft,
   Award,
@@ -48,9 +50,10 @@ interface StudentEditAchievementFormProps {
 
 export function StudentEditAchievementForm({
   achievement,
-  categories,
+  categories: initialCategories,
 }: StudentEditAchievementFormProps) {
   const router = useRouter();
+  const [categories, setCategories] = useState(initialCategories);
   const [formData, setFormData] = useState({
     title: achievement.title,
     description: achievement.description || '',
@@ -220,35 +223,43 @@ export function StudentEditAchievementForm({
         {/* Category & Level */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Category *</label>
-            <select
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Category *</label>
+            <CreatableSelect
               required
               value={formData.categoryId}
-              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-100 text-sm focus:border-brand-500 focus:outline-none"
-            >
-              <option value="">Select Category</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setFormData({ ...formData, categoryId: val })}
+              options={categories.map((c) => ({ value: c.id, label: c.name }))}
+              placeholder="Select Category"
+              customOptionLabel="+ Custom Category..."
+              customPlaceholder="Type custom category..."
+              onCreateCustom={async (name) => {
+                const created = await createCustomCategoryOption(name, 'ACHIEVEMENT');
+                if (created) {
+                  setCategories((prev) =>
+                    prev.some((c) => c.id === created.value) ? prev : [...prev, { id: created.value, name: created.label }]
+                  );
+                }
+                return created;
+              }}
+            />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">Level *</label>
-            <select
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">Level *</label>
+            <CreatableSelect
+              required
               value={formData.level}
-              onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-100 text-sm focus:border-brand-500 focus:outline-none"
-            >
-              <option value="COLLEGE">College / Intra-Campus</option>
-              <option value="INTER_COLLEGE">Inter-College</option>
-              <option value="STATE">State Level</option>
-              <option value="NATIONAL">National Level</option>
-              <option value="INTERNATIONAL">International Level</option>
-            </select>
+              onChange={(val) => setFormData({ ...formData, level: val })}
+              options={[
+                { value: 'COLLEGE', label: 'College / Intra-Campus' },
+                { value: 'INTER_COLLEGE', label: 'Inter-College' },
+                { value: 'STATE', label: 'State Level' },
+                { value: 'NATIONAL', label: 'National Level' },
+                { value: 'INTERNATIONAL', label: 'International Level' },
+              ]}
+              customOptionLabel="+ Custom Level..."
+              customPlaceholder="Type custom level..."
+            />
           </div>
         </div>
 
@@ -300,20 +311,23 @@ export function StudentEditAchievementForm({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-muted-foreground mb-1.5">
               Academic Year *
             </label>
-            <select
+            <CreatableSelect
+              required
               value={formData.academicYear}
-              onChange={(e) => setFormData({ ...formData, academicYear: e.target.value })}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-800/80 border border-slate-700 text-slate-100 text-sm focus:border-brand-500 focus:outline-none"
-            >
-              <option value="2026-2027">2026-2027</option>
-              <option value="2025-2026">2025-2026</option>
-              <option value="2024-2025">2024-2025</option>
-              <option value="2023-2024">2023-2024</option>
-              <option value="2022-2023">2022-2023</option>
-            </select>
+              onChange={(val) => setFormData({ ...formData, academicYear: val })}
+              options={[
+                { value: '2026-2027', label: '2026-2027' },
+                { value: '2025-2026', label: '2025-2026' },
+                { value: '2024-2025', label: '2024-2025' },
+                { value: '2023-2024', label: '2023-2024' },
+                { value: '2022-2023', label: '2022-2023' },
+              ]}
+              customOptionLabel="+ Custom Academic Year..."
+              customPlaceholder="e.g. 2027-2028"
+            />
           </div>
         </div>
 

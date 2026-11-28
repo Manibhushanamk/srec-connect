@@ -59,9 +59,9 @@ export const RightContextRail: React.FC = () => {
   }, []);
 
   return (
-    <div className="hidden xl:flex flex-col w-80 flex-shrink-0 sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto no-scrollbar pb-6 space-y-4">
+    <div className="hidden xl:flex flex-col w-72 xl:w-[300px] flex-shrink-0 sticky top-20 max-h-[calc(100dvh-5.75rem)] overflow-y-auto no-scrollbar pb-4 space-y-4">
       {/* 1. Official Announcements */}
-      <div className="bg-card rounded-2xl border border-border p-4 shadow-subtle">
+      <div className="glass-card p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
             <Megaphone className="w-4 h-4 text-amber-500" />
@@ -129,7 +129,7 @@ export const RightContextRail: React.FC = () => {
       </div>
 
       {/* 2. Upcoming Events Card */}
-      <div className="bg-card rounded-2xl border border-border p-4 shadow-subtle">
+      <div className="glass-card p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
             <Calendar className="w-4 h-4 text-primary" />
@@ -177,8 +177,8 @@ export const RightContextRail: React.FC = () => {
 
       {/* Notice Detail Modal */}
       {selectedNotice && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative w-full max-w-lg bg-card rounded-2xl border border-border shadow-2xl p-6 space-y-4">
+        <div className="fixed inset-0 z-50 bg-[#0D0E12]/70 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-lg glass-sheet liquid-sheet-enter rounded-3xl shadow-2xl p-6 space-y-4">
             <div className="flex items-start justify-between border-b border-border pb-3">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">

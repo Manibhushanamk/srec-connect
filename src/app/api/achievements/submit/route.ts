@@ -5,9 +5,11 @@ import prisma from '@/lib/prisma';
 import { PersonType, SubmissionStatus } from '@prisma/client';
 import { parseRollNumber } from '@/lib/studentHelper';
 import { sanitizeText } from '@/lib/sanitize';
+import { AchievementSubmitSchema, parseJsonBody } from '@/lib/schemas';
+import { resolveOrCreateCategoryId } from '@/lib/category-batch-helpers';
 
 export async function POST(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(authOptions).catch(() => null);
   const user = session?.user as any;
 
   if (!user?.email) {
@@ -23,22 +25,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   }
 
-  const body = await req.json();
+  const parsed = await parseJsonBody(req, AchievementSubmitSchema);
+  if (!parsed.success) return parsed.response;
+
   const {
     title,
     description,
-    categoryId,
+    categoryId: rawCategoryId,
+    customCategoryName,
     level,
     positionRank,
     organizationEventName,
     academicYear,
     achievementDate,
     googleDriveUrl,
+    certificateUrl,
     teamMembers,
     postToFeed,
     feedCaption,
     feedImageUrl,
-  } = body;
+    targetRollNumber,
+    targetStudentId,
+  } = parsed.data;
+
+  const categoryId = await resolveOrCreateCategoryId({
+    categoryId: rawCategoryId,
+    customCategoryName,
+    type: 'ACHIEVEMENT',
+  });
 
   const cleanTitle = sanitizeText(title);
   const cleanOrg = sanitizeText(organizationEventName);
@@ -50,15 +64,17 @@ export async function POST(req: NextRequest) {
   }
 
   // Security: Protocol and host validation on googleDriveUrl / certificateUrl
-  if (googleDriveUrl) {
-    const trimmedUrl = String(googleDriveUrl).trim();
+  const submittedProofUrl = googleDriveUrl || certificateUrl;
+  if (submittedProofUrl) {
+    const trimmedUrl = String(submittedProofUrl).trim();
     const isValidUrl =
       /^https:\/\/(drive|docs)\.google\.com\//i.test(trimmedUrl) ||
       /^https:\/\/lh3\.googleusercontent\.com\//i.test(trimmedUrl) ||
+      trimmedUrl.startsWith('/api/drive/document/') ||
       trimmedUrl.startsWith('/api/drive/file/') ||
       trimmedUrl.startsWith('/uploads/') ||
       trimmedUrl.startsWith('http://localhost:3000/uploads/') ||
-      trimmedUrl.startsWith('http://localhost:3000/api/drive/file/') ||
+      trimmedUrl.startsWith('http://localhost:3000/api/drive/') ||
       /^https?:\/\/.+/i.test(trimmedUrl);
     if (!isValidUrl) {
       return NextResponse.json(
@@ -68,11 +84,58 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const isFacultyOrHOD = dbUser.role === 'FACULTY' || dbUser.role === 'HOD';
-  const personType = isFacultyOrHOD ? PersonType.FACULTY : PersonType.STUDENT;
-  const facultyId = dbUser.facultyId || dbUser.faculty?.id || null;
+  const normalizedRoll =
+    typeof targetRollNumber === 'string' && targetRollNumber.trim()
+      ? targetRollNumber.toUpperCase().trim()
+      : null;
+  const normalizedTargetStudentId =
+    typeof targetStudentId === 'string' && targetStudentId.trim() ? targetStudentId.trim() : null;
+  const isAssistSubmission = Boolean(normalizedRoll || normalizedTargetStudentId);
 
-  let targetDepartmentId = dbUser.departmentId || dbUser.faculty?.departmentId || dbUser.student?.departmentId || null;
+  const CAN_ASSIST_ROLES = new Set(['WEB_MANAGER', 'FACULTY', 'HOD', 'SUPER_ADMIN', 'ADMIN']);
+
+  let targetStudent: { id: string; name: string; rollNumber: string; departmentId: string | null } | null = null;
+  if (isAssistSubmission) {
+    if (!CAN_ASSIST_ROLES.has(dbUser.role)) {
+      return NextResponse.json(
+        { error: 'Forbidden: Only authorized department staff may submit on behalf of a student' },
+        { status: 403 }
+      );
+    }
+
+    targetStudent = await prisma.student.findFirst({
+      where: normalizedTargetStudentId
+        ? { id: normalizedTargetStudentId, deletedAt: null }
+        : { rollNumber: normalizedRoll!, deletedAt: null },
+      select: { id: true, name: true, rollNumber: true, departmentId: true },
+    });
+
+    if (!targetStudent) {
+      return NextResponse.json({ error: 'Target student not found' }, { status: 404 });
+    }
+
+    // Fail-closed departmental isolation for WEB_MANAGER, FACULTY, and HOD
+    if (dbUser.role !== 'SUPER_ADMIN') {
+      const actorDeptId = dbUser.departmentId || dbUser.faculty?.departmentId || null;
+      if (!actorDeptId || targetStudent.departmentId !== actorDeptId) {
+        return NextResponse.json(
+          { error: 'Forbidden: Cross-department on-behalf achievement submission is not allowed' },
+          { status: 403 }
+        );
+      }
+    }
+  }
+
+  const isFacultyOrHOD = !isAssistSubmission && (dbUser.role === 'FACULTY' || dbUser.role === 'HOD');
+  const personType = isFacultyOrHOD ? PersonType.FACULTY : PersonType.STUDENT;
+  const facultyId = isAssistSubmission ? null : dbUser.facultyId || dbUser.faculty?.id || null;
+
+  let targetDepartmentId =
+    targetStudent?.departmentId ||
+    dbUser.departmentId ||
+    dbUser.faculty?.departmentId ||
+    dbUser.student?.departmentId ||
+    null;
   if (!targetDepartmentId) {
     const defaultDept = await prisma.department.findFirst({
       where: { OR: [{ code: 'AIML' }, { code: 'CSE(AI&ML)' }] },
@@ -84,7 +147,7 @@ export async function POST(req: NextRequest) {
     data: {
       title: cleanTitle,
       description: cleanDesc,
-      personName: dbUser.name || (isFacultyOrHOD ? 'Faculty Scholar' : 'Student Scholar'),
+      personName: targetStudent?.name || dbUser.name || (isFacultyOrHOD ? 'Faculty Scholar' : 'Student Scholar'),
       personType,
       participationType: teamMembers && teamMembers.length > 0 ? 'TEAM' : 'SOLO',
       level: level || 'NATIONAL',
@@ -94,14 +157,39 @@ export async function POST(req: NextRequest) {
       achievementDate: new Date(achievementDate || Date.now()),
       departmentId: targetDepartmentId,
       categoryId,
-      primaryStudentId: isFacultyOrHOD ? null : dbUser.studentId,
-      primaryStudentRoll: isFacultyOrHOD ? null : dbUser.student?.rollNumber,
+      primaryStudentId: targetStudent ? targetStudent.id : isFacultyOrHOD ? null : dbUser.studentId,
+      primaryStudentRoll: targetStudent
+        ? targetStudent.rollNumber
+        : isFacultyOrHOD
+        ? null
+        : dbUser.student?.rollNumber,
       facultyId,
-      googleDriveUrl,
+      googleDriveUrl: submittedProofUrl || null,
+      certificateUrl: submittedProofUrl || null,
       status: isFacultyOrHOD ? SubmissionStatus.APPROVED : SubmissionStatus.PENDING,
       createdById: dbUser.id,
     },
   });
+
+  if (isAssistSubmission && targetStudent) {
+    await prisma.auditLog.create({
+      data: {
+        actorId: dbUser.id,
+        actorEmail: dbUser.email,
+        actorRole: dbUser.role,
+        action: 'ACHIEVEMENT_SUBMITTED_ON_BEHALF',
+        entityType: 'Achievement',
+        entityId: achievement.id,
+        metadata: JSON.stringify({
+          submittedById: dbUser.id,
+          submittedByRole: dbUser.role,
+          targetStudentId: targetStudent.id,
+          targetRollNumber: targetStudent.rollNumber,
+          departmentId: targetDepartmentId,
+        }),
+      },
+    });
+  }
 
   // Insert team members if any and link student accounts
   if (teamMembers && Array.isArray(teamMembers) && teamMembers.length > 0) {

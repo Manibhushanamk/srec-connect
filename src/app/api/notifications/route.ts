@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { NotificationPatchSchema, parseJsonBody } from '@/lib/schemas';
 
 export async function GET(req: NextRequest) {
   try {
@@ -53,8 +54,9 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const body = await req.json();
-    const { id, markAllAsRead } = body;
+    const parsed = await parseJsonBody(req, NotificationPatchSchema);
+    if (!parsed.success) return parsed.response;
+    const { id, markAllAsRead } = parsed.data;
 
     if (markAllAsRead) {
       await prisma.notification.updateMany({

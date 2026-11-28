@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { SubmissionStatus } from '@prisma/client';
 import { sanitizeText } from '@/lib/sanitize';
+import { AchievementPatchSchema, parseJsonBody } from '@/lib/schemas';
+import { resolveOrCreateCategoryId } from '@/lib/category-batch-helpers';
 import { parseRollNumber } from '@/lib/studentHelper';
 
 export async function GET(
@@ -118,11 +120,14 @@ export async function PATCH(
       );
     }
 
-    const body = await req.json();
+    const parsed = await parseJsonBody(req, AchievementPatchSchema);
+    if (!parsed.success) return parsed.response;
+
     const {
       title,
       description,
       categoryId,
+      customCategoryName,
       level,
       positionRank,
       organizationEventName,
@@ -131,7 +136,16 @@ export async function PATCH(
       googleDriveUrl,
       certificateUrl,
       teamMembers,
-    } = body;
+    } = parsed.data;
+
+    const resolvedCategoryId =
+      customCategoryName || categoryId
+        ? await resolveOrCreateCategoryId({
+            categoryId,
+            customCategoryName,
+            type: 'ACHIEVEMENT',
+          })
+        : undefined;
 
     const updateData: any = {};
     if (title !== undefined) updateData.title = sanitizeText(title);
@@ -141,7 +155,7 @@ export async function PATCH(
     if (level !== undefined) updateData.level = level;
     if (academicYear !== undefined) updateData.academicYear = academicYear;
     if (achievementDate !== undefined) updateData.achievementDate = new Date(achievementDate);
-    if (categoryId !== undefined) updateData.categoryId = categoryId;
+    if (resolvedCategoryId) updateData.categoryId = resolvedCategoryId;
 
     const fileUrl = googleDriveUrl || certificateUrl;
     if (fileUrl !== undefined) {

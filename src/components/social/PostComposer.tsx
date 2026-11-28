@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { memo, useState, useRef, useEffect } from 'react';
 import { useSession, signIn } from 'next-auth/react';
 import Link from 'next/link';
-import { Image, Send, X, Lock, Globe, AlertCircle, Sparkles, Users, UserPlus, HardDrive, AlertTriangle, ArrowRight, RefreshCw } from 'lucide-react';
+import { Image as ImageIcon, Send, X, Lock, Globe, AlertCircle, Sparkles, Users, UserPlus, HardDrive, AlertTriangle, ArrowRight, RefreshCw } from 'lucide-react';
 import { MAX_POST_IMAGES } from '@/lib/media-constants';
 import { MemberSelector, SelectedMember } from '@/components/shared/MemberSelector';
 
 interface PostComposerProps {
   onPostCreated?: (newPost: any) => void;
+  initialComposeMode?: 'post' | 'milestone' | null;
 }
 
 const TOPIC_TAGS = [
@@ -20,16 +21,30 @@ const TOPIC_TAGS = [
   '#Announcement',
 ];
 
-export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => {
+const PostComposerComponent: React.FC<PostComposerProps> = ({
+  onPostCreated,
+  initialComposeMode = null,
+}) => {
   const { data: session } = useSession();
-  const [content, setContent] = useState('');
+  const [content, setContent] = useState(
+    initialComposeMode === 'milestone' ? '#Milestone ' : ''
+  );
   const [visibility, setVisibility] = useState<'PUBLIC' | 'COLLEGE_ONLY'>('PUBLIC');
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [collaborators, setCollaborators] = useState<SelectedMember[]>([]);
   const [showCollabSelector, setShowCollabSelector] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(Boolean(initialComposeMode));
+
+  useEffect(() => {
+    if (initialComposeMode === 'milestone') {
+      setIsExpanded(true);
+      setContent((prev) => (prev.trim() ? prev : '#Milestone '));
+    } else if (initialComposeMode === 'post') {
+      setIsExpanded(true);
+    }
+  }, [initialComposeMode]);
   const [driveStatus, setDriveStatus] = useState<{
     isConnected?: boolean;
     folderId?: string;
@@ -90,7 +105,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
 
   if (!session?.user) {
     return (
-      <div className="social-card p-4 mb-5 border-border bg-card/60">
+      <div className="social-card p-4 mb-5">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">
@@ -109,6 +124,41 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
     );
   }
 
+  const compressImageFile = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = () => {
+        const resultStr = reader.result as string;
+        if (typeof window === 'undefined' || !file.type.startsWith('image/')) {
+          resolve(resultStr);
+          return;
+        }
+        const imgEl = new window.Image();
+        imgEl.onerror = () => resolve(resultStr);
+        imgEl.onload = () => {
+          const maxEdge = 1280;
+          const scale = Math.min(1, maxEdge / Math.max(imgEl.width || maxEdge, imgEl.height || maxEdge));
+          const targetW = Math.max(1, Math.round((imgEl.width || maxEdge) * scale));
+          const targetH = Math.max(1, Math.round((imgEl.height || maxEdge) * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = targetW;
+          canvas.height = targetH;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(resultStr);
+            return;
+          }
+          ctx.drawImage(imgEl, 0, 0, targetW, targetH);
+          const webpUrl = canvas.toDataURL('image/webp', 0.82);
+          resolve(webpUrl.startsWith('data:image/webp') ? webpUrl : resultStr);
+        };
+        imgEl.src = resultStr;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     setErrorMessage('');
     const files = e.target.files;
@@ -126,21 +176,14 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
         setErrorMessage('Only valid image files (JPG, PNG, WebP) are accepted.');
         return;
       }
-      readers.push(
-        new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        })
-      );
+      readers.push(compressImageFile(file));
     }
 
     Promise.all(readers)
-      .then((newBase64s) => {
-        setSelectedImages((prev) => [...prev, ...newBase64s].slice(0, MAX_POST_IMAGES));
+      .then((newCompressedDataUris) => {
+        setSelectedImages((prev) => [...prev, ...newCompressedDataUris].slice(0, MAX_POST_IMAGES));
       })
-      .catch((err) => {
+      .catch(() => {
         setErrorMessage('Failed to read image file.');
       });
 
@@ -208,7 +251,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
   };
 
   return (
-    <div className="social-card p-4 mb-5 border-border bg-card shadow-subtle transition-all duration-200">
+    <div className="social-card p-4 mb-5">
       <div className="flex gap-3">
         <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden">
           {session.user.image ? (
@@ -356,7 +399,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
 
           {/* Action Row */}
           {isExpanded && (
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/60">
+            <div className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-border/60">
               <div className="flex items-center gap-2 flex-wrap">
                 <input
                   type="file"
@@ -370,7 +413,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={selectedImages.length >= MAX_POST_IMAGES}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+                  className={`min-h-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${
                     selectedImages.length >= MAX_POST_IMAGES
                       ? 'bg-muted text-muted-foreground border-transparent cursor-not-allowed opacity-60'
                       : !driveStatus?.isConnected
@@ -378,14 +421,14 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
                       : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border-border'
                   }`}
                 >
-                  <Image className="w-3.5 h-3.5 text-emerald-500" />
+                  <ImageIcon className="w-3.5 h-3.5 text-emerald-500" aria-hidden="true" />
                   <span>Add Images ({selectedImages.length}/{MAX_POST_IMAGES}){!driveStatus?.isConnected ? ' • Drive Req' : ''}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setShowCollabSelector(!showCollabSelector)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-colors ${
+                  className={`min-h-[44px] inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-colors ${
                     collaborators.length > 0 || showCollabSelector
                       ? 'bg-cyan-950/60 border-cyan-700/80 text-cyan-300'
                       : 'bg-secondary text-secondary-foreground hover:bg-secondary/80 border-border'
@@ -396,16 +439,17 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
                 </button>
 
                 <select
+                  aria-label="Post visibility"
                   value={visibility}
                   onChange={(e) => setVisibility(e.target.value as any)}
-                  className="text-xs bg-secondary border border-border text-foreground rounded-xl px-2.5 py-1.5 focus:outline-none"
+                  className="min-h-[44px] text-xs bg-secondary border border-border text-foreground rounded-xl px-3 py-2 focus:outline-none"
                 >
                   <option value="PUBLIC">🌍 Public</option>
                   <option value="COLLEGE_ONLY">🔒 College Only</option>
                 </select>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 ml-auto">
                 <button
                   type="button"
                   onClick={() => {
@@ -414,7 +458,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
                     setSelectedImages([]);
                     setErrorMessage('');
                   }}
-                  className="btn-ghost text-xs py-1.5 px-3"
+                  className="btn-ghost min-h-[44px] text-xs py-2 px-3"
                 >
                   Cancel
                 </button>
@@ -422,7 +466,7 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
                   type="button"
                   onClick={handleSubmit}
                   disabled={isSubmitting || !content.trim() || (selectedImages.length > 0 && !driveStatus?.isConnected)}
-                  className="btn-primary text-xs py-1.5 px-4 gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-primary min-h-[44px] text-xs py-2 px-4 gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
                     <span className="animate-pulse">Posting...</span>
@@ -447,4 +491,5 @@ export const PostComposer: React.FC<PostComposerProps> = ({ onPostCreated }) => 
   );
 };
 
+export const PostComposer = memo(PostComposerComponent);
 export default PostComposer;

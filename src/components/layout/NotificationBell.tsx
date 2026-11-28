@@ -80,8 +80,9 @@ export function NotificationBell() {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl text-muted-foreground hover:text-foreground bg-secondary/60 hover:bg-secondary border border-border transition-colors focus:outline-none"
+        className="relative min-h-[44px] min-w-[44px] inline-flex items-center justify-center p-2 rounded-xl text-muted-foreground hover:text-foreground bg-secondary/60 hover:bg-secondary border border-border transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
         aria-label="Notifications"
       >
         <Bell className="w-4 h-4" />
@@ -92,9 +93,9 @@ export function NotificationBell() {
         )}
       </button>
 
-      {/* Popover Dropdown */}
+      {/* Popover Dropdown (menu surface without nested backdrop-filter inside sticky glass-header) */}
       {isOpen && (
-        <div className="fixed sm:absolute left-3 right-3 sm:left-auto sm:right-0 top-16 sm:top-full mt-2 sm:w-96 max-w-sm sm:max-w-none ml-auto rounded-2xl bg-card border border-border shadow-2xl z-50 overflow-hidden backdrop-blur-xl animate-fade-in">
+        <div className="fixed sm:absolute left-3 right-3 sm:left-auto sm:right-0 top-16 sm:top-full mt-2 sm:w-96 max-w-sm sm:max-w-none ml-auto rounded-2xl glass-menu-surface liquid-sheet-enter z-50 overflow-hidden">
           <div className="p-3.5 border-b border-border flex items-center justify-between bg-secondary/40">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-foreground">Notifications</span>

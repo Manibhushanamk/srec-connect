@@ -5,10 +5,24 @@ import prisma from '@/lib/prisma';
 import { canAccessAdmin, isSuperAdmin } from '@/lib/rbac';
 import { SubmissionStatus } from '@prisma/client';
 import { sanitizeText, sanitizeSafeUrl } from '@/lib/sanitize';
+import {
+  resolveScopedDepartmentId,
+  toPrivateDocumentUrl,
+  validateAchievementTransition,
+} from '@/lib/admin-auth';
+import {
+  AdminAchievementDeleteSchema,
+  AdminAchievementPatchSchema,
+  AdminAchievementsQuerySchema,
+  parseJsonBody,
+  parseQueryParams,
+} from '@/lib/schemas';
+import { resolveOrCreateCategoryId } from '@/lib/category-batch-helpers';
+import { buildDateRangePrismaFilter, resolveTimelineDateRange } from '@/lib/timeline';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions).catch(() => null);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -23,68 +37,197 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const statusParam = searchParams.get('status');
+    const parsedQuery = parseQueryParams(searchParams, AdminAchievementsQuerySchema);
+    if (!parsedQuery.success) return parsedQuery.response;
 
-    const where: any = { deletedAt: null };
+    const {
+      status: rawStatus,
+      timeline,
+      dateFrom,
+      dateTo,
+      categoryId,
+      level,
+      academicYear,
+      departmentId: requestedDepartmentId,
+      search,
+    } = parsedQuery.data;
+    const statusParam = rawStatus?.toUpperCase();
+
+    const scopedDepartmentId = resolveScopedDepartmentId(
+      user.role,
+      user.departmentId,
+      requestedDepartmentId
+    );
+    const baseWhere: any = { deletedAt: null };
+    if (scopedDepartmentId) {
+      baseWhere.departmentId = scopedDepartmentId;
+    }
+
+    const timelineInfo = resolveTimelineDateRange(timeline, dateFrom, dateTo);
+    const dateRange = buildDateRangePrismaFilter(timeline, dateFrom, dateTo);
+    if (dateRange) {
+      baseWhere.achievementDate = dateRange;
+    }
+    if (categoryId && categoryId !== 'ALL') {
+      baseWhere.categoryId = categoryId;
+    }
+    if (level && level !== 'ALL') {
+      baseWhere.level = level;
+    }
+    if (academicYear && academicYear !== 'ALL') {
+      baseWhere.academicYear = academicYear;
+    }
+    if (search) {
+      baseWhere.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { personName: { contains: search, mode: 'insensitive' } },
+        { primaryStudentRoll: { contains: search, mode: 'insensitive' } },
+        { organizationEventName: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const where: any = { ...baseWhere };
     if (statusParam && statusParam !== 'ALL') {
-      where.status = statusParam as SubmissionStatus;
+      if (statusParam === 'SUBMITTED') {
+        where.status = { in: [SubmissionStatus.DRAFT, SubmissionStatus.PENDING] };
+      } else {
+        where.status = statusParam as SubmissionStatus;
+      }
     }
 
-    // Enforce department boundary: HOD and Web Manager can only view their own department honors
-    if (!isSuperAdmin(user.role)) {
-      where.departmentId = user.departmentId || 'no_department_bound';
+    const [achievements, groupedCounts, scopedDepartment] = await Promise.all([
+      prisma.achievement.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          category: true,
+          department: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              shortName: true,
+            },
+          },
+          teamMembers: {
+            select: {
+              id: true,
+              rollNumber: true,
+              studentName: true,
+              studentId: true,
+              isLeader: true,
+            },
+          },
+          posts: {
+            include: {
+              media: true,
+            },
+          },
+          primaryStudent: {
+            select: {
+              id: true,
+              rollNumber: true,
+              name: true,
+              departmentName: true,
+              batch: true,
+              section: true,
+            },
+          },
+          faculty: {
+            select: {
+              id: true,
+              name: true,
+              designation: true,
+              departmentName: true,
+            },
+          },
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+            },
+          },
+          media: true,
+        },
+      }),
+      prisma.achievement.groupBy({
+        by: ['status'],
+        where: baseWhere,
+        _count: { id: true },
+      }),
+      scopedDepartmentId
+        ? prisma.department.findUnique({
+            where: { id: scopedDepartmentId },
+            select: { id: true, code: true, name: true },
+          })
+        : Promise.resolve(null),
+    ]);
+
+    const achIds = achievements.map((a) => a.id);
+    const auditLogs =
+      achIds.length > 0
+        ? await prisma.auditLog.findMany({
+            where: {
+              entityType: 'Achievement',
+              entityId: { in: achIds },
+            },
+            orderBy: { createdAt: 'desc' },
+            select: {
+              id: true,
+              entityId: true,
+              action: true,
+              actorEmail: true,
+              actorRole: true,
+              metadata: true,
+              createdAt: true,
+            },
+          })
+        : [];
+
+    const auditMap = new Map<string, typeof auditLogs>();
+    for (const entry of auditLogs) {
+      if (!entry.entityId) continue;
+      const list = auditMap.get(entry.entityId) || [];
+      list.push(entry);
+      auditMap.set(entry.entityId, list);
     }
 
-    const achievements = await prisma.achievement.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        category: true,
-        teamMembers: {
-          select: {
-            id: true,
-            rollNumber: true,
-            studentName: true,
-            studentId: true,
-            isLeader: true,
-          },
-        },
-        posts: {
-          include: {
-            media: true,
-          },
-        },
-        primaryStudent: {
-          select: {
-            id: true,
-            rollNumber: true,
-            name: true,
-            departmentName: true,
-            batch: true,
-            section: true,
-          },
-        },
-        faculty: {
-          select: {
-            id: true,
-            name: true,
-            designation: true,
-            departmentName: true,
-          },
-        },
-        createdBy: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-          },
-        },
-        media: true,
-      },
+    const statusCounts: Record<string, number> = {
+      DRAFT: 0,
+      PENDING: 0,
+      SUBMITTED: 0,
+      UNDER_REVIEW: 0,
+      APPROVED: 0,
+      RESUBMISSION_REQUIRED: 0,
+      REJECTED: 0,
+      PUBLISHED: 0,
+      ALL: 0,
+    };
+
+    for (const item of groupedCounts) {
+      statusCounts[item.status] = item._count.id;
+      statusCounts.ALL += item._count.id;
+    }
+    statusCounts.SUBMITTED = (statusCounts.DRAFT || 0) + (statusCounts.PENDING || 0);
+
+    const enrichedAchievements = achievements.map((ach) => ({
+      ...ach,
+      privateCertificateUrl: toPrivateDocumentUrl(ach.certificateUrl || ach.googleDriveUrl),
+      auditLogs: auditMap.get(ach.id) || [],
+    }));
+
+    return NextResponse.json({
+      achievements: enrichedAchievements,
+      statusCounts,
+      actorRole: user.role,
+      actorId: user.id,
+      scopedDepartmentId,
+      scopedDepartment,
+      timelinePreset: timelineInfo.preset,
+      timelineLabel: timelineInfo.label,
     });
-
-    return NextResponse.json({ achievements });
   } catch (error: any) {
     console.error('[Admin Achievements GET] Error:', error);
     return NextResponse.json({ error: 'Failed to fetch achievements' }, { status: 500 });
@@ -93,7 +236,7 @@ export async function GET(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions).catch(() => null);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -106,33 +249,45 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden: Insufficient privileges' }, { status: 403 });
     }
 
-    const body = await req.json();
+    const parsedBody = await parseJsonBody(req, AdminAchievementPatchSchema);
+    if (!parsedBody.success) return parsedBody.response;
+    const rawBody = await Promise.resolve(parsedBody.data as any);
     const {
       id,
       status,
       rejectionReason,
-      departmentId,
       title,
       description,
-      categoryId,
+      categoryId: rawCategoryId,
+      customCategoryName,
       level,
       positionRank,
       organizationEventName,
       personName,
       personType,
-      facultyDesignation,
-      primaryStudentRoll,
       academicYear,
-      achievementDate,
-      participationType,
-      teamName,
-      googleDriveUrl,
-      certificateUrl,
-      teamMembers,
-      postToFeed,
-      feedCaption,
-      feedImageUrl,
-    } = body;
+    } = rawBody;
+    const body = rawBody;
+    const categoryId =
+      customCategoryName || rawCategoryId
+        ? await resolveOrCreateCategoryId({
+            categoryId: rawCategoryId,
+            customCategoryName,
+            type: 'ACHIEVEMENT',
+          })
+        : undefined;
+    const departmentId = body.departmentId;
+    const facultyDesignation = body.facultyDesignation;
+    const primaryStudentRoll = body.primaryStudentRoll;
+    const achievementDate = body.achievementDate;
+    const participationType = body.participationType;
+    const teamName = body.teamName;
+    const googleDriveUrl = body.googleDriveUrl;
+    const certificateUrl = body.certificateUrl;
+    const teamMembers = body.teamMembers;
+    const postToFeed = body.postToFeed;
+    const feedCaption = body.feedCaption;
+    const feedImageUrl = body.feedImageUrl;
 
     if (!id) {
       return NextResponse.json({ error: 'Achievement ID is required' }, { status: 400 });
@@ -146,23 +301,40 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Achievement not found' }, { status: 404 });
     }
 
-    // Department boundary check: HOD and Web Manager can only modify achievements in their own department
-    if (!isSuperAdmin(user.role) && existing.departmentId && existing.departmentId !== user.departmentId) {
+    // Fail-closed department boundary check: HOD, Web Manager, and Faculty require matching departmentId
+    if (!isSuperAdmin(user.role)) {
+      if (!user.departmentId || existing.departmentId !== user.departmentId) {
+        return NextResponse.json(
+          { error: 'Forbidden: You can only modify honors belonging to your own department.' },
+          { status: 403 }
+        );
+      }
+    }
+
+    const transition = validateAchievementTransition({
+      status,
+      rejectionReason,
+      actorId: user.id,
+      actorRole: user.role,
+      createdById: existing.createdById,
+    });
+
+    if (!transition.valid) {
       return NextResponse.json(
-        { error: 'Forbidden: You can only modify honors belonging to your own department.' },
-        { status: 403 }
+        { error: transition.error },
+        { status: transition.httpStatus }
       );
     }
 
     const updateData: any = {};
-    if (status) {
-      updateData.status = status as SubmissionStatus;
-      if (status === 'PUBLISHED' || status === 'APPROVED') {
+    if (transition.status) {
+      updateData.status = transition.status;
+      if (transition.status === 'PUBLISHED' || transition.status === 'APPROVED') {
         updateData.publishedAt = new Date();
         updateData.rejectionReason = null;
       }
-      if (status === 'REJECTED') {
-        updateData.rejectionReason = rejectionReason ? sanitizeText(rejectionReason) : 'Requirements not met.';
+      if (transition.status === 'REJECTED' || transition.status === 'RESUBMISSION_REQUIRED') {
+        updateData.rejectionReason = sanitizeText(transition.sanitizedReason || '');
       }
     } else if (rejectionReason !== undefined) {
       updateData.rejectionReason = rejectionReason ? sanitizeText(rejectionReason) : null;
@@ -355,7 +527,28 @@ export async function PATCH(req: NextRequest) {
       return ach;
     });
 
-    return NextResponse.json({ success: true, achievement: updated });
+    const auditLogs = await prisma.auditLog.findMany({
+      where: { entityType: 'Achievement', entityId: id },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        entityId: true,
+        action: true,
+        actorEmail: true,
+        actorRole: true,
+        metadata: true,
+        createdAt: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      achievement: {
+        ...updated,
+        privateCertificateUrl: toPrivateDocumentUrl(updated.certificateUrl || updated.googleDriveUrl),
+        auditLogs,
+      },
+    });
   } catch (error: any) {
     console.error('[Admin Achievements PATCH] Error:', error);
     return NextResponse.json({ error: error.message || 'Failed to update achievement' }, { status: 500 });
@@ -364,7 +557,7 @@ export async function PATCH(req: NextRequest) {
 
 export async function DELETE(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions).catch(() => null);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -377,12 +570,9 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden: Super Admin or HOD authority required to delete records' }, { status: 403 });
     }
 
-    const body = await req.json();
-    const { id } = body;
-
-    if (!id) {
-      return NextResponse.json({ error: 'Achievement ID required' }, { status: 400 });
-    }
+    const parsedDel = await parseJsonBody(req, AdminAchievementDeleteSchema);
+    if (!parsedDel.success) return parsedDel.response;
+    const { id } = parsedDel.data;
 
     const existing = await prisma.achievement.findUnique({
       where: { id },

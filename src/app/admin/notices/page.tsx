@@ -20,6 +20,8 @@ import {
   GraduationCap,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
+import { ACADEMIC_BATCH_OPTIONS } from '@/lib/studentHelper';
 
 export default function AdminNoticesPage() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
@@ -291,26 +293,33 @@ export default function AdminNoticesPage() {
           </div>
 
           {form.targetRole === 'STUDENT' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-slate-950/60 rounded-xl border border-slate-800">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-secondary/40 rounded-xl border border-border">
               <div>
-                <label className="block text-slate-400 mb-1">Batch Filter (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 2022-2026 (or blank for all)"
+                <label className="block text-muted-foreground mb-1">Batch Filter (Optional)</label>
+                <CreatableSelect
                   value={form.batch}
-                  onChange={(e) => setForm({ ...form, batch: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                  onChange={(val) => setForm({ ...form, batch: val })}
+                  options={ACADEMIC_BATCH_OPTIONS}
+                  placeholder="All Batches"
+                  customOptionLabel="+ Custom Batch..."
+                  customPlaceholder="e.g. 2026-2030"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1">Section Filter (Optional)</label>
-                <input
-                  type="text"
-                  placeholder="e.g. A (or blank for all)"
+                <label className="block text-muted-foreground mb-1">Section Filter (Optional)</label>
+                <CreatableSelect
                   value={form.section}
-                  onChange={(e) => setForm({ ...form, section: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                  onChange={(val) => setForm({ ...form, section: val.toUpperCase() })}
+                  options={[
+                    { value: 'A', label: 'Section A' },
+                    { value: 'B', label: 'Section B' },
+                    { value: 'C', label: 'Section C' },
+                    { value: 'D', label: 'Section D' },
+                  ]}
+                  placeholder="All Sections"
+                  customOptionLabel="+ Custom Section..."
+                  customPlaceholder="e.g. E"
                 />
               </div>
             </div>

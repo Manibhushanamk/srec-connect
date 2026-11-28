@@ -30,7 +30,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { parseRollNumber, ACADEMIC_BATCH_OPTIONS } from '@/lib/studentHelper';
+import { parseRollNumber, ACADEMIC_BATCH_OPTIONS, buildMergedBatchOptions } from '@/lib/studentHelper';
+import { CreatableSelect, SelectOption } from '@/components/ui/CreatableSelect';
+import { createCustomBatchOption, removeBatchOption } from '@/lib/client-creatable';
 
 interface UserItem {
   id: string;
@@ -89,6 +91,7 @@ export default function AdminUsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [departmentsList, setDepartmentsList] = useState<Array<{ id: string; name: string; code: string }>>([]);
+  const [batchOptions, setBatchOptions] = useState<SelectOption[]>(() => buildMergedBatchOptions());
   const [currentActor, setCurrentActor] = useState<{
     id: string;
     name: string;
@@ -184,6 +187,9 @@ export default function AdminUsersPage() {
         setTotalPages(data.totalPages);
         if (data.departments) {
           setDepartmentsList(data.departments);
+        }
+        if (Array.isArray(data.batches)) {
+          setBatchOptions(buildMergedBatchOptions(data.batches));
         }
         if (data.currentActor) {
           setCurrentActor(data.currentActor);
@@ -354,10 +360,6 @@ export default function AdminUsersPage() {
       if (u.role === 'SUPER_ADMIN' || u.role === 'ADMIN' || u.role === 'HOD') return false;
       return !u.departmentId || u.departmentId === currentActor.departmentId;
     }
-    if (currentActor.isWebManager) {
-      if (u.role !== 'FACULTY' && u.role !== 'STUDENT') return false;
-      return !u.departmentId || u.departmentId === currentActor.departmentId;
-    }
     return false;
   };
 
@@ -459,7 +461,7 @@ export default function AdminUsersPage() {
       )}
 
       {/* Filter & Search Bar */}
-      <Card className="border-border bg-card/60 backdrop-blur-md">
+      <Card>
         <CardContent className="p-4">
           <form onSubmit={handleSearchSubmit} className="flex flex-col md:flex-row gap-3">
             <div className="relative flex-1">
@@ -692,8 +694,8 @@ export default function AdminUsersPage() {
 
       {/* Super Admin Edit User Modal */}
       {showEditModal && editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md animate-fade-in">
-          <Card className="w-full max-w-2xl max-h-[92vh] flex flex-col border-border shadow-2xl bg-card overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#0D0E12]/75">
+          <Card className="w-full max-w-2xl max-h-[92vh] flex flex-col glass-sheet liquid-sheet-enter overflow-hidden">
             <CardHeader className="border-b border-border pb-3.5 flex flex-row items-center justify-between shrink-0 bg-secondary/30">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
@@ -977,21 +979,30 @@ export default function AdminUsersPage() {
                             </div>
                             <div>
                               <label className="block text-xs font-semibold mb-1 text-foreground">Academic Batch</label>
-                              <select
+                              <CreatableSelect
                                 value={editFormData.student.batch}
-                                onChange={(e) => setEditFormData({
+                                onChange={(val) => setEditFormData({
                                   ...editFormData,
-                                  student: { ...editFormData.student, batch: e.target.value }
+                                  student: { ...editFormData.student, batch: val }
                                 })}
-                                className="w-full px-3 py-2 rounded-xl border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                              >
-                                {ACADEMIC_BATCH_OPTIONS.map((opt) => (
-                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                ))}
-                                {!ACADEMIC_BATCH_OPTIONS.some((o) => o.value === editFormData.student.batch) && editFormData.student.batch && (
-                                  <option value={editFormData.student.batch}>{editFormData.student.batch}</option>
-                                )}
-                              </select>
+                                options={batchOptions}
+                                customOptionLabel="+ Custom Batch (Not listed)..."
+                                customPlaceholder="e.g. 2026-2030"
+                                onCreateCustom={async (customBatch) => {
+                                  const created = await createCustomBatchOption(customBatch);
+                                  if (created) {
+                                    setBatchOptions((prev) => buildMergedBatchOptions([...prev, created]));
+                                  }
+                                  return created;
+                                }}
+                                onRemoveOption={async (opt) => {
+                                  const ok = await removeBatchOption(opt.value);
+                                  if (ok) {
+                                    setBatchOptions((prev) => prev.filter((b) => b.value !== opt.value));
+                                  }
+                                  return ok;
+                                }}
+                              />
                             </div>
                             <div>
                               <label className="block text-xs font-semibold mb-1 text-foreground">Section</label>
@@ -1131,19 +1142,21 @@ export default function AdminUsersPage() {
 
                       <div>
                         <label className="block text-xs font-semibold mb-1 text-foreground">Role Category</label>
-                        <select
+                        <CreatableSelect
                           value={editFormData.faculty.roleCategory}
-                          onChange={(e) => setEditFormData({
+                          onChange={(val) => setEditFormData({
                             ...editFormData,
-                            faculty: { ...editFormData.faculty, roleCategory: e.target.value }
+                            faculty: { ...editFormData.faculty, roleCategory: val }
                           })}
-                          className="w-full px-3 py-2 rounded-xl border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                        >
-                          <option value="HOD">Head of Department (HOD)</option>
-                          <option value="PROFESSOR">Professor</option>
-                          <option value="ASSOCIATE_PROFESSOR">Associate Professor</option>
-                          <option value="ASSISTANT_PROFESSOR">Assistant Professor</option>
-                        </select>
+                          options={[
+                            { value: 'HOD', label: 'Head of Department (HOD)' },
+                            { value: 'PROFESSOR', label: 'Professor' },
+                            { value: 'ASSOCIATE_PROFESSOR', label: 'Associate Professor' },
+                            { value: 'ASSISTANT_PROFESSOR', label: 'Assistant Professor' },
+                          ]}
+                          customOptionLabel="+ Custom Role Category..."
+                          customPlaceholder="e.g. Visiting Professor"
+                        />
                       </div>
                     </div>
 
@@ -1264,8 +1277,8 @@ export default function AdminUsersPage() {
 
       {/* Pre-Provision User Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <Card className="w-full max-w-2xl border-border shadow-2xl bg-card max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0D0E12]/70">
+          <Card className="w-full max-w-2xl glass-sheet liquid-sheet-enter shadow-2xl max-h-[90vh] flex flex-col">
             <CardHeader className="border-b border-border pb-4 shrink-0">
               <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-primary" />
@@ -1456,36 +1469,45 @@ export default function AdminUsersPage() {
                               <label className="block text-xs font-semibold mb-1 text-foreground">
                                 Academic Batch
                               </label>
-                              <select
+                              <CreatableSelect
                                 value={formData.batch}
-                                onChange={(e) => setFormData({ ...formData, batch: e.target.value })}
-                                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                              >
-                                {ACADEMIC_BATCH_OPTIONS.map((opt) => (
-                                  <option key={opt.value} value={opt.value}>
-                                    {opt.label}
-                                  </option>
-                                ))}
-                                {!ACADEMIC_BATCH_OPTIONS.some((o) => o.value === formData.batch) && formData.batch && (
-                                  <option value={formData.batch}>{formData.batch}</option>
-                                )}
-                              </select>
+                                onChange={(val) => setFormData({ ...formData, batch: val })}
+                                options={batchOptions}
+                                customOptionLabel="+ Custom Batch (Not listed)..."
+                                customPlaceholder="e.g. 2026-2030"
+                                onCreateCustom={async (customBatch) => {
+                                  const created = await createCustomBatchOption(customBatch);
+                                  if (created) {
+                                    setBatchOptions((prev) => buildMergedBatchOptions([...prev, created]));
+                                  }
+                                  return created;
+                                }}
+                                onRemoveOption={async (opt) => {
+                                  const ok = await removeBatchOption(opt.value);
+                                  if (ok) {
+                                    setBatchOptions((prev) => prev.filter((b) => b.value !== opt.value));
+                                  }
+                                  return ok;
+                                }}
+                              />
                             </div>
 
                             <div>
                               <label className="block text-xs font-semibold mb-1 text-foreground">
                                 Section
                               </label>
-                              <select
+                              <CreatableSelect
                                 value={formData.section}
-                                onChange={(e) => setFormData({ ...formData, section: e.target.value })}
-                                className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                              >
-                                <option value="A">Section A</option>
-                                <option value="B">Section B</option>
-                                <option value="C">Section C</option>
-                                <option value="D">Section D</option>
-                              </select>
+                                onChange={(val) => setFormData({ ...formData, section: val })}
+                                options={[
+                                  { value: 'A', label: 'Section A' },
+                                  { value: 'B', label: 'Section B' },
+                                  { value: 'C', label: 'Section C' },
+                                  { value: 'D', label: 'Section D' },
+                                ]}
+                                customOptionLabel="+ Custom Section..."
+                                customPlaceholder="e.g. E or Honors"
+                              />
                             </div>
                           </div>
 
@@ -1559,16 +1581,18 @@ export default function AdminUsersPage() {
                         <label className="block text-xs font-semibold mb-1 text-foreground">
                           Academic Category
                         </label>
-                        <select
+                        <CreatableSelect
                           value={formData.roleCategory}
-                          onChange={(e) => setFormData({ ...formData, roleCategory: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                        >
-                          <option value="ASSISTANT_PROFESSOR">Assistant Professor</option>
-                          <option value="ASSOCIATE_PROFESSOR">Associate Professor</option>
-                          <option value="PROFESSOR">Professor</option>
-                          <option value="HOD">Head of Department (HOD)</option>
-                        </select>
+                          onChange={(val) => setFormData({ ...formData, roleCategory: val })}
+                          options={[
+                            { value: 'ASSISTANT_PROFESSOR', label: 'Assistant Professor' },
+                            { value: 'ASSOCIATE_PROFESSOR', label: 'Associate Professor' },
+                            { value: 'PROFESSOR', label: 'Professor' },
+                            { value: 'HOD', label: 'Head of Department (HOD)' },
+                          ]}
+                          customOptionLabel="+ Custom Academic Category..."
+                          customPlaceholder="e.g. Visiting Professor"
+                        />
                       </div>
                     </div>
 

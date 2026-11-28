@@ -20,7 +20,7 @@ export default function AdminLoading() {
       <StatsGridSkeleton />
 
       {/* Main Table / Data Card */}
-      <div className="social-card p-6 border-border bg-card space-y-4">
+      <div className="social-card p-6 space-y-4">
         <div className="flex items-center justify-between pb-2 border-b border-border/60">
           <div className="space-y-1">
             <Skeleton className="h-5 w-44 rounded-lg" />

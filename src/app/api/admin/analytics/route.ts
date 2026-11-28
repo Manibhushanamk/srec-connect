@@ -3,10 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 import { canAccessAdmin } from '@/lib/rbac';
+import { resolveScopedDepartmentId } from '@/lib/admin-auth';
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(authOptions).catch(() => null);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -19,7 +20,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Run parallel aggregation queries for fast single round-trip
+    const scopedDepartmentId = resolveScopedDepartmentId(
+      currentUser.role,
+      currentUser.departmentId
+    );
+    const deptFilter = scopedDepartmentId ? { departmentId: scopedDepartmentId } : {};
+    const deptUserFilter = scopedDepartmentId
+      ? { deletedAt: null, status: 'ACTIVE' as const, departmentId: scopedDepartmentId }
+      : { deletedAt: null, status: 'ACTIVE' as const };
+    const isIsolatedFromGrievances = currentUser.role === 'WEB_MANAGER' || currentUser.role === 'FACULTY';
+
+    // Run parallel aggregation queries scoped to department for non-super-admins
     const [
       studentCount,
       facultyCount,
@@ -33,18 +44,36 @@ export async function GET(req: NextRequest) {
       totalIncidents,
       departmentStats,
     ] = await Promise.all([
-      prisma.student.count({ where: { isActive: true, deletedAt: null } }),
-      prisma.faculty.count({ where: { isActive: true, deletedAt: null } }),
-      prisma.achievement.count({ where: { deletedAt: null } }),
-      prisma.achievement.count({ where: { status: 'PUBLISHED', deletedAt: null } }),
-      prisma.achievement.count({ where: { status: 'PENDING', deletedAt: null } }),
-      prisma.event.count({ where: { deletedAt: null } }),
-      prisma.eventRegistration.count({ where: { status: 'REGISTERED', user: { deletedAt: null, status: 'ACTIVE' } } }),
-      prisma.eventAttendance.count({ where: { user: { deletedAt: null, status: 'ACTIVE' } } }),
-      prisma.post.count({ where: { deletedAt: null, author: { deletedAt: null, status: 'ACTIVE' } } }),
-      prisma.incident.count({ where: { deletedAt: null } }),
+      prisma.student.count({ where: { isActive: true, deletedAt: null, ...deptFilter } }),
+      prisma.faculty.count({ where: { isActive: true, deletedAt: null, ...deptFilter } }),
+      prisma.achievement.count({ where: { deletedAt: null, ...deptFilter } }),
+      prisma.achievement.count({ where: { status: 'PUBLISHED', deletedAt: null, ...deptFilter } }),
+      prisma.achievement.count({
+        where: {
+          status: { in: ['PENDING', 'UNDER_REVIEW', 'APPROVED'] },
+          deletedAt: null,
+          ...deptFilter,
+        },
+      }),
+      prisma.event.count({ where: { deletedAt: null, ...deptFilter } }),
+      prisma.eventRegistration.count({ where: { status: 'REGISTERED', user: deptUserFilter } }),
+      prisma.eventAttendance.count({ where: { user: deptUserFilter } }),
+      prisma.post.count({ where: { deletedAt: null, author: deptUserFilter } }),
+      isIsolatedFromGrievances
+        ? Promise.resolve(0)
+        : prisma.incident.count({
+            where: scopedDepartmentId
+              ? {
+                  deletedAt: null,
+                  OR: [
+                    { student: { departmentId: scopedDepartmentId } },
+                    { reporter: { departmentId: scopedDepartmentId } },
+                  ],
+                }
+              : { deletedAt: null },
+          }),
       prisma.department.findMany({
-        where: { isActive: true },
+        where: scopedDepartmentId ? { isActive: true, id: scopedDepartmentId } : { isActive: true },
         select: {
           id: true,
           code: true,
@@ -76,7 +105,7 @@ export async function GET(req: NextRequest) {
     const categoryGroup = await prisma.achievement.groupBy({
       by: ['categoryId'],
       _count: { id: true },
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...deptFilter },
     });
 
     const categoryNames = await prisma.category.findMany({
@@ -91,6 +120,8 @@ export async function GET(req: NextRequest) {
     }));
 
     return NextResponse.json({
+      isScoped: Boolean(scopedDepartmentId),
+      scopedDepartmentId,
       summary: {
         studentCount,
         facultyCount,

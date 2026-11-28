@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { memo, useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import {
   Sparkles,
@@ -19,6 +19,7 @@ import {
   Pencil,
   Settings2,
 } from 'lucide-react';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
 
 export interface StoryItem {
   id: string;
@@ -109,7 +110,7 @@ const DEFAULT_STORIES: StoryItem[] = [
   },
 ];
 
-export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: initialStories }) => {
+const StoryHighlightsComponent: React.FC<{ stories?: StoryItem[] }> = ({ stories: initialStories }) => {
   const { data: session } = useSession();
   const user = session?.user as any;
   const userRole = user?.role;
@@ -355,7 +356,7 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
               <div
                 className={`p-[2.5px] rounded-full transition-transform duration-200 group-hover:scale-105 ${
                   story.hasUnseen
-                    ? 'bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600'
+                    ? 'bg-gradient-to-tr from-[#F97316] via-[#EC4899] to-[#FACC15]'
                     : 'bg-border'
                 }`}
               >
@@ -375,8 +376,8 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
 
       {/* Create Highlight Modal (HOD / Faculty / Super Admin only) */}
       {isCreateOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-card rounded-2xl border border-border shadow-2xl p-6 space-y-4">
+        <div className="fixed inset-0 z-50 bg-[#0D0E12]/70 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md glass-sheet liquid-sheet-enter rounded-3xl border shadow-2xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
@@ -414,18 +415,20 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-foreground mb-1">Category</label>
-                  <select
+                  <CreatableSelect
                     value={formCategory}
-                    onChange={(e) => setFormCategory(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-xl bg-background border border-border text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  >
-                    <option value="Official Notice">Official Notice</option>
-                    <option value="Achievement">Achievement</option>
-                    <option value="Career">Career & Placement</option>
-                    <option value="Department Event">Department Event</option>
-                    <option value="Workshop">Workshop</option>
-                    <option value="Research">Research & Grants</option>
-                  </select>
+                    onChange={setFormCategory}
+                    options={[
+                      { value: 'Official Notice', label: 'Official Notice' },
+                      { value: 'Achievement', label: 'Achievement' },
+                      { value: 'Career', label: 'Career & Placement' },
+                      { value: 'Department Event', label: 'Department Event' },
+                      { value: 'Workshop', label: 'Workshop' },
+                      { value: 'Research', label: 'Research & Grants' },
+                    ]}
+                    customOptionLabel="+ Custom Highlight Category..."
+                    customPlaceholder="e.g. Innovation Club"
+                  />
                 </div>
 
                 <div>
@@ -481,8 +484,8 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
 
       {/* Edit Highlight Modal */}
       {isEditOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-card rounded-2xl border border-border shadow-2xl p-6 space-y-4">
+        <div className="fixed inset-0 z-50 bg-[#0D0E12]/70 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md glass-sheet liquid-sheet-enter rounded-3xl shadow-2xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-border pb-3">
               <div className="flex items-center gap-2">
                 <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
@@ -517,18 +520,20 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-foreground mb-1">Category</label>
-                  <select
+                  <CreatableSelect
                     value={editCategory}
-                    onChange={(e) => setEditCategory(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-xl bg-background border border-border text-foreground text-xs focus:outline-none focus:ring-2 focus:ring-primary/40"
-                  >
-                    <option value="Official Notice">Official Notice</option>
-                    <option value="Achievement">Achievement</option>
-                    <option value="Career">Career & Placement</option>
-                    <option value="Department Event">Department Event</option>
-                    <option value="Workshop">Workshop</option>
-                    <option value="Research">Research & Grants</option>
-                  </select>
+                    onChange={setEditCategory}
+                    options={[
+                      { value: 'Official Notice', label: 'Official Notice' },
+                      { value: 'Achievement', label: 'Achievement' },
+                      { value: 'Career', label: 'Career & Placement' },
+                      { value: 'Department Event', label: 'Department Event' },
+                      { value: 'Workshop', label: 'Workshop' },
+                      { value: 'Research', label: 'Research & Grants' },
+                    ]}
+                    customOptionLabel="+ Custom Highlight Category..."
+                    customPlaceholder="e.g. Innovation Club"
+                  />
                 </div>
 
                 <div>
@@ -583,8 +588,8 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
 
       {/* Instagram Story Lightbox Modal */}
       {activeStory && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="relative w-full max-w-md bg-card rounded-3xl overflow-hidden border border-border shadow-2xl flex flex-col max-h-[85vh]">
+        <div className="fixed inset-0 z-50 bg-[#0D0E12]/80 flex items-center justify-center p-4">
+          <div className="relative w-full max-w-md glass-sheet liquid-sheet-enter rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
             {/* Story Progress Bar */}
             <div className="absolute top-0 left-0 right-0 p-3 z-10 bg-gradient-to-b from-black/60 to-transparent">
               <div className="flex gap-1.5 mb-2.5">
@@ -695,4 +700,5 @@ export const StoryHighlights: React.FC<{ stories?: StoryItem[] }> = ({ stories: 
   );
 };
 
+export const StoryHighlights = memo(StoryHighlightsComponent);
 export default StoryHighlights;

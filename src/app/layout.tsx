@@ -15,7 +15,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000'),
   title: {
-    default: 'SREC Connect v3.0 | Santhiram Engineering College',
+    default: 'SREC Connect | Santhiram Engineering College',
     template: '%s | SREC Connect',
   },
   description: 'SREC Connect - Empowering Multi-Disciplinary Excellence & Campus Milestones',
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     locale: 'en_IN',
     url: 'https://department-connect-srec.vercel.app',
     siteName: 'SREC Connect',
-    title: 'SREC Connect v3.0 | Santhiram Engineering College',
+    title: 'SREC Connect | Santhiram Engineering College',
     description: 'Empowering Multi-Disciplinary Excellence & Campus Milestones',
     images: [
       {
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'SREC Connect v3.0',
+    title: 'SREC Connect',
     description: 'Empowering Multi-Disciplinary Excellence & Campus Milestones',
     images: ['/og-image.png'],
   },
@@ -53,13 +53,14 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0c1324' },
+    { media: '(prefers-color-scheme: light)', color: '#F8F7F5' },
+    { media: '(prefers-color-scheme: dark)', color: '#0D0E12' },
   ],
   colorScheme: 'light dark',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
+  viewportFit: 'cover',
 };
 
 export default async function RootLayout({
@@ -74,11 +75,14 @@ export default async function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://pub-e7d8279877684f24b897c56ddb84f5d2.r2.dev" crossOrigin="anonymous" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased">
+        <div aria-hidden="true" className="liquid-ambient-mesh" />
+        <div aria-hidden="true" className="liquid-ambient-grain" />
         <Providers session={session}>
           <Suspense fallback={null}>
             <GlobalNavigationLoader />

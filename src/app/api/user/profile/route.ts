@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { revalidatePath } from 'next/cache';
 import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { UserProfilePatchSchema, parseJsonBody } from '@/lib/schemas';
+import { ensureBatchesRegistered } from '@/lib/category-batch-helpers';
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -32,7 +34,9 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await req.json();
+  const parsed = await parseJsonBody(req, UserProfilePatchSchema);
+  if (!parsed.success) return parsed.response;
+  const body = parsed.data;
   const dbUser = await prisma.user.findUnique({
     where: { email: user.email.toLowerCase().trim() },
     include: { student: true, faculty: true },
@@ -125,6 +129,10 @@ export async function PATCH(req: NextRequest) {
 
   // Update student profile
   if (dbUser.studentId) {
+    const updatedBatch = canManageAcademicAnchors && typeof body.batch === 'string' && body.batch.trim() ? body.batch.trim() : undefined;
+    if (updatedBatch) {
+      await ensureBatchesRegistered([updatedBatch]).catch(() => null);
+    }
     await prisma.student.update({
       where: { id: dbUser.studentId },
       data: {
@@ -132,7 +140,7 @@ export async function PATCH(req: NextRequest) {
         bio: typeof body.bio === 'string' ? body.bio.substring(0, 1000) : undefined,
         phone: typeof body.phone === 'string' ? body.phone.substring(0, 20) : undefined,
         skills: body.skills !== undefined ? (body.skills === null ? null : typeof body.skills === 'string' ? body.skills.trim().substring(0, 500) : undefined) : undefined,
-        batch: canManageAcademicAnchors && typeof body.batch === 'string' && body.batch.trim() ? body.batch.trim() : undefined,
+        batch: updatedBatch,
         section: canManageAcademicAnchors && typeof body.section === 'string' && body.section.trim() ? body.section.trim() : undefined,
         githubUrl: sanitizeUrl(body.githubUrl),
         linkedinUrl: sanitizeUrl(body.linkedinUrl),

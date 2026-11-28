@@ -25,31 +25,6 @@ export async function POST(
       }
     }
 
-    // Support simulated or programmatic test requests with userId or rollNumber in body
-    if (!userId) {
-      try {
-        const body = await req.json().catch(() => ({}));
-        if (body.userId) {
-          const u = await prisma.user.findUnique({ where: { id: body.userId } });
-          if (u) {
-            userId = u.id;
-            userEmail = u.email;
-          }
-        } else if (body.rollNumber) {
-          const student = await prisma.student.findUnique({
-            where: { rollNumber: body.rollNumber },
-            include: { user: true },
-          });
-          if (student?.user) {
-            userId = student.user.id;
-            userEmail = student.user.email;
-          }
-        }
-      } catch {
-        // no body
-      }
-    }
-
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized: Please sign in to register for this event' },

@@ -124,10 +124,11 @@ export default async function StudentEditAchievementPage({
     );
   }
 
-  // Fetch all categories for edit dropdown
+  // Fetch all active categories for edit dropdown
   const categories = await prisma.category.findMany({
+    where: { isActive: true, deletedAt: null, type: { in: ['ACHIEVEMENT', 'BOTH'] } },
     select: { id: true, name: true },
-    orderBy: { name: 'asc' },
+    orderBy: [{ displayOrder: 'asc' }, { name: 'asc' }],
   });
 
   return (

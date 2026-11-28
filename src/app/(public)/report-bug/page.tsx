@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
 
 const CATEGORIES = [
   { value: 'UI_VISUAL', label: '🎨 UI & Visual Layout' },
@@ -180,18 +181,14 @@ export default function ReportBugPage() {
                   <label htmlFor="bug-category" className="block text-xs font-bold text-foreground uppercase tracking-wider mb-2">
                     Category
                   </label>
-                  <select
+                  <CreatableSelect
                     id="bug-category"
                     value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-background border border-input text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                  >
-                    {CATEGORIES.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={setCategory}
+                    options={CATEGORIES}
+                    customOptionLabel="+ Custom Bug Category..."
+                    customPlaceholder="e.g. Calendar Sync Issue"
+                  />
                 </div>
 
                 <div>

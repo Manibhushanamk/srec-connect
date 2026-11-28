@@ -3,7 +3,8 @@
 import React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, Filter, RotateCcw } from 'lucide-react';
-import { getBatchLabel } from '@/lib/studentHelper';
+import { getBatchLabel, buildMergedBatchOptions } from '@/lib/studentHelper';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
 
 interface StudentsFilterBarProps {
   departments: { id: string; name: string }[];
@@ -112,19 +113,15 @@ export function StudentsFilterBar({
           <label htmlFor="batch" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">
             Academic Batch
           </label>
-          <select
+          <CreatableSelect
             id="batch"
-            value={currentBatch}
-            className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-            onChange={(e) => updateFilter('batch', e.target.value)}
-          >
-            <option value="all" className="bg-card text-foreground">All Batches</option>
-            {batches.map((batch) => (
-              <option key={batch} value={batch} className="bg-card text-foreground">
-                {getBatchLabel(batch)}
-              </option>
-            ))}
-          </select>
+            value={currentBatch === 'all' ? '' : currentBatch}
+            onChange={(val) => updateFilter('batch', val || 'all')}
+            options={buildMergedBatchOptions(batches)}
+            placeholder="All Batches"
+            customOptionLabel="+ Filter Custom Batch..."
+            customPlaceholder="e.g. 2026-2030"
+          />
         </div>
 
         {/* Section */}
@@ -132,17 +129,15 @@ export function StudentsFilterBar({
           <label htmlFor="section" className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">
             Section
           </label>
-          <select
+          <CreatableSelect
             id="section"
-            value={currentSection}
-            className="w-full px-3 py-2 text-xs rounded-xl bg-background border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
-            onChange={(e) => updateFilter('section', e.target.value)}
-          >
-            <option value="all" className="bg-card text-foreground">All Sections</option>
-            {sections.map((section) => (
-              <option key={section} value={section} className="bg-card text-foreground">Section {section}</option>
-            ))}
-          </select>
+            value={currentSection === 'all' ? '' : currentSection}
+            onChange={(val) => updateFilter('section', val || 'all')}
+            options={sections.map((s) => ({ value: s, label: `Section ${s}` }))}
+            placeholder="All Sections"
+            customOptionLabel="+ Custom Section..."
+            customPlaceholder="e.g. E"
+          />
         </div>
       </div>
     </div>

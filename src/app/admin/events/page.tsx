@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { Card } from '@/components/ui/Card';
 import { Badge, StatusBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -22,8 +23,15 @@ import {
   CheckCircle,
   Image as ImageIcon,
   Sparkles,
+  Tag,
+  Building2,
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { CreatableSelect } from '@/components/ui/CreatableSelect';
+import { FilteredExportActions } from '@/components/shared/FilteredExportActions';
+import { canManageCategories } from '@/lib/admin-auth';
+import { createCustomCategoryOption, removeCategoryOption } from '@/lib/client-creatable';
+import { EVENT_TIMELINE_PRESETS } from '@/lib/timeline';
 
 const EVENT_POSTER_PRESETS = [
   {
@@ -49,12 +57,21 @@ const EVENT_POSTER_PRESETS = [
 ];
 
 export default function AdminEventsPage() {
+  const { data: session } = useSession();
+  const actorRole = (session?.user as any)?.role as string | undefined;
+  const isCategoryAdmin = canManageCategories(actorRole);
+
   const [events, setEvents] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [timelineFilter, setTimelineFilter] = useState('ALL');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [departmentFilter, setDepartmentFilter] = useState('ALL');
 
   // Create modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -75,10 +92,19 @@ export default function AdminEventsPage() {
     posterUrl: '',
   });
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/events?status=${statusFilter === 'ALL' ? '' : statusFilter}&search=${search}`);
+      const params = new URLSearchParams({ limit: '100' });
+      if (statusFilter && statusFilter !== 'ALL') params.set('status', statusFilter);
+      if (timelineFilter && timelineFilter !== 'ALL') params.set('timeline', timelineFilter);
+      if (dateFrom) params.set('dateFrom', dateFrom);
+      if (dateTo) params.set('dateTo', dateTo);
+      if (categoryFilter && categoryFilter !== 'ALL') params.set('categoryId', categoryFilter);
+      if (departmentFilter && departmentFilter !== 'ALL') params.set('departmentId', departmentFilter);
+      if (search.trim()) params.set('search', search.trim());
+
+      const res = await fetch(`/api/events?${params.toString()}`);
       const data = await res.json();
       setEvents(data.events || []);
     } catch (e) {
@@ -86,18 +112,18 @@ export default function AdminEventsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, timelineFilter, dateFrom, dateTo, categoryFilter, departmentFilter, search]);
 
   useEffect(() => {
-    fetchEvents();
-  }, [statusFilter]);
+    void fetchEvents();
+  }, [fetchEvents]);
 
   useEffect(() => {
-    fetch('/api/categories')
+    fetch('/api/categories?type=EVENT')
       .then((r) => (r.ok ? r.json() : { categories: [] }))
       .then((d) => setCategories(d.categories || []))
       .catch(() => setCategories([]));
-    fetch('/api/departments')
+    fetch('/api/departments?all=true')
       .then((r) => (r.ok ? r.json() : { departments: [] }))
       .then((d) => setDepartments(d.departments || []))
       .catch(() => setDepartments([]));
@@ -296,6 +322,148 @@ export default function AdminEventsPage() {
         </div>
       </div>
 
+      {/* Time Category, Category Management & Export Bar */}
+      <div className="glass-card p-3.5 space-y-3 rounded-2xl border border-slate-800 bg-slate-900/50">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+          <div>
+            <label htmlFor="admin-evt-timeline" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+              <Clock className="w-3 h-3 text-cyan-400" />
+              <span>Time Category / Timeline</span>
+            </label>
+            <select
+              id="admin-evt-timeline"
+              value={timelineFilter}
+              onChange={(e) => {
+                const val = e.target.value;
+                setTimelineFilter(val);
+                if (val !== 'CUSTOM') {
+                  setDateFrom('');
+                  setDateTo('');
+                }
+              }}
+              className="w-full px-3 py-2 rounded-xl border border-slate-700 bg-slate-900 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 cursor-pointer"
+            >
+              {EVENT_TIMELINE_PRESETS.map((preset) => (
+                <option key={preset.value} value={preset.value}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="admin-evt-cat" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+              <Tag className="w-3 h-3 text-cyan-400" />
+              <span>Event Category {isCategoryAdmin ? '(Add / Remove)' : ''}</span>
+            </label>
+            <CreatableSelect
+              id="admin-evt-cat"
+              value={categoryFilter === 'ALL' ? '' : categoryFilter}
+              onChange={(val) => setCategoryFilter(val || 'ALL')}
+              options={categories.map((c) => ({ value: c.id, label: c.name }))}
+              placeholder="All Event Categories"
+              customOptionLabel={isCategoryAdmin ? '+ Add Event Category...' : '+ Custom Category...'}
+              customPlaceholder="Type event category..."
+              onCreateCustom={
+                isCategoryAdmin
+                  ? async (name) => {
+                      const created = await createCustomCategoryOption(name, 'EVENT');
+                      if (created) {
+                        setCategories((prev) =>
+                          prev.some((c) => c.id === created.value) ? prev : [...prev, { id: created.value, name: created.label }]
+                        );
+                      }
+                      return created;
+                    }
+                  : undefined
+              }
+              onRemoveOption={
+                isCategoryAdmin
+                  ? async (opt) => {
+                      const ok = await removeCategoryOption(opt);
+                      if (ok) {
+                        setCategories((prev) => prev.filter((c) => c.id !== opt.value));
+                        if (categoryFilter === opt.value) setCategoryFilter('ALL');
+                      }
+                      return ok;
+                    }
+                  : undefined
+              }
+            />
+          </div>
+
+          <div>
+            <label htmlFor="admin-evt-dept" className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+              <Building2 className="w-3 h-3 text-cyan-400" />
+              <span>Department Filter</span>
+            </label>
+            <select
+              id="admin-evt-dept"
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-slate-700 bg-slate-900 text-xs sm:text-sm text-white focus:outline-none focus:border-cyan-500 cursor-pointer"
+            >
+              <option value="ALL">All Departments</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.code} — {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {(timelineFilter === 'CUSTOM' || dateFrom || dateTo) && (
+          <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-slate-800">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              Custom Date Window:
+            </span>
+            <label className="flex items-center gap-1.5 text-xs text-slate-300">
+              <span>From</span>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setTimelineFilter('CUSTOM');
+                }}
+                className="px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 text-xs text-white [color-scheme:dark] focus:outline-none focus:border-cyan-500"
+              />
+            </label>
+            <label className="flex items-center gap-1.5 text-xs text-slate-300">
+              <span>To</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setTimelineFilter('CUSTOM');
+                }}
+                className="px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-900 text-xs text-white [color-scheme:dark] focus:outline-none focus:border-cyan-500"
+              />
+            </label>
+          </div>
+        )}
+
+        <FilteredExportActions
+          domain="EVENTS"
+          actorRole={actorRole}
+          filters={{
+            status: statusFilter !== 'ALL' ? statusFilter : undefined,
+            timeline: timelineFilter !== 'ALL' ? timelineFilter : undefined,
+            dateFrom: dateFrom || undefined,
+            dateTo: dateTo || undefined,
+            achievementCategoryId: categoryFilter !== 'ALL' ? categoryFilter : undefined,
+            departmentId: departmentFilter !== 'ALL' ? departmentFilter : undefined,
+            search: search.trim() || undefined,
+          }}
+          recordCount={filteredEvents.length}
+          timelineLabel={EVENT_TIMELINE_PRESETS.find((t) => t.value === timelineFilter)?.label || 'All Time'}
+          showFullFormats
+          className="pt-2.5 border-t border-slate-800"
+        />
+      </div>
+
       {/* Events Table / Card List */}
       {loading ? (
         <div className="py-20 flex justify-center">
@@ -418,17 +586,31 @@ export default function AdminEventsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-slate-300 font-medium mb-1">Category *</label>
-              <select
+              <CreatableSelect
                 required
                 value={createForm.categoryId}
-                onChange={(e) => setCreateForm({ ...createForm, categoryId: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
-              >
-                <option value="">Select Category</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+                onChange={(val) => setCreateForm({ ...createForm, categoryId: val })}
+                options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                placeholder="Select Category"
+                customOptionLabel="+ Custom Event Category..."
+                customPlaceholder="Type custom category..."
+                onCreateCustom={async (name) => {
+                  const created = await createCustomCategoryOption(name, 'EVENT');
+                  if (created) {
+                    setCategories((prev) =>
+                      prev.some((c) => c.id === created.value) ? prev : [...prev, { id: created.value, name: created.label }]
+                    );
+                  }
+                  return created;
+                }}
+                onRemoveOption={async (opt) => {
+                  const ok = await removeCategoryOption(opt);
+                  if (ok) {
+                    setCategories((prev) => prev.filter((c) => c.id !== opt.value));
+                  }
+                  return ok;
+                }}
+              />
             </div>
 
             <div>
@@ -636,17 +818,31 @@ export default function AdminEventsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-slate-300 font-medium mb-1">Category *</label>
-              <select
+              <CreatableSelect
                 required
                 value={editForm.categoryId}
-                onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-cyan-500"
-              >
-                <option value="">Select Category</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+                onChange={(val) => setEditForm({ ...editForm, categoryId: val })}
+                options={categories.map((c) => ({ value: c.id, label: c.name }))}
+                placeholder="Select Category"
+                customOptionLabel="+ Custom Event Category..."
+                customPlaceholder="Type custom category..."
+                onCreateCustom={async (name) => {
+                  const created = await createCustomCategoryOption(name, 'EVENT');
+                  if (created) {
+                    setCategories((prev) =>
+                      prev.some((c) => c.id === created.value) ? prev : [...prev, { id: created.value, name: created.label }]
+                    );
+                  }
+                  return created;
+                }}
+                onRemoveOption={async (opt) => {
+                  const ok = await removeCategoryOption(opt);
+                  if (ok) {
+                    setCategories((prev) => prev.filter((c) => c.id !== opt.value));
+                  }
+                  return ok;
+                }}
+              />
             </div>
 
             <div>

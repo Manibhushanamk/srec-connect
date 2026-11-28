@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import prisma from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
@@ -14,6 +16,11 @@ export async function GET(req: NextRequest) {
         posts: [],
       });
     }
+
+    const session = await getServerSession(authOptions).catch(() => null);
+    const postVisibilityFilter = session?.user
+      ? { in: ['PUBLIC' as const, 'COLLEGE_ONLY' as const] }
+      : ('PUBLIC' as const);
 
     const [students, faculty, events, posts] = await Promise.all([
       // 1. Search Students (Only active, non-trashed students with active accounts)
@@ -98,17 +105,20 @@ export async function GET(req: NextRequest) {
         take: 5,
       }),
 
-      // 4. Search Posts (Only non-deleted posts from active, non-suspended authors)
+      // 4. Search Posts (Enforce visibility scope + narrow projection)
       prisma.post.findMany({
         where: {
           deletedAt: null,
+          visibility: postVisibilityFilter,
           author: {
             deletedAt: null,
             status: 'ACTIVE',
           },
           content: { contains: query, mode: 'insensitive' },
         },
-        include: {
+        select: {
+          id: true,
+          content: true,
           author: { select: { id: true, name: true, role: true } },
         },
         take: 5,
